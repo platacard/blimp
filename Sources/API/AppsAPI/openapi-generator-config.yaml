@@ -1,0 +1,10 @@
+generate:
+  - client
+  - types
+filter:
+  operations:
+    - apps_getCollection # /v1/apps
+    - apps_betaGroups_getToManyRelated # /v1/apps/{id}/betaGroups
+
+# Run from root when changed:
+# ./Scripts/update_api.sh AppsAPI

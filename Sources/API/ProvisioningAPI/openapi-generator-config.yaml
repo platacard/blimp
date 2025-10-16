@@ -1,0 +1,14 @@
+generate:
+  - client
+  - types
+filter:
+  operations:
+    - certificates-get_collection # GET /v1/certificates
+    - bundleIds-profiles-get_to_many_related # GET /v1/bundleIds/{id}/profiles
+    - profiles-get_collection # GET /v1/profiles
+    - profiles-create_instance # POST /v1/profiles
+    - profiles-delete_instance # DELETE /v1/profiles/{id}
+    - devices-create_instance # POST /v1/devices
+
+# Run from root when changed:
+# ./Scripts/update_api.sh ProvisioningAPI

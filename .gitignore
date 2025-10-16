@@ -1,0 +1,19 @@
+.DS_Store
+/.build
+/Packages
+xcuserdata/
+.swiftpm/xcode
+DerivedData/
+.swiftpm/configuration/registries.json
+.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
+.netrc
+
+# Idea
+.idea
+
+
+# DeployHelpers tests
+.context
+
+openapi.zip
+openapi.json
