@@ -1,13 +1,13 @@
 {
-  "originHash" : "4460993648459c9ae53785de543f8b4f2cea3c62dacd8047e6d5d672b5aaad4b",
+  "originHash" : "369e71cc94b2dd609494e775839a1f1b1a5a637e9d52d0d80f4461803ec8e61f",
   "pins" : [
     {
       "identity" : "corredor",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/platacard/corredor",
       "state" : {
-        "revision" : "0e578df029efd1e5d82c49352e3caf4f2b4628f5",
-        "version" : "1.0.0"
+        "revision" : "73a39cc7e61987a76fb8bb2a117bce7984c172b4",
+        "version" : "1.0.2"
       }
     },
     {
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/platacard/cronista",
       "state" : {
-        "revision" : "387eec748412b90d0d5274931fcff0b596ca5e65",
-        "version" : "1.0.1"
+        "revision" : "6f6a259f7e53d23dbb9b3125f6f4c47de8f17bf7",
+        "version" : "1.0.2"
       }
     },
     {
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/platacard/dotcontext.git",
       "state" : {
-        "revision" : "ea8c4a9ce6d84d434114f3d36ab2c0b060f48b18",
-        "version" : "1.0.0"
+        "revision" : "c05288da9f8399dca4f47c5435c6c306e51bbf1c",
+        "version" : "1.0.1"
       }
     },
     {
