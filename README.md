@@ -34,10 +34,11 @@ Blimp is meant to be a building block in your pipeline, not a final, opinionated
 
 - [cronista](https://github.com/platacard/cronista) — A simple logger
 - [corredor](https://github.com/platacard/corredor) — A shell wrapper
+- [gito](https://github.com/platacard/gito) — A git wrapper
 - [slackito](https://github.com/platacard/slackito) — A Slack API client
 - [dotcontext](https://github.com/platacard/dotcontext) — An environment variables manager that extends .env file functionality
 
-But the best part is that everything is modular and extendable to your liking.
+These packages provide a modular way to build your deploy pipeline. But the best part is that they are not required to use blimp and you can tweak everything to your liking.
 
 You can try things out by calling the `blimp` CLI via `swift run blimp {command}`, or you can compile the project and use the binary artifact directly. Use `BlimpKit` for Swift package integration.
 
