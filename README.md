@@ -8,7 +8,9 @@ Heavily inspired by [fastlane](https://fastlane.tools/).
 
 ## Disclaimer
 
-This project is still a work in progress and not in its final state.
+This project is still a work in progress but aims to be a native Swift `fastlane` replacement in the future. The implementation is already stable enough for us to ship our apps with it. If you have questions or issues, just open an issue/discussion and we'll try to help. If you want to contribute, feel free to open a pull request. Although it's better to align with our [roadmap](https://github.com/orgs/platacard/projects/3).
+
+----
 
 ### What's working
 
@@ -25,8 +27,6 @@ This project is still a work in progress and not in its final state.
 - Testing support for watchOS, macOS, and other less-used platforms
 
 ----
-
-The implementation is stable enough for us to ship our apps with it. If you have a request, just open an issue and we'll try to help. If you want to contribute, feel free to open a pull request.
 
 ## Getting started
 
