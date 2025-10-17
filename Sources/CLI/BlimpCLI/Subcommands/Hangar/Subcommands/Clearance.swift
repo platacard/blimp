@@ -32,7 +32,7 @@ struct Clearance: AsyncParsableCommand {
     var betaGroups: [String] = []
     
     var logger: Cronista {
-        Cronista(module: "Blimp", category: "Hangar Clearance")
+        Cronista(module: "blimp", category: "Hangar Clearance")
     }
     
     func run() async throws {

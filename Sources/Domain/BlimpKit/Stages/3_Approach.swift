@@ -10,7 +10,7 @@ public extension Blimp {
     /// - TestFlight / App Store delivery operations
     struct Approach: FlightStage {
         package var type: FlightStage.Type { Self.self }
-        private var logger: Cronista { Cronista(module: "Blimp", category: "Approach") }
+        private var logger: Cronista { Cronista(module: "blimp", category: "Approach") }
         private let transporter: Transporter
         
         private let testflightAPI: TestflightAPI

@@ -29,7 +29,7 @@ struct TakeOff: AsyncParsableCommand {
     @Flag(help: "Produce more output")
     var verbose = false
     
-    private var logger: Cronista { Cronista(module: "Blimp", category: "TakeOff") }
+    private var logger: Cronista { Cronista(module: "blimp", category: "TakeOff") }
     private var plistHelper: PlistHelper { .default }
     
     func run() async throws {

@@ -16,7 +16,7 @@ struct Weight: AsyncParsableCommand {
     @Option
     var devices: [String]
     
-    private var logger: Cronista { Cronista(module: "Blimp", category: "Weight") }
+    private var logger: Cronista { Cronista(module: "blimp", category: "Weight") }
     
     func run() async throws {
         let provider = DefaultJWTProvider()

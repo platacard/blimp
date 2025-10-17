@@ -8,7 +8,7 @@ public struct ProvisioningAPI {
     
     private let jwtProvider: any JWTProviding
     private let client: any APIProtocol
-    private let logger = Cronista(module: "Blimp", category: "ProvisioningAPI")
+    private let logger = Cronista(module: "blimp", category: "ProvisioningAPI")
     
     public init(jwtProvider: any JWTProviding) {
         self.jwtProvider = jwtProvider
