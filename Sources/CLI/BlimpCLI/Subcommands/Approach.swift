@@ -37,7 +37,7 @@ struct Approach: AsyncParsableCommand {
     @Flag(help: "Produce more output")
     var verbose = false
     
-    private var logger: Cronista { Cronista(module: "Blimp", category: "Approach") }
+    private var logger: Cronista { Cronista(module: "blimp", category: "Approach") }
     
     func run() async throws {
         let altool = AltoolTransporter()

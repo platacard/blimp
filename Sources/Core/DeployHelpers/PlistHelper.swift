@@ -3,7 +3,7 @@ import Cronista
 
 /// Simplifies the plist interactions
 public struct PlistHelper: Sendable {
-    private var logger: Cronista { .init(module: "Blimp", category: "PlistHelper") }
+    private var logger: Cronista { Cronista(module: "blimp", category: "PlistHelper") }
     private var fileManager: FileManager { .default }
 
     public static let `default` = PlistHelper()

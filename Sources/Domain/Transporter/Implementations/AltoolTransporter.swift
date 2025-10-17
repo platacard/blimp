@@ -14,7 +14,7 @@ public struct AltoolTransporter: Transporter, ASCCredentialsTrait {
         }
     }
 
-    private var logger: Cronista { Cronista(module: "Blimp", category: "TakeOff") }
+    private var logger: Cronista { Cronista(module: "blimp", category: "TakeOff") }
     
     public init() {}
     

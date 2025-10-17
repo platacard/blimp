@@ -20,7 +20,7 @@ struct Land: AsyncParsableCommand {
     @Flag(help: "Produce more output")
     var verbose = false
     
-    private var logger: Cronista { Cronista(module: "Blimp", category: "Land") }
+    private var logger: Cronista { Cronista(module: "blimp", category: "Land") }
     
     func run() async throws {
         let land = Blimp.Land()

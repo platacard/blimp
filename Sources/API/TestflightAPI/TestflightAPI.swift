@@ -8,7 +8,7 @@ import ClientTransport
 public struct TestflightAPI {
     private let jwtProvider: any JWTProviding
     private let client: any APIProtocol
-    private let logger = Cronista(module: "Blimp", category: "TestFlightAPI")
+    private let logger = Cronista(module: "blimp", category: "TestFlightAPI")
 
     public init(jwtProvider: any JWTProviding) {
         self.jwtProvider = jwtProvider

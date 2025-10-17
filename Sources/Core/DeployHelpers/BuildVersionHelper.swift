@@ -3,8 +3,8 @@ import Corredor
 import Cronista
 
 public struct BuildVersionHelper {
-    private static var logger: Cronista { .init(module: "Blimp", category: "BuildVersionHelper") }
-    
+    private static var logger: Cronista { Cronista(module: "blimp", category: "BuildVersionHelper") }
+
     public static func set(buildNumber: String, projectPath: String?) throws {
         let folder = projectPath != nil ? URL(fileURLWithPath: projectPath!).deletingLastPathComponent().path : "."
         let commandPrefix = "cd \(URL(fileURLWithPath: folder).standardizedFileURL.path) &&"
