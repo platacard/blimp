@@ -120,7 +120,7 @@ public struct TestflightAPI {
         )
 
         let email = try response.created.body.json.data.attributes?.email
-        logger.info("Invite sent to \(email ?? "unknown")")
+        logger.info("Invite sent to \(email?.redactedEmail ?? "unknown")")
     }
 
     public func inviteBetaTester(
@@ -338,7 +338,7 @@ private extension TestflightAPI {
         let singleTesterState = singleTesterData?.attributes?.state
 
         if singleTesterState == .REVOKED {
-            logger.info("Tester \(email) has been revoked, will invite again")
+            logger.info("Tester \(email.redactedEmail) has been revoked, will invite again")
             return nil
         } else {
             return singleTesterData.map(\.id)
@@ -373,12 +373,12 @@ private extension TestflightAPI {
         let isDeveloper = try? result.conflict
 
         if isDeveloper != nil {
-            logger.info("\(email) has the developer role. Resending the invite...")
+            logger.info("\(email.redactedEmail) has the developer role. Resending the invite...")
             try await inviteDeveloper(email: email, firstName: firstName, lastName: lastName)
             return nil
         } else {
             let betaTesterId = try result.created.body.json.data.id
-            logger.info("Invited \(email) with beta tester id: \(betaTesterId) to app id: \(appId)")
+            logger.info("Invited \(email.redactedEmail) with beta tester id: \(betaTesterId) to app id: \(appId)")
             return betaTesterId
         }
     }
@@ -399,5 +399,28 @@ private extension TestflightAPI {
         )
 
         logger.info("Sent beta tester invitation email")
+    }
+}
+
+// MARK: - Private
+
+private extension String {
+
+    var redactedEmail: String {
+        guard let atIndex = self.firstIndex(of: "@") else { return self }
+
+        let namePart = self[..<atIndex]
+        let domainPart = self[self.index(after: atIndex)...]
+
+        // Show the first and last character of the username, mask the rest
+        if namePart.count <= 2 {
+            return String(namePart.prefix(1)) + "***@" + domainPart
+        }
+
+        let prefix = namePart.prefix(1)
+        let suffix = namePart.suffix(1)
+        let maskedPart = String(repeating: "*", count: namePart.count - 2)
+
+        return "\(prefix)\(maskedPart)\(suffix)@\(domainPart)"
     }
 }
