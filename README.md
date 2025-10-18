@@ -53,6 +53,32 @@ export APP_STORE_CONNECT_API_KEY_ISSUER_ID=...
 
 You can get these values from the App Store Connect API Keys page.
 
+### Installation
+
+As package dependency:
+```swift
+dependencies: [
+    .package(url: "https://github.com/platacard/blimp.git", from: "1.0.0")
+]
+```
+
+Then, add the package to your target:
+```swift
+targets: [
+    .target(name: "YourTarget", dependencies: ["Blimp"])
+]
+```
+
+Using binary artifact:
+```bash
+swift build -c release
+```
+
+Then, you can use the binary artifact directly:
+```bash
+./build/release/blimp {command}
+```
+
 ### Available commands
 
 > Use -h with each command to see all available parameters and their default values.
@@ -69,3 +95,7 @@ You can get these values from the App Store Connect API Keys page.
 - Archiving and exporting are done via `xcodebuild`.
 - Uploading is done via `altool`.
 - Processing is done via the App Store Connect API.
+
+## Attributions
+
+JWT signing was borrowed from [AvdLee](https://github.com/AvdLee/appstoreconnect-swift-sdk) under MIT License.
