@@ -40,9 +40,6 @@ struct Clearance: AsyncParsableCommand {
         let appsAPI = AppsAPI(jwtProvider: jwtProvider)
         let tfAPI = TestflightAPI(jwtProvider: jwtProvider)
         
-        logger.info("Email: \(email)")
-        logger.info("Name: \(firstName) \(lastName)")
-        
         if !bundleIds.isEmpty && !betaGroups.isEmpty {
             logger.info("Bundle ids: \(bundleIds.joined(separator: ", "))")
             logger.info("Beta groups: \(betaGroups.joined(separator: ", "))")
@@ -51,7 +48,6 @@ struct Clearance: AsyncParsableCommand {
         switch clearanceLevel {
         case .developer:
             try await tfAPI.inviteDeveloper(email: email, firstName: firstName, lastName: lastName)
-            logger.info("Invited \(email) with developer role")
         case .betaTester:
             guard !betaGroups.isEmpty && !bundleIds.isEmpty else {
                 throw ValidationError("Beta groups and bundle ids are required for beta tester invite")
