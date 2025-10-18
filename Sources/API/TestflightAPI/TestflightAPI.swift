@@ -413,13 +413,9 @@ private extension String {
         let domainPart = self[self.index(after: atIndex)...]
 
         // Show the first and last character of the username, mask the rest
-        if namePart.count <= 2 {
-            return String(namePart.prefix(1)) + "***@" + domainPart
-        }
-
         let prefix = namePart.prefix(1)
-        let suffix = namePart.suffix(1)
-        let maskedPart = String(repeating: "*", count: namePart.count - 2)
+        let suffix = namePart.count > 1 ? namePart.suffix(1) : ""
+        let maskedPart = String(repeating: "*", count: max(0, namePart.count - 2))
 
         return "\(prefix)\(maskedPart)\(suffix)@\(domainPart)"
     }
