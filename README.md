@@ -4,7 +4,7 @@ Finally, a Swift deployment automation for Apple platforms.
 
 Heavily inspired by [fastlane](https://fastlane.tools/).
 
-> Blimp refers to a non-rigid flying ship (like a zeppelin). Rarely used nowadays, it might be slow and clumsy, but it's still beautiful and gets the job done.
+> Blimp refers to a non-rigid flying ship (like a zeppelin). Rarely used nowadays, it might be slow and clumsy, but still beautiful and gets the job done.
 
 ## Disclaimer
 
