@@ -53,7 +53,7 @@ These packages provide a modular way to build your deploy pipeline. But the best
 
 You can try things out by calling the `blimp` CLI via `swift run blimp {command}`, or you can compile the project and use the binary artifact directly.
  
->❗️ Moreover, `blimp` CLI provides an example of how you can use `BlimpKit` in your CLI.  We recommend trying out the `swift-argument-parser` package, it works great for us.
+>❗️ Moreover, `blimp` CLI provides an example of how you can use `BlimpKit` in your CLI. We recommend trying out the `swift-argument-parser` package, it works great for us.
 
 You'll need the [App Store Connect API Key](https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api). `blimp` will handle the API authentication process for you once the `.p8` file is placed in the `~/.appstoreconnect/private_keys` folder. Soon, migration to API uploads will make it easier to use on CI via environment variables.
 
