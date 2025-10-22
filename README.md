@@ -8,9 +8,20 @@ Heavily inspired by [fastlane](https://fastlane.tools/).
 
 ## Disclaimer
 
-This project is still a work in progress but aims to be a native Swift `fastlane` replacement in the future. The implementation is already stable enough for us to ship our apps with it. If you have questions or issues, just open an issue/discussion and we'll try to help. If you want to contribute, feel free to open a pull request. Although it's better to align with our [roadmap](https://github.com/orgs/platacard/projects/3).
+This project is still a work in progress but aims to be a native Swift `fastlane` replacement in the future. However, the implementation is already stable enough for Plata to ship our apps with it. If you have questions or issues, just open an issue/discussion and we'll try to help. If you want to contribute, feel free to open a pull request. Although it's better to align with our [roadmap](https://github.com/orgs/platacard/projects/3).
 
 ----
+
+## Installation
+
+As package dependency:
+```swift
+dependencies: [
+    .package(url: "https://github.com/platacard/blimp.git", from: "1.0.0")
+]
+```
+
+## Features overview
 
 ### What's working
 
@@ -35,14 +46,16 @@ Blimp is meant to be a building block in your pipeline, not a final, opinionated
 - [cronista](https://github.com/platacard/cronista) — A simple logger
 - [corredor](https://github.com/platacard/corredor) — A shell wrapper
 - [gito](https://github.com/platacard/gito) — A git wrapper
-- [slackito](https://github.com/platacard/slackito) — A Slack API client
+- [slackito](https://github.com/platacard/slackito) — A Slack API client using result builders
 - [dotcontext](https://github.com/platacard/dotcontext) — An environment variables manager that extends .env file functionality
 
-These packages provide a modular way to build your deploy pipeline. But the best part is that they are not required to use blimp and you can tweak everything to your liking.
+These packages provide a modular way to build your deploy pipeline. But the best part is that they are not required to use blimp. Tweak everything to your liking.
 
-You can try things out by calling the `blimp` CLI via `swift run blimp {command}`, or you can compile the project and use the binary artifact directly. Use `BlimpKit` for Swift package integration.
+You can try things out by calling the `blimp` CLI via `swift run blimp {command}`, or you can compile the project and use the binary artifact directly.
+ 
+>❗️ Moreover, `blimp` CLI provides an example of how you can use `BlimpKit` in your CLI. We recommend trying out the `swift-argument-parser` package, it works great for us.
 
-You'll need the [App Store Connect API Key](https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api). `blimp` will handle the API authentication process for you once the `.p8` file is placed in the `~/.appstoreconnect/private_keys` folder.
+You'll need the [App Store Connect API Key](https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api). `blimp` will handle the API authentication process for you once the `.p8` file is placed in the `~/.appstoreconnect/private_keys` folder. Currently, uploads use `altool`, but we plan to migrate to the App Store Connect API (API uploads), which will enable authentication via environment variables and simplify CI integration. You can track progress on this feature in our [roadmap](https://github.com/orgs/platacard/projects/3).
 
 Then, expose these environment variables to your shell:
 
@@ -52,22 +65,6 @@ export APP_STORE_CONNECT_API_KEY_ISSUER_ID=...
 ```
 
 You can get these values from the App Store Connect API Keys page.
-
-### Installation
-
-As package dependency:
-```swift
-dependencies: [
-    .package(url: "https://github.com/platacard/blimp.git", from: "1.0.0")
-]
-```
-
-Then, add the package to your target:
-```swift
-targets: [
-    .target(name: "YourTarget", dependencies: ["Blimp"])
-]
-```
 
 Using binary artifact:
 ```bash
