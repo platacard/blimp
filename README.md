@@ -1,4 +1,4 @@
-# <img width="60" alt="blimp_icon_dark" src="https://github.com/user-attachments/assets/d78717f8-c440-424f-a5ed-aae73747c128" /> Blimp
+# <img width="45" alt="blimp_icon_dark" src="https://github.com/user-attachments/assets/d78717f8-c440-424f-a5ed-aae73747c128" /> Blimp
 
 Finally, a Swift deployment automation for Apple platforms.
 
