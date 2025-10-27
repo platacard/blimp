@@ -1,6 +1,6 @@
 # <img width="45" alt="blimp_icon_dark" src="https://github.com/user-attachments/assets/d78717f8-c440-424f-a5ed-aae73747c128" /> Blimp
 <!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
-[![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors-)
+[![All Contributors](https://img.shields.io/badge/all_contributors-3-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
 Finally, a Swift deployment automation for Apple platforms.
