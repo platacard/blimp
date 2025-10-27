@@ -112,6 +112,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/memoto"><img src="https://avatars.githubusercontent.com/u/16154570?v=4?s=100" width="100px;" alt="Konstantin Iurichev"/><br /><sub><b>Konstantin Iurichev</b></sub></a><br /><a href="https://github.com/platacard/blimp/commits?author=memoto" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/tigati"><img src="https://avatars.githubusercontent.com/u/2447006?v=4?s=100" width="100px;" alt="tigati"/><br /><sub><b>tigati</b></sub></a><br /><a href="https://github.com/platacard/blimp/commits?author=tigati" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/NoFearJoe"><img src="https://avatars.githubusercontent.com/u/4526841?v=4?s=100" width="100px;" alt="Ilya Kharabet"/><br /><sub><b>Ilya Kharabet</b></sub></a><br /><a href="https://github.com/platacard/blimp/commits?author=NoFearJoe" title="Code">💻</a></td>
     </tr>
   </tbody>
 </table>
