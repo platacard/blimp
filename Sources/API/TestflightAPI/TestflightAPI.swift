@@ -23,6 +23,51 @@ public struct TestflightAPI {
         )
     }
 
+    public func uploadBuild(appId: String, appVersion: String, buildNumber: String, platform: TestflightAPI.Platform) async throws -> UploadState {
+        let response = try await client.buildUploads_createInstance(
+            .init(
+                body: .json(
+                    Components.Schemas.BuildUploadCreateRequest.init(
+                        data: .init(
+                            _type: .buildUploads,
+                            attributes: .init(
+                                cfBundleShortVersionString: appVersion,
+                                cfBundleVersion: buildNumber,
+                                platform: platform.asApiPlatform
+                            ),
+                            relationships: .init(app: .init(data: .init(_type: .apps, id: appId)))
+                        )
+                    )
+                )
+            )
+        )
+
+        switch response {
+        case .badRequest(let badRequest):
+            let badRequestInfo = (try? badRequest.body.json.errors?.description) ?? "no_additional_info"
+            logger.error("Bad request: \(badRequestInfo)")
+            throw Error.badRequest(badRequestInfo)
+        case .unauthorized(let unauthorized):
+            let unauthorizedInfo = 
+        case .forbidden(let forbidden):
+            <#code#>
+        case .unprocessableContent(let unprocessableContent):
+            <#code#>
+        case .created(let created):
+            let errors = try? created.body.json.data.attributes?.state?.errors
+            if !errors.isEmpty {
+                return .error(errors)
+            }
+
+        case .conflict(let conflict):
+            <#code#>
+        case .tooManyRequests(let tooManyRequests):
+            <#code#>
+        case .undocumented(let statusCode, let undocumentedPayload):
+            throw Error.undocumented("\(statusCode): \(undocumentedPayload.body.debugDescription)")
+        }
+    }
+
     public func getBuildID(
         appId: String,
         appVersion: String,
@@ -71,7 +116,7 @@ public struct TestflightAPI {
                 logger.info("Too many requests. 429, \(response)")
         }
 
-        throw Error.badResponse
+        throw Error.badResponse()
     }
 
     public func getBuildProcessingResult(id: String) async throws -> BuildProcessingResult {
@@ -90,7 +135,7 @@ public struct TestflightAPI {
             let buildBundleID = try? response.ok.body.json.data.relationships?.buildBundles?.data?.first?.id,
             let buildLocalizationIDs = try? (response.ok.body.json.data.relationships?.betaBuildLocalizations?.data?.compactMap { $0.id })
         else {
-            throw Error.badResponse
+            throw Error.badResponse()
         }
 
         return .init(
@@ -234,10 +279,8 @@ public struct TestflightAPI {
             case .ok(let ok):
                 let data = try ok.body.json.data
                 return try data.map { build in
-                    guard
-                        let id = build.relationships?.buildBundles?.data?.first?.id
-                    else {
-                        throw Error.badResponse
+                    guard let id = build.relationships?.buildBundles?.data?.first?.id else {
+                        throw Error.badResponse()
                     }
 
                     return id
@@ -248,7 +291,7 @@ public struct TestflightAPI {
                 logger.info("Too many requests. 429, \(response)")
         }
 
-        throw Error.badResponse
+        throw Error.badResponse()
     }
 
     public func getBundleBuildSizes(
@@ -278,7 +321,7 @@ public struct TestflightAPI {
                         let downloadBytes = attributes.downloadBytes,
                         let installBytes = attributes.installBytes
                     else {
-                        throw Error.badResponse
+                        throw Error.badResponse()
                     }
 
                     guard
@@ -305,7 +348,45 @@ public struct TestflightAPI {
                 logger.info("Too many requests. 429, \(response)")
         }
 
-        throw Error.badResponse
+        throw Error.badResponse()
+    }
+}
+
+// MARK: - Upload States
+
+public extension TestflightAPI {
+    enum UploadState {
+        case waiting
+        case processing
+        case error([String])
+        case warnings
+    }
+}
+
+// MARK: - Upload platforms
+
+public extension TestflightAPI {
+
+    enum Platform {
+        case iOS
+        case macOS
+        case tvOS
+        case visionOS
+
+        var asApiPlatform: Components.Schemas.Platform {
+            switch self {
+            case .iOS:
+                return .IOS
+            case .macOS:
+                return .MAC_OS
+            case .tvOS:
+                return .TV_OS
+            case .visionOS:
+                return .VISION_OS
+            @unknown default:
+                fatalError("New platform case without a corresponding API case")
+            }
+        }
     }
 }
 
@@ -402,7 +483,7 @@ private extension TestflightAPI {
     }
 }
 
-// MARK: - Private
+// MARK: Helpers
 
 private extension String {
 

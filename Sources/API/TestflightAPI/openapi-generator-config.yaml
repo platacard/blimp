@@ -3,6 +3,11 @@ generate:
   - types
 filter:
   operations:
+    - buildUploads_createInstance # Start uploading the build
+    - buildUploadFiles_createInstance # Upload binary
+    - buildUploadFiles_updateInstance # Finish the upload
+    - buildUploads_getInstance
+
     - buildBetaDetails_build_getToOneRelated # Get TF build details
     - builds_getCollection # Get app builds filtered with appId
     - builds_getInstance # Get build by ID

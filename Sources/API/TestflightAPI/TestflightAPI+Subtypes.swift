@@ -86,6 +86,8 @@ extension TestflightAPI.BetaBuildSort {
 
 extension TestflightAPI {
     enum Error: Swift.Error {
-        case badResponse
+        case badRequest(String? = nil)
+        case undocumented(String? = nil)
+        case badResponse(String? = nil)
     }
 }
