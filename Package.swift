@@ -71,8 +71,12 @@ let package = Package(
             name: "Transporter",
             dependencies: [
                 "ASCCredentials",
+                "AppsAPI",
+                "TestflightAPI",
+                "JWTProvider",
                 .product(name: "Cronista", package: "cronista"),
-                .product(name: "Corredor", package: "corredor")
+                .product(name: "Corredor", package: "corredor"),
+                .product(name: "Crypto", package: "swift-crypto")
             ]
         ),
 

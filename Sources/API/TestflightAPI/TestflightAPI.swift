@@ -1,3 +1,4 @@
+import Foundation
 import OpenAPIRuntime
 import OpenAPIURLSession
 import JWTProvider
@@ -23,46 +24,157 @@ public struct TestflightAPI {
         )
     }
 
-    public func uploadBuild(appId: String, appVersion: String, buildNumber: String, platform: TestflightAPI.Platform) async throws -> UploadState {
-        let response = try await client.buildUploads_createInstance(
-            .init(
-                body: .json(
-                    Components.Schemas.BuildUploadCreateRequest.init(
-                        data: .init(
-                            _type: .buildUploads,
-                            attributes: .init(
-                                cfBundleShortVersionString: appVersion,
-                                cfBundleVersion: buildNumber,
-                                platform: platform.asApiPlatform
-                            ),
-                            relationships: .init(app: .init(data: .init(_type: .apps, id: appId)))
-                        )
+    public func createBuildUpload(
+        appId: String,
+        appVersion: String,
+        buildNumber: String,
+        platform: TestflightAPI.Platform,
+        file: UploadFileDescriptor
+    ) async throws -> BuildUploadPlan {
+        let request = Components.Schemas.BuildUploadCreateRequest(
+            data: .init(
+                _type: .buildUploads,
+                attributes: .init(
+                    cfBundleShortVersionString: appVersion,
+                    cfBundleVersion: buildNumber,
+                    platform: platform.asApiPlatform
+                ),
+                relationships: .init(
+                    app: .init(
+                        data: .init(_type: .apps, id: appId)
                     )
                 )
             )
         )
 
+        let response = try await client.buildUploads_createInstance(.init(body: .json(request)))
+
         switch response {
-        case .badRequest(let badRequest):
-            let badRequestInfo = (try? badRequest.body.json.errors?.description) ?? "no_additional_info"
-            logger.error("Bad request: \(badRequestInfo)")
-            throw Error.badRequest(badRequestInfo)
-        case .unauthorized(let unauthorized):
-            let unauthorizedInfo = 
-        case .forbidden(let forbidden):
-            <#code#>
-        case .unprocessableContent(let unprocessableContent):
-            <#code#>
         case .created(let created):
-            let errors = try? created.body.json.data.attributes?.state?.errors
-            if !errors.isEmpty {
-                return .error(errors)
+            let payload = try created.body.json
+            let buildUpload = payload.data
+            let status = try buildUpload.asUploadStatus()
+
+            let existingFiles = payload.included?.compactMap { item -> Components.Schemas.BuildUploadFile? in
+                if case let .buildUploadFiles(fileItem) = item {
+                    return fileItem
+                }
+                return nil
+            } ?? []
+
+            let assetFile = existingFiles.first(where: { $0.matches(assetType: file.assetType) && ($0.attributes?.uploadOperations?.isEmpty == false) })
+
+            let resolvedFile: Components.Schemas.BuildUploadFile
+            if let assetFile {
+                resolvedFile = assetFile
+            } else {
+                resolvedFile = try await createBuildUploadFile(uploadId: buildUpload.id, file: file)
             }
 
+            let operations = try resolvedFile.makeUploadOperations()
+
+            return BuildUploadPlan(
+                uploadId: buildUpload.id,
+                uploadFileId: resolvedFile.id,
+                operations: operations,
+                status: status
+            )
+        case .badRequest(let badRequest):
+            let message = (try? badRequest.body.json.errorDescription) ?? "Bad request"
+            throw Error.badRequest(message)
+        case .unauthorized(let unauthorized):
+            let message = (try? unauthorized.body.json.errorDescription) ?? "Unauthorized"
+            throw Error.badResponse(message)
+        case .forbidden(let forbidden):
+            let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
+            throw Error.badResponse(message)
+        case .unprocessableContent(let unprocessable):
+            let message = (try? unprocessable.body.json.errorDescription) ?? "Unprocessable content"
+            throw Error.badResponse(message)
         case .conflict(let conflict):
-            <#code#>
-        case .tooManyRequests(let tooManyRequests):
-            <#code#>
+            let message = (try? conflict.body.json.errorDescription) ?? "Conflict"
+            throw Error.badResponse(message)
+        case .tooManyRequests(let tooMany):
+            let message = (try? tooMany.body.json.errorDescription) ?? "Too many requests"
+            throw Error.badResponse(message)
+        case .undocumented(let statusCode, let undocumentedPayload):
+            throw Error.undocumented("\(statusCode): \(undocumentedPayload.body.debugDescription)")
+        }
+    }
+
+    public func markUploadComplete(uploadFileId: String, checksum: UploadChecksum) async throws {
+        let updateRequest = Components.Schemas.BuildUploadFileUpdateRequest(
+            data: .init(
+                _type: .buildUploadFiles,
+                id: uploadFileId,
+                attributes: .init(
+                    sourceFileChecksums: checksum.asComponents(),
+                    uploaded: true
+                )
+            )
+        )
+
+        let response = try await client.buildUploadFiles_updateInstance(
+            .init(
+                path: .init(id: uploadFileId),
+                body: .json(updateRequest)
+            )
+        )
+
+        switch response {
+        case .ok:
+            return
+        case .badRequest(let badRequest):
+            let message = (try? badRequest.body.json.errorDescription) ?? "Bad request"
+            throw Error.badRequest(message)
+        case .unauthorized(let unauthorized):
+            let message = (try? unauthorized.body.json.errorDescription) ?? "Unauthorized"
+            throw Error.badResponse(message)
+        case .forbidden(let forbidden):
+            let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
+            throw Error.badResponse(message)
+        case .notFound:
+            throw Error.badResponse("Upload file \(uploadFileId) not found")
+        case .unprocessableContent(let unprocessable):
+            let message = (try? unprocessable.body.json.errorDescription) ?? "Unprocessable content"
+            throw Error.badResponse(message)
+        case .conflict(let conflict):
+            let message = (try? conflict.body.json.errorDescription) ?? "Conflict"
+            throw Error.badResponse(message)
+        case .tooManyRequests(let tooMany):
+            let message = (try? tooMany.body.json.errorDescription) ?? "Too many requests"
+            throw Error.badResponse(message)
+        case .undocumented(let statusCode, let undocumentedPayload):
+            throw Error.undocumented("\(statusCode): \(undocumentedPayload.body.debugDescription)")
+        }
+    }
+
+    public func getUploadStatus(uploadId: String) async throws -> UploadStatus {
+        let response = try await client.buildUploads_getInstance(
+            .init(
+                path: .init(id: uploadId),
+                query: .init(fields_lbrack_buildUploads_rbrack_: [.state])
+            )
+        )
+
+        switch response {
+        case .ok(let ok):
+            let payload = try ok.body.json
+            return try payload.data.asUploadStatus()
+        case .badRequest(let badRequest):
+            let message = (try? badRequest.body.json.errorDescription) ?? "Bad request"
+            throw Error.badRequest(message)
+        case .unauthorized(let unauthorized):
+            let message = (try? unauthorized.body.json.errorDescription) ?? "Unauthorized"
+            throw Error.badResponse(message)
+        case .forbidden(let forbidden):
+            let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
+            throw Error.badResponse(message)
+        case .notFound:
+            throw Error.badResponse("Upload \(uploadId) not found")
+        case .tooManyRequests(let tooMany):
+            let message = (try? tooMany.body.json.errorDescription) ?? "Too many requests"
+            throw Error.badResponse(message)
         case .undocumented(let statusCode, let undocumentedPayload):
             throw Error.undocumented("\(statusCode): \(undocumentedPayload.body.debugDescription)")
         }
@@ -352,14 +464,113 @@ public struct TestflightAPI {
     }
 }
 
-// MARK: - Upload States
+// MARK: - Upload Types
 
 public extension TestflightAPI {
-    enum UploadState {
-        case waiting
-        case processing
-        case error([String])
-        case warnings
+    struct BuildUploadPlan: Sendable {
+        public let uploadId: String
+        public let uploadFileId: String
+        public let operations: [UploadOperation]
+        public let status: UploadStatus
+
+        public init(uploadId: String, uploadFileId: String, operations: [UploadOperation], status: UploadStatus) {
+            self.uploadId = uploadId
+            self.uploadFileId = uploadFileId
+            self.operations = operations
+            self.status = status
+        }
+    }
+
+    struct UploadOperation: Sendable {
+        public let method: String
+        public let url: URL
+        public let length: Int64
+        public let offset: Int64
+        public let headers: [String: String]
+        public let expiration: Date?
+        public let partNumber: Int64?
+        public let entityTag: String?
+
+        public init(
+            method: String,
+            url: URL,
+            length: Int64,
+            offset: Int64,
+            headers: [String: String],
+            expiration: Date?,
+            partNumber: Int64?,
+            entityTag: String?
+        ) {
+            self.method = method
+            self.url = url
+            self.length = length
+            self.offset = offset
+            self.headers = headers
+            self.expiration = expiration
+            self.partNumber = partNumber
+            self.entityTag = entityTag
+        }
+    }
+
+    struct UploadStatus: Sendable {
+        public enum Phase: Sendable {
+            case awaitingUpload
+            case processing
+            case complete
+            case failed
+        }
+
+        public let phase: Phase
+        public let errors: [String]
+        public let warnings: [String]
+
+        public init(phase: Phase, errors: [String], warnings: [String]) {
+            self.phase = phase
+            self.errors = errors
+            self.warnings = warnings
+        }
+    }
+
+    struct UploadFileDescriptor: Sendable {
+        public enum AssetType: Sendable {
+            case asset
+            case assetDescription
+            case assetSPI
+        }
+
+        public enum UTI: Sendable {
+            case ipa
+            case pkg
+            case zip
+            case binaryPropertyList
+            case xmlPropertyList
+        }
+
+        public let fileName: String
+        public let fileSize: Int64
+        public let assetType: AssetType
+        public let uti: UTI
+
+        public init(fileName: String, fileSize: Int64, assetType: AssetType, uti: UTI) {
+            self.fileName = fileName
+            self.fileSize = fileSize
+            self.assetType = assetType
+            self.uti = uti
+        }
+
+        public static func ipa(fileName: String, fileSize: Int64) -> UploadFileDescriptor {
+            .init(fileName: fileName, fileSize: fileSize, assetType: .asset, uti: .ipa)
+        }
+    }
+
+    struct UploadChecksum: Sendable {
+        public let sha256: String?
+        public let md5: String?
+
+        public init(sha256: String? = nil, md5: String? = nil) {
+            self.sha256 = sha256
+            self.md5 = md5
+        }
     }
 }
 
@@ -393,6 +604,61 @@ public extension TestflightAPI {
 // MARK: - Private
 
 private extension TestflightAPI {
+
+    func createBuildUploadFile(uploadId: String, file: UploadFileDescriptor) async throws -> Components.Schemas.BuildUploadFile {
+        let request = Components.Schemas.BuildUploadFileCreateRequest(
+            data: .init(
+                _type: .buildUploadFiles,
+                attributes: .init(
+                    assetType: file.assetType.generatedValue,
+                    fileName: file.fileName,
+                    fileSize: file.fileSize,
+                    uti: file.uti.generatedValue
+                ),
+                relationships: .init(
+                    buildUpload: .init(
+                        data: .init(
+                            _type: .buildUploads,
+                            id: uploadId
+                        )
+                    )
+                )
+            )
+        )
+
+        let response = try await client.buildUploadFiles_createInstance(
+            .init(body: .json(request))
+        )
+
+        switch response {
+        case .created(let created):
+            let resource = try created.body.json.data
+            guard !(resource.attributes?.uploadOperations?.isEmpty ?? true) else {
+                throw Error.badResponse("No upload operations returned for build upload file")
+            }
+            return resource
+        case .badRequest(let badRequest):
+            let message = (try? badRequest.body.json.errorDescription) ?? "Bad request"
+            throw Error.badRequest(message)
+        case .unauthorized(let unauthorized):
+            let message = (try? unauthorized.body.json.errorDescription) ?? "Unauthorized"
+            throw Error.badResponse(message)
+        case .forbidden(let forbidden):
+            let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
+            throw Error.badResponse(message)
+        case .unprocessableContent(let unprocessable):
+            let message = (try? unprocessable.body.json.errorDescription) ?? "Unprocessable content"
+            throw Error.badResponse(message)
+        case .conflict(let conflict):
+            let message = (try? conflict.body.json.errorDescription) ?? "Conflict"
+            throw Error.badResponse(message)
+        case .tooManyRequests(let tooMany):
+            let message = (try? tooMany.body.json.errorDescription) ?? "Too many requests"
+            throw Error.badResponse(message)
+        case .undocumented(let statusCode, let undocumentedPayload):
+            throw Error.undocumented("\(statusCode): \(undocumentedPayload.body.debugDescription)")
+        }
+    }
 
     func getBetaGroupIds(appId: String, betaGroups: [String]) async throws -> [String] {
         let betaGroupsResponse = try await client.betaGroups_getCollection(
@@ -480,6 +746,157 @@ private extension TestflightAPI {
         )
 
         logger.info("Sent beta tester invitation email")
+    }
+}
+
+private extension TestflightAPI.UploadFileDescriptor.AssetType {
+    var generatedValue: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.attributesPayload.assetTypePayload {
+        switch self {
+        case .asset:
+            return .ASSET
+        case .assetDescription:
+            return .ASSET_DESCRIPTION
+        case .assetSPI:
+            return .ASSET_SPI
+        }
+    }
+}
+
+private extension TestflightAPI.UploadFileDescriptor.UTI {
+    var generatedValue: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.attributesPayload.utiPayload {
+        switch self {
+        case .ipa:
+            return .com_period_apple_period_ipa
+        case .pkg:
+            return .com_period_apple_period_pkg
+        case .zip:
+            return .com_period_pkware_period_zip_hyphen_archive
+        case .binaryPropertyList:
+            return .com_period_apple_period_binary_hyphen_property_hyphen_list
+        case .xmlPropertyList:
+            return .com_period_apple_period_xml_hyphen_property_hyphen_list
+        }
+    }
+}
+
+private extension TestflightAPI.UploadChecksum {
+    func asComponents() -> Components.Schemas.Checksums? {
+        if sha256 == nil && md5 == nil {
+            return nil
+        }
+
+        let filePayload = sha256.map { hash in
+            Components.Schemas.Checksums.filePayload(hash: hash, algorithm: .SHA_256)
+        }
+
+        let compositePayload = md5.map { hash in
+            Components.Schemas.Checksums.compositePayload(hash: hash, algorithm: .MD5)
+        }
+
+        return .init(file: filePayload, composite: compositePayload)
+    }
+}
+
+private extension Components.Schemas.BuildUploadFile {
+    func matches(assetType: TestflightAPI.UploadFileDescriptor.AssetType) -> Bool {
+        guard let value = attributes?.assetType else {
+            return assetType == .asset
+        }
+
+        switch (value, assetType) {
+        case (.ASSET, .asset), (.ASSET_DESCRIPTION, .assetDescription), (.ASSET_SPI, .assetSPI):
+            return true
+        default:
+            return false
+        }
+    }
+
+    func makeUploadOperations() throws -> [TestflightAPI.UploadOperation] {
+        guard let operations = attributes?.uploadOperations, !operations.isEmpty else {
+            throw TestflightAPI.Error.badResponse("Missing upload operations in response")
+        }
+
+        return try operations.map { try TestflightAPI.UploadOperation(operation: $0) }
+    }
+}
+
+private extension TestflightAPI.UploadOperation {
+    init(operation: Components.Schemas.DeliveryFileUploadOperation) throws {
+        guard
+            let method = operation.method,
+            let urlString = operation.url,
+            let url = URL(string: urlString),
+            let length = operation.length,
+            let offset = operation.offset
+        else {
+            throw TestflightAPI.Error.badResponse("Incomplete upload operation payload")
+        }
+
+        let headers = operation.requestHeaders?.reduce(into: [String: String]()) { result, header in
+            if let name = header.name, let value = header.value {
+                result[name] = value
+            }
+        } ?? [:]
+
+        self.init(
+            method: method,
+            url: url,
+            length: length,
+            offset: offset,
+            headers: headers,
+            expiration: operation.expiration,
+            partNumber: operation.partNumber,
+            entityTag: operation.entityTag
+        )
+    }
+}
+
+private extension Components.Schemas.BuildUpload {
+    func asUploadStatus() throws -> TestflightAPI.UploadStatus {
+        guard let stateWrapper = attributes?.state, let rawState = stateWrapper.state else {
+            throw TestflightAPI.Error.badResponse("Missing upload state information")
+        }
+
+        let errors = stateWrapper.errors?.humanReadable ?? []
+        let warnings = stateWrapper.warnings?.humanReadable ?? []
+
+        let phase: TestflightAPI.UploadStatus.Phase
+        switch rawState {
+        case .AWAITING_UPLOAD:
+            phase = .awaitingUpload
+        case .PROCESSING:
+            phase = .processing
+        case .COMPLETE:
+            phase = .complete
+        case .FAILED:
+            phase = .failed
+        }
+
+        return .init(phase: phase, errors: errors, warnings: warnings)
+    }
+}
+
+private extension Array where Element == Components.Schemas.StateDetail {
+    var humanReadable: [String] {
+        map { detail in
+            if let description = detail.description, !description.isEmpty {
+                return description
+            }
+            if let code = detail.code, !code.isEmpty {
+                return code
+            }
+            return "Unknown detail"
+        }
+    }
+}
+
+private extension Components.Schemas.ErrorResponse {
+    var errorDescription: String {
+        guard let errors, !errors.isEmpty else {
+            return "Unknown error"
+        }
+
+        return errors.map { "\($0.code): \($0.detail)" }.joined(separator: " | ")
     }
 }
 

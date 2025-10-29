@@ -11,18 +11,21 @@ public extension Blimp {
     struct Approach: FlightStage {
         package var type: FlightStage.Type { Self.self }
         private var logger: Cronista { Cronista(module: "blimp", category: "Approach") }
-        private let transporter: Transporter
-        
+        private let uploader: AppStoreConnectUploader
+        private let legacyUploader: AltoolUploader?
+
         private let testflightAPI: TestflightAPI
         private let appsAPI: AppsAPI
         private let ignoreUploaderFailure: Bool
 
         public init(
-            transporter: Transporter,
+            uploader: AppStoreConnectUploader,
+            legacyUploader: AltoolUploader? = nil,
             jwtProvider: JWTProviding = DefaultJWTProvider(),
             ignoreUploaderFailure: Bool = false
         ) {
-            self.transporter = transporter
+            self.uploader = uploader
+            self.legacyUploader = legacyUploader
             self.testflightAPI = TestflightAPI(jwtProvider: jwtProvider)
             self.appsAPI = AppsAPI(jwtProvider: jwtProvider)
             self.ignoreUploaderFailure = ignoreUploaderFailure
@@ -31,23 +34,22 @@ public extension Blimp {
 }
 
 public extension Blimp.Approach {
-    /// Upload the build
-    /// - Parameters:
-    ///   - bundleId: bundle id of the app to upload
-    ///   - arguments: upload settings from `Blimp.Approach.Settings`
-    ///   - verbose: Print extended output of the uploader
-    func start(bundleId: String, arguments: [Setting], verbose: Bool) throws {
+
+    /// Upload the build with legacy altool uploader.
+    func start(arguments: [AltoolUploader.TransporterSetting], verbose: Bool) throws {
         do {
-            try transporter.upload(
-                arguments: arguments.asCoreSettings,
+            guard let legacyUploader else {
+                logger.error("To use Altool Initialize Blimp.Approach(uploader:legacyUploader:) instead.")
+                throw TransporterError.toolError(NSError(domain: "Uninitialized altool uploader", code: -1))
+            }
+            try legacyUploader.upload(
+                arguments: arguments,
                 verbose: verbose
             )
         } catch let TransporterError.toolError(error) {
             logger.warning("Transporter error: [\(error.localizedDescription)]!")
+            if ignoreUploaderFailure { return }
 
-            if ignoreUploaderFailure {
-                return
-            }
             throw error
         } catch {
             logger.warning("Some transporter error: [\(error.localizedDescription)]!")
@@ -56,6 +58,22 @@ public extension Blimp.Approach {
         }
     }
     
+    /// Upload the build with App Store Connect API
+    func start(config: UploadConfig, verbose: Bool) async throws {
+        do {
+            try await uploader.upload(config: config, verbose: verbose)
+        } catch let TransporterError.toolError(error) {
+            logger.warning("Transporter error: [\(error.localizedDescription)]!")
+            if ignoreUploaderFailure { return }
+
+            throw error
+        } catch {
+            logger.warning("Some transporter error: [\(error.localizedDescription)]!")
+
+            throw error
+        }
+    }
+
     /// Wait for build processing
     /// - Parameter bundleId: bundle id of the app to process
     /// - Returns: processing result meta info
@@ -173,58 +191,6 @@ public extension Blimp.Approach {
         case failedProcessing
         case invalidBinary
         case failedToGetAppSizes
-    }
-    
-    enum Platform: String {
-        case iOS
-        case macOS
-    }
-    
-    enum Setting {
-        case validate
-        case upload
-        case appVersion(String)
-        case buildNumber(String)
-        case file(String)
-        case platform(Platform)
-        case maxUploadSpeed
-        case showProgress
-        case legacy
-        case verbose
-    }
-}
-
-extension Blimp.Approach.Platform {
-    var asCoreSetting: TransporterSetting.Platform {
-        switch self {
-            case .iOS: .iOS
-            case .macOS: .macOS
-        }
-    }
-}
-
-// MARK: - Mappings
-
-extension Blimp.Approach.Setting {
-    var asCoreSetting: TransporterSetting {
-        switch self {
-            case .validate: TransporterSetting.validate
-            case .upload: TransporterSetting.upload
-            case .appVersion(let version): TransporterSetting.appVersion(version)
-            case .buildNumber(let number): TransporterSetting.buildNumber(number)
-            case .file(let file): TransporterSetting.file(file)
-            case .platform(let platform): TransporterSetting.platform(platform.asCoreSetting)
-            case .maxUploadSpeed: TransporterSetting.maxUploadSpeed
-            case .showProgress: TransporterSetting.showProgress
-            case .legacy: TransporterSetting.oldAltool
-            case .verbose: TransporterSetting.verbose
-        }
-    }
-}
-
-extension Array where Element == Blimp.Approach.Setting {
-    var asCoreSettings: [TransporterSetting] {
-        map { $0.asCoreSetting }
     }
 }
 

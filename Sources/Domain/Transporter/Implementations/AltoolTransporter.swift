@@ -5,7 +5,8 @@ import ASCCredentials
 import RegexBuilder
 import sys_wait
 
-public struct AltoolTransporter: Transporter, ASCCredentialsTrait {
+public struct AltoolUploader: ASCCredentialsTrait {
+    
     private enum Argument: String, BashArgument {
         case verbose
 
@@ -57,11 +58,23 @@ extension AuthOption: BashArgument {
     }
 }
 
-extension TransporterSetting: BashArgument {
+public extension AltoolUploader {
+    enum TransporterSetting {
+        case upload
+        case appVersion(String)
+        case buildNumber(String)
+        case file(String)
+        case platform(Platform)
+        case maxUploadSpeed
+        case showProgress
+        case oldAltool
+        case verbose
+    }
+}
+
+extension AltoolUploader.TransporterSetting: BashArgument {
     public var bashArgument: String {
         switch self {
-        case .validate:
-            "--validate-app"
         case .upload:
             "--upload-app"
         case .file(let path):
@@ -86,8 +99,8 @@ extension TransporterSetting: BashArgument {
 
 // MARK: - Private
 
-private extension AltoolTransporter {
-    
+private extension AltoolUploader {
+
     /// The log is flooded in non-interactive shells, filter it to get some useful messages
     func makeFilteredLog(_ output: String?) {
         let filteredOutput = output?.split( separator: "\n")

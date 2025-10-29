@@ -1,8 +1,8 @@
 import Foundation
 
-public protocol Transporter {
+public protocol AppStoreConnectUploader {
     /// Upload the resource with the selected transporter, typically IPA file
-    func upload(arguments: [TransporterSetting], verbose: Bool) throws
+    func upload(config: UploadConfig, verbose: Bool) async throws
 }
 
 public enum AuthOption {
@@ -10,23 +10,27 @@ public enum AuthOption {
     case apiIssuer(String)
 }
 
-public enum TransporterSetting {
-    
-    public enum Platform: String {
-        case iOS = "ios"
-        case macOS = "macos"
+public struct UploadConfig {
+    let bundleId: String
+    let appVersion: String?
+    let buildNumber: String?
+    let filePath: String?
+    let platform: Platform?
+
+    public init(bundleId: String, appVersion: String?, buildNumber: String?, filePath: String?, platform: Platform?) {
+        self.bundleId = bundleId
+        self.appVersion = appVersion
+        self.buildNumber = buildNumber
+        self.filePath = filePath
+        self.platform = platform
     }
-    
-    case validate
-    case upload
-    case appVersion(String)
-    case buildNumber(String)
-    case file(String)
-    case platform(Platform)
-    case maxUploadSpeed
-    case showProgress
-    case oldAltool
-    case verbose
+}
+
+public enum Platform: String {
+    case iOS = "ios"
+    case macOS = "macos"
+    case visionOS = "visionos"
+    case tvOS = "tvos"
 }
 
 public enum TransporterError: Error, CustomStringConvertible {
