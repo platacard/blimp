@@ -5,16 +5,19 @@ import AppsAPI
 import JWTProvider
 import Crypto
 
-public struct AppStoreConnectAPIUploader: AppStoreConnectUploader {
+public class AppStoreConnectAPIUploader: AppStoreConnectUploader {
 
     private let logger = Cronista(module: "blimp", category: "ASCTransporter")
     private let testflightAPI: TestflightAPI
     private let appsAPI: AppsAPI
     private let urlSession: URLSession
     private let maxConcurrentChunkUploads: Int
-    private let maxUploadRetries: Int
+
     private let pollIntervalNanoseconds: UInt64
     private let maxPollAttempts: Int
+
+    private let maxUploadRetries: Int
+    private var currentUploadAttempt = 0
 
     public init(
         jwtProvider: any JWTProviding = DefaultJWTProvider(),
@@ -119,6 +122,7 @@ public struct AppStoreConnectAPIUploader: AppStoreConnectUploader {
             }
             logger.info("IPA uploaded successfully via App Store Connect API.")
         case .failed:
+            finalStatus.errors.forEach { logger.error($0) }
             throw TransporterError.toolError(ASCTransporterError.uploadFailed(finalStatus.errors))
         case .awaitingUpload, .processing:
             logger.warning("Upload finished with unexpected state: \(finalStatus.phase)")
@@ -153,7 +157,7 @@ private extension AppStoreConnectAPIUploader {
         let sha256Digest = Data(sha256.finalize())
         let md5Digest = Data(md5.finalize())
 
-        return .init(
+        return FileChecksums(
             sha256Base64: sha256Digest.base64EncodedString(),
             md5Base64: md5Digest.base64EncodedString()
         )
@@ -165,25 +169,10 @@ private extension AppStoreConnectAPIUploader {
             return
         }
 
-        let sortedOperations = operations.sorted { $0.offset < $1.offset }
-        var iterator = sortedOperations.makeIterator()
-
         try await withThrowingTaskGroup(of: Void.self) { group in
-            let initialCount = min(maxConcurrentChunkUploads, sortedOperations.count)
-
-            for _ in 0..<initialCount {
-                guard let operation = iterator.next() else { break }
-
-                group.addTask {
-                    try await self.uploadOperation(operation, fileURL: fileURL, verbose: verbose)
-                }
-            }
-
-            while let _ = try await group.next() {
-                if let nextOperation = iterator.next() {
-                    group.addTask {
-                        try await self.uploadOperation(nextOperation, fileURL: fileURL, verbose: verbose)
-                    }
+            for i in 0 ..< operations.count {
+                group.addTask { [self] in
+                    try await uploadOperation(operations[i], fileURL: fileURL, verbose: verbose)
                 }
             }
         }
@@ -196,48 +185,44 @@ private extension AppStoreConnectAPIUploader {
             logger.info("Uploading chunk offset=\(operation.offset) length=\(operation.length) part=\(operation.partNumber ?? -1)")
         }
 
-        var attempt = 0
-        while attempt < maxUploadRetries {
-            do {
-                var request = URLRequest(url: operation.url)
-                request.httpMethod = operation.method
-                for (header, value) in operation.headers {
-                    request.setValue(value, forHTTPHeaderField: header)
-                }
+        do {
+            var request = URLRequest(url: operation.url)
+            request.timeoutInterval = 300
+            request.httpMethod = operation.method
+            request.allHTTPHeaderFields = operation.headers
+            request.setValue("\(operation.length)", forHTTPHeaderField: "content-length")
 
-                let (_, response) = try await urlSession.upload(for: request, from: data)
-
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    throw ASCTransporterError.invalidResponse("Non-HTTP response while uploading chunk")
-                }
-
-                if (200..<300).contains(httpResponse.statusCode) {
-                    if verbose {
-                        logger.info("Finished chunk offset=\(operation.offset) length=\(operation.length)")
-                    }
-                    return
-                }
-
-                if shouldRetry(statusCode: httpResponse.statusCode) {
-                    attempt += 1
-                    if verbose {
-                        logger.warning("Chunk upload received status \(httpResponse.statusCode). Retrying attempt \(attempt)/\(maxUploadRetries).")
-                    }
-                    try await Task.sleep(nanoseconds: retryDelayNanoseconds(forAttempt: attempt))
-                    continue
-                } else {
-                    throw ASCTransporterError.serverError(statusCode: httpResponse.statusCode)
-                }
-            } catch {
-                attempt += 1
-                if attempt >= maxUploadRetries {
-                    throw error
-                }
-                if verbose {
-                    logger.warning("Chunk upload failed with \(error.localizedDescription). Retrying attempt \(attempt)/\(maxUploadRetries).")
-                }
-                try await Task.sleep(nanoseconds: retryDelayNanoseconds(forAttempt: attempt))
+            for (header, value) in operation.headers {
+                request.setValue(value, forHTTPHeaderField: header)
             }
+
+            let (_, response) = try await urlSession.upload(for: request, from: data)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw ASCTransporterError.invalidResponse("Non-HTTP response while uploading chunk")
+            }
+
+            if (200..<300).contains(httpResponse.statusCode) {
+                if verbose {
+                    logger.info("Finished chunk offset=\(operation.offset) length=\(operation.length)")
+                }
+                return
+            } else {
+                throw ASCTransporterError.serverError(statusCode: httpResponse.statusCode)
+            }
+        } catch {
+            currentUploadAttempt += 1
+
+            if currentUploadAttempt >= maxUploadRetries {
+                throw error
+            }
+            if verbose {
+                logger.warning("Chunk upload failed with \(error.localizedDescription). Retrying attempt \(currentUploadAttempt)/\(maxUploadRetries).")
+            }
+            try await Task.sleep(nanoseconds: retryDelayNanoseconds(forAttempt: currentUploadAttempt))
+            logger.warning("Retrying: \(operation), \(fileURL)")
+
+            try await uploadOperation(operation, fileURL: fileURL, verbose: verbose)
         }
 
         throw ASCTransporterError.uploadFailed(["Exceeded maximum retry attempts for chunk offset \(operation.offset)"])
@@ -248,25 +233,13 @@ private extension AppStoreConnectAPIUploader {
         defer { try? handle.close() }
 
         try handle.seek(toOffset: UInt64(offset))
+        let data = try handle.read(upToCount: Int(length))
 
-        var remaining = length
-        var buffer = Data(capacity: Int(length))
-
-        while remaining > 0 {
-            let chunkSize = min(remaining, Int64(8 * 1024 * 1024))
-            let data = try handle.read(upToCount: Int(chunkSize)) ?? Data()
-            if data.isEmpty {
-                break
-            }
-            buffer.append(data)
-            remaining -= Int64(data.count)
-        }
-
-        guard buffer.count == length else {
+        guard let data, data.count == length else {
             throw ASCTransporterError.invalidFile("Failed to read expected number of bytes for chunk starting at offset \(offset)")
         }
 
-        return buffer
+        return data
     }
 
     func shouldRetry(statusCode: Int) -> Bool {
@@ -333,10 +306,10 @@ private extension Platform {
 
     var asTestflightPlatform: TestflightAPI.Platform {
         switch self {
-            case .iOS: .iOS
-            case .macOS: .macOS
-            case .visionOS: .visionOS
-            case .tvOS: .tvOS
+        case .iOS: .iOS
+        case .macOS: .macOS
+        case .visionOS: .visionOS
+        case .tvOS: .tvOS
         }
     }
 }

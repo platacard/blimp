@@ -821,6 +821,7 @@ private extension Components.Schemas.BuildUploadFile {
 }
 
 private extension TestflightAPI.UploadOperation {
+
     init(operation: Components.Schemas.DeliveryFileUploadOperation) throws {
         guard
             let method = operation.method,
