@@ -15,9 +15,9 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-openapi-generator", exact: "1.10.3"),
         .package(url: "https://github.com/apple/swift-openapi-runtime", exact: "1.8.3"),
         .package(url: "https://github.com/apple/swift-openapi-urlsession", exact: "1.1.0"),
-        .package(url: "https://github.com/platacard/cronista", exact: "1.0.3"),
-        .package(url: "https://github.com/platacard/corredor", exact: "1.0.2"),
-        .package(url: "https://github.com/platacard/dotcontext.git", exact: "1.0.1")
+        .package(url: "https://github.com/platacard/cronista", from: "1.1.0"),
+        .package(url: "https://github.com/platacard/corredor", from: "1.0.2"),
+        .package(url: "https://github.com/platacard/dotcontext.git", from: "1.0.1")
     ],
     targets: [
         .cli(
