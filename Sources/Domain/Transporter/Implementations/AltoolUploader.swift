@@ -5,6 +5,7 @@ import ASCCredentials
 import RegexBuilder
 import sys_wait
 
+@available(*, deprecated, message: "Use AppStoreConnectAPIUploader")
 public struct AltoolUploader: ASCCredentialsTrait {
     
     private enum Argument: String, BashArgument {
@@ -15,8 +16,8 @@ public struct AltoolUploader: ASCCredentialsTrait {
         }
     }
 
-    private var logger: Cronista { Cronista(module: "blimp", category: "TakeOff") }
-    
+    private var logger: Cronista { Cronista(module: "blimp", category: "TakeOff", isFileLoggingEnabled: true) }
+
     public init() {}
     
     public func upload(arguments: [TransporterSetting], verbose: Bool) throws {
@@ -99,7 +100,7 @@ extension AltoolUploader.TransporterSetting: BashArgument {
 
 // MARK: - AppStoreConnectUploader Conformance
 
-/// Adapter that makes AltoolUploader conform to AppStoreConnectUploader protocol
+// FIXME: New altool from Xcode 26.0.1 has processing issues. Prefer using API uploader
 public struct AltoolUploaderAdapter: AppStoreConnectUploader {
     private let altoolUploader: AltoolUploader
     
@@ -108,29 +109,16 @@ public struct AltoolUploaderAdapter: AppStoreConnectUploader {
     }
     
     public func upload(config: UploadConfig, verbose: Bool) async throws {
-        // Convert UploadConfig to TransporterSetting arguments
         var arguments: [AltoolUploader.TransporterSetting] = [.upload]
-        
-        if let filePath = config.filePath {
-            arguments.append(.file(filePath))
-        }
-        
-        if let appVersion = config.appVersion {
-            arguments.append(.appVersion(appVersion))
-        }
-        
-        if let buildNumber = config.buildNumber {
-            arguments.append(.buildNumber(buildNumber))
-        }
-        
-        if let platform = config.platform {
-            arguments.append(.platform(platform))
-        }
-        
-        // Run the synchronous upload in an async context
-        try await Task.detached {
-            try self.altoolUploader.upload(arguments: arguments, verbose: verbose)
-        }.value
+
+        arguments.append(.file(config.filePath))
+        arguments.append(.appVersion(config.appVersion))
+        arguments.append(.buildNumber(config.buildNumber))
+        arguments.append(.platform(config.platform))
+        arguments.append(.showProgress)
+        arguments.append(.oldAltool)
+
+        try self.altoolUploader.upload(arguments: arguments, verbose: verbose)
     }
 }
 

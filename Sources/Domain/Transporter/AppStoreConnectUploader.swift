@@ -12,12 +12,12 @@ public enum AuthOption {
 
 public struct UploadConfig: Sendable {
     let bundleId: String
-    let appVersion: String?
-    let buildNumber: String?
-    let filePath: String?
-    let platform: Platform?
+    let appVersion: String
+    let buildNumber: String
+    let filePath: String
+    let platform: Platform
 
-    public init(bundleId: String, appVersion: String?, buildNumber: String?, filePath: String?, platform: Platform?) {
+    public init(bundleId: String, appVersion: String, buildNumber: String, filePath: String, platform: Platform) {
         self.bundleId = bundleId
         self.appVersion = appVersion
         self.buildNumber = buildNumber
