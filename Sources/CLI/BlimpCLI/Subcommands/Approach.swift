@@ -95,7 +95,7 @@ extension Platform: ExpressibleByArgument {
         case "visionOS", "visionos":
             self = .visionOS
         default:
-            fatalError("unsupported platform in \(Self.self)")
+            fatalError("Unsupported platform: \(argument). Supported platforms: ios, macos, tvos, visionos")
         }
     }
 }

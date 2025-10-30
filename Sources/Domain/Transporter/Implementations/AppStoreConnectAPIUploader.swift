@@ -17,7 +17,10 @@ public actor AppStoreConnectAPIUploader: AppStoreConnectUploader {
 
     private let maxPollAttempts: Int
     private let maxUploadRetries: Int
-    private var currentUploadAttempt = 0
+
+    nonisolated(unsafe)
+    private var currentUploadAttempt: [String: Int] = [:]
+    private let lock = NSLock()
 
     public init(
         jwtProvider: any JWTProviding = DefaultJWTProvider(),
@@ -36,23 +39,7 @@ public actor AppStoreConnectAPIUploader: AppStoreConnectUploader {
     }
 
     public func upload(config: UploadConfig, verbose: Bool) async throws {
-        guard let filePath = config.filePath else {
-            throw TransporterError.toolError(ASCTransporterError.missingRequiredArgument("IPA file path (--file) is required for upload"))
-        }
-
-        guard let appVersion = config.appVersion else {
-            throw TransporterError.toolError(ASCTransporterError.missingRequiredArgument("App version (--appVersion) is required for upload"))
-        }
-
-        guard let buildNumber = config.buildNumber else {
-            throw TransporterError.toolError(ASCTransporterError.missingRequiredArgument("Build number (--buildNumber) is required for upload"))
-        }
-
-        guard let platform = config.platform?.asTestflightPlatform else {
-            throw TransporterError.toolError(ASCTransporterError.missingRequiredArgument("Platform (--platform) is required for upload"))
-        }
-
-        let ipaURL = URL(fileURLWithPath: filePath, isDirectory: false).standardizedFileURL
+        let ipaURL = URL(fileURLWithPath: config.filePath, isDirectory: false).standardizedFileURL
 
         guard FileManager.default.fileExists(atPath: ipaURL.path()) else {
             throw TransporterError.toolError(ASCTransporterError.invalidFile("IPA not found at path \(ipaURL.path())"))
@@ -63,7 +50,7 @@ public actor AppStoreConnectAPIUploader: AppStoreConnectUploader {
             throw TransporterError.toolError(ASCTransporterError.invalidFile("Unable to determine IPA file size"))
         }
 
-        logger.info("Preparing build upload for \(config.bundleId) version \(appVersion) (\(buildNumber)).")
+        logger.info("Preparing build upload for \(config.bundleId) version \(config.appVersion) (\(config.buildNumber)).")
 
         let appId = try await appsAPI.getAppId(bundleId: config.bundleId)
         let descriptor = TestflightAPI.UploadFileDescriptor.ipa(fileName: ipaURL.lastPathComponent, fileSize: fileSize)
@@ -72,9 +59,9 @@ public actor AppStoreConnectAPIUploader: AppStoreConnectUploader {
         do {
             plan = try await testflightAPI.createBuildUpload(
                 appId: appId,
-                appVersion: appVersion,
-                buildNumber: buildNumber,
-                platform: platform,
+                appVersion: config.appVersion,
+                buildNumber: config.buildNumber,
+                platform: config.platform.asTestflightPlatform,
                 file: descriptor
             )
         } catch {
@@ -176,21 +163,25 @@ private extension AppStoreConnectAPIUploader {
                 throw ASCTransporterError.serverError(statusCode: httpResponse.statusCode)
             }
         } catch {
-            currentUploadAttempt += 1
+            lock.withLock {
+                currentUploadAttempt[zeroDefault: operation.url.absoluteString] += 1
+            }
+            
+            let attempts = currentUploadAttempt[operation.url.absoluteString] ?? 0
 
-            if currentUploadAttempt >= maxUploadRetries {
+            if attempts >= maxUploadRetries {
                 throw error
             }
+
             if verbose {
-                logger.warning("Chunk upload failed with \(error.localizedDescription). Retrying attempt \(currentUploadAttempt)/\(maxUploadRetries).")
+                logger.warning("Chunk upload failed with \(error.localizedDescription). Retrying attempt \(attempts)/\(maxUploadRetries).")
             }
-            try await Task.sleep(for: .seconds(retryDelay(forAttempt: currentUploadAttempt)))
-            logger.warning("Retrying: \(operation), \(fileURL)")
+
+            try await Task.sleep(for: .seconds(retryDelay(forAttempt: attempts)))
+            logger.warning("Retrying \(operation.url) for file: \(fileURL), partNumber: \(operation.partNumber)")
 
             try await uploadOperation(operation, fileURL: fileURL, verbose: verbose)
         }
-
-        throw ASCTransporterError.uploadFailed(["Exceeded maximum retry attempts for chunk offset \(operation.offset)"])
     }
 
     func readChunk(fileURL: URL, offset: Int64, length: Int64) throws -> Data {
@@ -286,5 +277,10 @@ private extension Platform {
     }
 }
 
-extension AppStoreConnectAPIUploader: Sendable {}
-
+extension Dictionary where Key == String, Value == Int {
+    // Custom subscript that returns 0 for missing keys and allows mutation
+    subscript(zeroDefault key: String) -> Int {
+        get { self[key] ?? 0 }
+        set { self[key] = newValue }
+    }
+}

@@ -605,8 +605,6 @@ public extension TestflightAPI {
                 return .TV_OS
             case .visionOS:
                 return .VISION_OS
-            @unknown default:
-                fatalError("New platform case without a corresponding API case")
             }
         }
     }
