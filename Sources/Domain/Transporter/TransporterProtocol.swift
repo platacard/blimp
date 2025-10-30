@@ -10,7 +10,7 @@ public enum AuthOption {
     case apiIssuer(String)
 }
 
-public struct UploadConfig {
+public struct UploadConfig: Sendable {
     let bundleId: String
     let appVersion: String?
     let buildNumber: String?
@@ -26,7 +26,7 @@ public struct UploadConfig {
     }
 }
 
-public enum Platform: String {
+public enum Platform: String, Sendable {
     case iOS = "ios"
     case macOS = "macos"
     case visionOS = "visionos"

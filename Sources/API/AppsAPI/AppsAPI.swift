@@ -5,10 +5,12 @@ import Cronista
 import Auth
 import ClientTransport
 
-public struct AppsAPI {
+public struct AppsAPI: Sendable {
     
     private let jwtProvider: any JWTProviding
     private let client: any APIProtocol
+    
+    nonisolated(unsafe)
     private let logger = Cronista(module: "Blimp", category: "AppsAPI")
 
     public init(jwtProvider: any JWTProviding) {

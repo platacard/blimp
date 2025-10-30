@@ -97,6 +97,43 @@ extension AltoolUploader.TransporterSetting: BashArgument {
     }
 }
 
+// MARK: - AppStoreConnectUploader Conformance
+
+/// Adapter that makes AltoolUploader conform to AppStoreConnectUploader protocol
+public struct AltoolUploaderAdapter: AppStoreConnectUploader {
+    private let altoolUploader: AltoolUploader
+    
+    public init(altoolUploader: AltoolUploader = AltoolUploader()) {
+        self.altoolUploader = altoolUploader
+    }
+    
+    public func upload(config: UploadConfig, verbose: Bool) async throws {
+        // Convert UploadConfig to TransporterSetting arguments
+        var arguments: [AltoolUploader.TransporterSetting] = [.upload]
+        
+        if let filePath = config.filePath {
+            arguments.append(.file(filePath))
+        }
+        
+        if let appVersion = config.appVersion {
+            arguments.append(.appVersion(appVersion))
+        }
+        
+        if let buildNumber = config.buildNumber {
+            arguments.append(.buildNumber(buildNumber))
+        }
+        
+        if let platform = config.platform {
+            arguments.append(.platform(platform))
+        }
+        
+        // Run the synchronous upload in an async context
+        try await Task.detached {
+            try self.altoolUploader.upload(arguments: arguments, verbose: verbose)
+        }.value
+    }
+}
+
 // MARK: - Private
 
 private extension AltoolUploader {

@@ -6,10 +6,13 @@ import Cronista
 import Auth
 import ClientTransport
 
-public struct TestflightAPI {
+public struct TestflightAPI: Sendable {
+
     private let jwtProvider: any JWTProviding
     private let client: any APIProtocol
-    private let logger = Cronista(module: "blimp", category: "TestFlightAPI")
+
+    nonisolated(unsafe)
+    private let logger = Cronista(module: "blimp", category: "TestFlightAPI", isFileLoggingEnabled: true)
 
     public init(jwtProvider: any JWTProviding) {
         self.jwtProvider = jwtProvider
@@ -81,34 +84,40 @@ public struct TestflightAPI {
             )
         case .badRequest(let badRequest):
             let message = (try? badRequest.body.json.errorDescription) ?? "Bad request"
+            logger.error(message)
             throw Error.badRequest(message)
         case .unauthorized(let unauthorized):
             let message = (try? unauthorized.body.json.errorDescription) ?? "Unauthorized"
+            logger.error(message)
             throw Error.badResponse(message)
         case .forbidden(let forbidden):
             let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
+            logger.error(message)
             throw Error.badResponse(message)
         case .unprocessableContent(let unprocessable):
             let message = (try? unprocessable.body.json.errorDescription) ?? "Unprocessable content"
+            logger.error(message)
             throw Error.badResponse(message)
         case .conflict(let conflict):
             let message = (try? conflict.body.json.errorDescription) ?? "Conflict"
+            logger.error(message)
             throw Error.badResponse(message)
         case .tooManyRequests(let tooMany):
             let message = (try? tooMany.body.json.errorDescription) ?? "Too many requests"
+            logger.error(message)
             throw Error.badResponse(message)
         case .undocumented(let statusCode, let undocumentedPayload):
+            logger.error("\(statusCode): \(undocumentedPayload.body.debugDescription)")
             throw Error.undocumented("\(statusCode): \(undocumentedPayload.body.debugDescription)")
         }
     }
 
-    public func markUploadComplete(uploadFileId: String, checksum: UploadChecksum) async throws {
+    public func markUploadComplete(uploadFileId: String) async throws {
         let updateRequest = Components.Schemas.BuildUploadFileUpdateRequest(
             data: .init(
                 _type: .buildUploadFiles,
                 id: uploadFileId,
                 attributes: .init(
-                    sourceFileChecksums: checksum.asComponents(),
                     uploaded: true
                 )
             )
@@ -126,23 +135,30 @@ public struct TestflightAPI {
             return
         case .badRequest(let badRequest):
             let message = (try? badRequest.body.json.errorDescription) ?? "Bad request"
+            logger.error(message)
             throw Error.badRequest(message)
         case .unauthorized(let unauthorized):
             let message = (try? unauthorized.body.json.errorDescription) ?? "Unauthorized"
+            logger.error(message)
             throw Error.badResponse(message)
         case .forbidden(let forbidden):
             let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
+            logger.error(message)
             throw Error.badResponse(message)
         case .notFound:
+            logger.error("Not found error: \(response)")
             throw Error.badResponse("Upload file \(uploadFileId) not found")
         case .unprocessableContent(let unprocessable):
             let message = (try? unprocessable.body.json.errorDescription) ?? "Unprocessable content"
+            logger.error(message)
             throw Error.badResponse(message)
         case .conflict(let conflict):
             let message = (try? conflict.body.json.errorDescription) ?? "Conflict"
+            logger.error(message)
             throw Error.badResponse(message)
         case .tooManyRequests(let tooMany):
             let message = (try? tooMany.body.json.errorDescription) ?? "Too many requests"
+            logger.error(message)
             throw Error.badResponse(message)
         case .undocumented(let statusCode, let undocumentedPayload):
             throw Error.undocumented("\(statusCode): \(undocumentedPayload.body.debugDescription)")
@@ -163,17 +179,22 @@ public struct TestflightAPI {
             return try payload.data.asUploadStatus()
         case .badRequest(let badRequest):
             let message = (try? badRequest.body.json.errorDescription) ?? "Bad request"
+            logger.error(message)
             throw Error.badRequest(message)
         case .unauthorized(let unauthorized):
             let message = (try? unauthorized.body.json.errorDescription) ?? "Unauthorized"
+            logger.error(message)
             throw Error.badResponse(message)
         case .forbidden(let forbidden):
             let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
+            logger.error(message)
             throw Error.badResponse(message)
         case .notFound:
+            logger.error("Not found error: \(response)")
             throw Error.badResponse("Upload \(uploadId) not found")
         case .tooManyRequests(let tooMany):
             let message = (try? tooMany.body.json.errorDescription) ?? "Too many requests"
+            logger.error(message)
             throw Error.badResponse(message)
         case .undocumented(let statusCode, let undocumentedPayload):
             throw Error.undocumented("\(statusCode): \(undocumentedPayload.body.debugDescription)")
@@ -562,16 +583,6 @@ public extension TestflightAPI {
             .init(fileName: fileName, fileSize: fileSize, assetType: .asset, uti: .ipa)
         }
     }
-
-    struct UploadChecksum: Sendable {
-        public let sha256: String?
-        public let md5: String?
-
-        public init(sha256: String? = nil, md5: String? = nil) {
-            self.sha256 = sha256
-            self.md5 = md5
-        }
-    }
 }
 
 // MARK: - Upload platforms
@@ -776,24 +787,6 @@ private extension TestflightAPI.UploadFileDescriptor.UTI {
         case .xmlPropertyList:
             return .com_period_apple_period_xml_hyphen_property_hyphen_list
         }
-    }
-}
-
-private extension TestflightAPI.UploadChecksum {
-    func asComponents() -> Components.Schemas.Checksums? {
-        if sha256 == nil && md5 == nil {
-            return nil
-        }
-
-        let filePayload = sha256.map { hash in
-            Components.Schemas.Checksums.filePayload(hash: hash, algorithm: .SHA_256)
-        }
-
-        let compositePayload = md5.map { hash in
-            Components.Schemas.Checksums.compositePayload(hash: hash, algorithm: .MD5)
-        }
-
-        return .init(file: filePayload, composite: compositePayload)
     }
 }
 

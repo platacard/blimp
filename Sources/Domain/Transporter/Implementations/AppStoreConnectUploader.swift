@@ -5,34 +5,33 @@ import AppsAPI
 import JWTProvider
 import Crypto
 
-public class AppStoreConnectAPIUploader: AppStoreConnectUploader {
+public actor AppStoreConnectAPIUploader: AppStoreConnectUploader {
 
-    private let logger = Cronista(module: "blimp", category: "ASCTransporter")
+    nonisolated(unsafe)
+    private let logger = Cronista(module: "blimp", category: "ASCTransporter", isFileLoggingEnabled: true)
     private let testflightAPI: TestflightAPI
     private let appsAPI: AppsAPI
     private let urlSession: URLSession
-    private let maxConcurrentChunkUploads: Int
 
-    private let pollIntervalNanoseconds: UInt64
+    private let pollInterval: Int?
+
     private let maxPollAttempts: Int
-
     private let maxUploadRetries: Int
     private var currentUploadAttempt = 0
 
     public init(
         jwtProvider: any JWTProviding = DefaultJWTProvider(),
         urlSession: URLSession = .shared,
-        maxConcurrentChunkUploads: Int = 4,
         maxUploadRetries: Int = 3,
         uploadStatusPollInterval: TimeInterval = 30,
-        uploadStatusMaxAttempts: Int = 60
+        uploadStatusMaxAttempts: Int = 60,
+        pollInterval: Int? = 30
     ) {
         self.testflightAPI = TestflightAPI(jwtProvider: jwtProvider)
         self.appsAPI = AppsAPI(jwtProvider: jwtProvider)
         self.urlSession = urlSession
-        self.maxConcurrentChunkUploads = max(1, maxConcurrentChunkUploads)
         self.maxUploadRetries = max(1, maxUploadRetries)
-        self.pollIntervalNanoseconds = UInt64(max(uploadStatusPollInterval, 0.5) * 1_000_000_000)
+        self.pollInterval = pollInterval
         self.maxPollAttempts = max(1, uploadStatusMaxAttempts)
     }
 
@@ -82,17 +81,14 @@ public class AppStoreConnectAPIUploader: AppStoreConnectUploader {
             throw TransporterError.toolError(error)
         }
 
-        if !plan.status.warnings.isEmpty {
-            plan.status.warnings.forEach { warning in
-                logger.warning("Upload plan warning: \(warning)")
-            }
+        plan.status.warnings.forEach { warning in
+            logger.warning("Upload plan warning: \(warning)")
         }
 
         if case .failed = plan.status.phase {
+            logger.error("Uploading IPA failed: \(plan.status.errors.joined(separator: "\n")), \(config)")
             throw TransporterError.toolError(ASCTransporterError.uploadFailed(plan.status.errors))
         }
-
-        let checksums = try computeChecksums(for: ipaURL)
 
         do {
             try await uploadBinary(plan.operations, fileURL: ipaURL, verbose: verbose)
@@ -105,10 +101,7 @@ public class AppStoreConnectAPIUploader: AppStoreConnectUploader {
 
         logger.info("Notifying App Store Connect that upload is complete.")
         do {
-            try await testflightAPI.markUploadComplete(
-                uploadFileId: plan.uploadFileId,
-                checksum: .init(sha256: checksums.sha256Base64, md5: checksums.md5Base64)
-            )
+            try await testflightAPI.markUploadComplete(uploadFileId: plan.uploadFileId)
         } catch {
             throw TransporterError.toolError(error)
         }
@@ -134,34 +127,6 @@ public class AppStoreConnectAPIUploader: AppStoreConnectUploader {
 // MARK: - Upload Helpers
 
 private extension AppStoreConnectAPIUploader {
-
-    struct FileChecksums {
-        let sha256Base64: String
-        let md5Base64: String
-    }
-
-    func computeChecksums(for fileURL: URL) throws -> FileChecksums {
-        let handle = try FileHandle(forReadingFrom: fileURL)
-        defer { try? handle.close() }
-
-        var sha256 = SHA256()
-        var md5 = Insecure.MD5()
-
-        while true {
-            let chunk = try handle.read(upToCount: 8 * 1024 * 1024)
-            guard let chunk, !chunk.isEmpty else { break }
-            sha256.update(data: chunk)
-            md5.update(data: chunk)
-        }
-
-        let sha256Digest = Data(sha256.finalize())
-        let md5Digest = Data(md5.finalize())
-
-        return FileChecksums(
-            sha256Base64: sha256Digest.base64EncodedString(),
-            md5Base64: md5Digest.base64EncodedString()
-        )
-    }
 
     func uploadBinary(_ operations: [TestflightAPI.UploadOperation], fileURL: URL, verbose: Bool) async throws {
         guard !operations.isEmpty else {
@@ -219,7 +184,7 @@ private extension AppStoreConnectAPIUploader {
             if verbose {
                 logger.warning("Chunk upload failed with \(error.localizedDescription). Retrying attempt \(currentUploadAttempt)/\(maxUploadRetries).")
             }
-            try await Task.sleep(nanoseconds: retryDelayNanoseconds(forAttempt: currentUploadAttempt))
+            try await Task.sleep(for: .seconds(retryDelay(forAttempt: currentUploadAttempt)))
             logger.warning("Retrying: \(operation), \(fileURL)")
 
             try await uploadOperation(operation, fileURL: fileURL, verbose: verbose)
@@ -242,16 +207,6 @@ private extension AppStoreConnectAPIUploader {
         return data
     }
 
-    func shouldRetry(statusCode: Int) -> Bool {
-        statusCode == 429 || (500..<600).contains(statusCode)
-    }
-
-    func retryDelayNanoseconds(forAttempt attempt: Int) -> UInt64 {
-        let base: UInt64 = 500_000_000 // 0.5 seconds
-        let multiplier = UInt64(1 << max(0, attempt - 1))
-        return base * max(1, multiplier)
-    }
-
     func pollUploadCompletion(uploadId: String, verbose: Bool) async throws -> TestflightAPI.UploadStatus {
         var attempt = 0
 
@@ -260,17 +215,34 @@ private extension AppStoreConnectAPIUploader {
 
             switch status.phase {
             case .awaitingUpload, .processing:
+                guard let pollInterval else {
+                    logger.info("No poll interval specified. The processing is skipped")
+                    return status
+                }
+
                 attempt += 1
+
                 if verbose {
                     logger.info("Upload state: \(status.phase) (attempt \(attempt)/\(maxPollAttempts))")
                 }
-                try await Task.sleep(nanoseconds: pollIntervalNanoseconds)
+                try await Task.sleep(for: .seconds(pollInterval))
             case .complete, .failed:
                 return status
             }
         }
 
         throw ASCTransporterError.uploadTimedOut
+    }
+}
+
+// MARK: Retry delay
+
+private extension AppStoreConnectAPIUploader {
+
+    func retryDelay(forAttempt attempt: Int) -> Int {
+        let base = 5 // seconds
+        let multiplier = attempt + 1
+        return base * multiplier
     }
 }
 
@@ -314,5 +286,5 @@ private extension Platform {
     }
 }
 
-extension AppStoreConnectAPIUploader: @unchecked Sendable {}
+extension AppStoreConnectAPIUploader: Sendable {}
 
