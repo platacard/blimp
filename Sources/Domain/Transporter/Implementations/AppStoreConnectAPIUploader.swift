@@ -18,9 +18,7 @@ public actor AppStoreConnectAPIUploader: AppStoreConnectUploader {
     private let maxPollAttempts: Int
     private let maxUploadRetries: Int
 
-    nonisolated(unsafe)
     private var currentUploadAttempt: [String: Int] = [:]
-    private let lock = NSLock()
 
     public init(
         jwtProvider: any JWTProviding = DefaultJWTProvider(),
@@ -121,7 +119,7 @@ private extension AppStoreConnectAPIUploader {
             return
         }
 
-        try await withThrowingTaskGroup(of: Void.self) { group in
+        await withThrowingTaskGroup(of: Void.self) { group in
             for i in 0 ..< operations.count {
                 group.addTask { [self] in
                     try await uploadOperation(operations[i], fileURL: fileURL, verbose: verbose)
@@ -144,10 +142,6 @@ private extension AppStoreConnectAPIUploader {
             request.allHTTPHeaderFields = operation.headers
             request.setValue("\(operation.length)", forHTTPHeaderField: "content-length")
 
-            for (header, value) in operation.headers {
-                request.setValue(value, forHTTPHeaderField: header)
-            }
-
             let (_, response) = try await urlSession.upload(for: request, from: data)
 
             guard let httpResponse = response as? HTTPURLResponse else {
@@ -163,10 +157,8 @@ private extension AppStoreConnectAPIUploader {
                 throw ASCTransporterError.serverError(statusCode: httpResponse.statusCode)
             }
         } catch {
-            lock.withLock {
-                currentUploadAttempt[zeroDefault: operation.url.absoluteString] += 1
-            }
-            
+            currentUploadAttempt[zeroDefault: operation.url.absoluteString] += 1
+
             let attempts = currentUploadAttempt[operation.url.absoluteString] ?? 0
 
             if attempts >= maxUploadRetries {
@@ -178,7 +170,7 @@ private extension AppStoreConnectAPIUploader {
             }
 
             try await Task.sleep(for: .seconds(retryDelay(forAttempt: attempts)))
-            logger.warning("Retrying \(operation.url) for file: \(fileURL), partNumber: \(operation.partNumber)")
+            logger.warning("Retrying \(operation.url) for file: \(fileURL), partNumber: \(operation.partNumber ?? -1)")
 
             try await uploadOperation(operation, fileURL: fileURL, verbose: verbose)
         }
