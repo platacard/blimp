@@ -5,7 +5,9 @@ import ASCCredentials
 import RegexBuilder
 import sys_wait
 
-public struct AltoolTransporter: Transporter, ASCCredentialsTrait {
+@available(*, deprecated, message: "Use AppStoreConnectAPIUploader")
+public struct AltoolUploader: ASCCredentialsTrait {
+    
     private enum Argument: String, BashArgument {
         case verbose
 
@@ -14,8 +16,8 @@ public struct AltoolTransporter: Transporter, ASCCredentialsTrait {
         }
     }
 
-    private var logger: Cronista { Cronista(module: "blimp", category: "TakeOff") }
-    
+    private var logger: Cronista { Cronista(module: "blimp", category: "TakeOff", isFileLoggingEnabled: true) }
+
     public init() {}
     
     public func upload(arguments: [TransporterSetting], verbose: Bool) throws {
@@ -57,11 +59,23 @@ extension AuthOption: BashArgument {
     }
 }
 
-extension TransporterSetting: BashArgument {
+public extension AltoolUploader {
+    enum TransporterSetting {
+        case upload
+        case appVersion(String)
+        case buildNumber(String)
+        case file(String)
+        case platform(Platform)
+        case maxUploadSpeed
+        case showProgress
+        case oldAltool
+        case verbose
+    }
+}
+
+extension AltoolUploader.TransporterSetting: BashArgument {
     public var bashArgument: String {
         switch self {
-        case .validate:
-            "--validate-app"
         case .upload:
             "--upload-app"
         case .file(let path):
@@ -84,10 +98,34 @@ extension TransporterSetting: BashArgument {
     }
 }
 
+// MARK: - AppStoreConnectUploader Conformance
+
+// FIXME: New altool from Xcode 26.0.1 has processing issues. Prefer using API uploader
+public struct AltoolUploaderAdapter: AppStoreConnectUploader {
+    private let altoolUploader: AltoolUploader
+    
+    public init(altoolUploader: AltoolUploader = AltoolUploader()) {
+        self.altoolUploader = altoolUploader
+    }
+    
+    public func upload(config: UploadConfig, verbose: Bool) async throws {
+        var arguments: [AltoolUploader.TransporterSetting] = [.upload]
+
+        arguments.append(.file(config.filePath))
+        arguments.append(.appVersion(config.appVersion))
+        arguments.append(.buildNumber(config.buildNumber))
+        arguments.append(.platform(config.platform))
+        arguments.append(.showProgress)
+        arguments.append(.oldAltool)
+
+        try self.altoolUploader.upload(arguments: arguments, verbose: verbose)
+    }
+}
+
 // MARK: - Private
 
-private extension AltoolTransporter {
-    
+private extension AltoolUploader {
+
     /// The log is flooded in non-interactive shells, filter it to get some useful messages
     func makeFilteredLog(_ output: String?) {
         let filteredOutput = output?.split( separator: "\n")

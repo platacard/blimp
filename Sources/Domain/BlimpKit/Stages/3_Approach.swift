@@ -11,18 +11,18 @@ public extension Blimp {
     struct Approach: FlightStage {
         package var type: FlightStage.Type { Self.self }
         private var logger: Cronista { Cronista(module: "blimp", category: "Approach") }
-        private let transporter: Transporter
-        
+        private let uploader: AppStoreConnectUploader
+
         private let testflightAPI: TestflightAPI
         private let appsAPI: AppsAPI
         private let ignoreUploaderFailure: Bool
 
         public init(
-            transporter: Transporter,
+            uploader: AppStoreConnectUploader,
             jwtProvider: JWTProviding = DefaultJWTProvider(),
             ignoreUploaderFailure: Bool = false
         ) {
-            self.transporter = transporter
+            self.uploader = uploader
             self.testflightAPI = TestflightAPI(jwtProvider: jwtProvider)
             self.appsAPI = AppsAPI(jwtProvider: jwtProvider)
             self.ignoreUploaderFailure = ignoreUploaderFailure
@@ -31,23 +31,14 @@ public extension Blimp {
 }
 
 public extension Blimp.Approach {
-    /// Upload the build
-    /// - Parameters:
-    ///   - bundleId: bundle id of the app to upload
-    ///   - arguments: upload settings from `Blimp.Approach.Settings`
-    ///   - verbose: Print extended output of the uploader
-    func start(bundleId: String, arguments: [Setting], verbose: Bool) throws {
+    /// Upload the build with App Store Connect API
+    func start(config: UploadConfig, verbose: Bool) async throws {
         do {
-            try transporter.upload(
-                arguments: arguments.asCoreSettings,
-                verbose: verbose
-            )
+            try await uploader.upload(config: config, verbose: verbose)
         } catch let TransporterError.toolError(error) {
             logger.warning("Transporter error: [\(error.localizedDescription)]!")
+            if ignoreUploaderFailure { return }
 
-            if ignoreUploaderFailure {
-                return
-            }
             throw error
         } catch {
             logger.warning("Some transporter error: [\(error.localizedDescription)]!")
@@ -55,7 +46,7 @@ public extension Blimp.Approach {
             throw error
         }
     }
-    
+
     /// Wait for build processing
     /// - Parameter bundleId: bundle id of the app to process
     /// - Returns: processing result meta info
@@ -173,58 +164,6 @@ public extension Blimp.Approach {
         case failedProcessing
         case invalidBinary
         case failedToGetAppSizes
-    }
-    
-    enum Platform: String {
-        case iOS
-        case macOS
-    }
-    
-    enum Setting {
-        case validate
-        case upload
-        case appVersion(String)
-        case buildNumber(String)
-        case file(String)
-        case platform(Platform)
-        case maxUploadSpeed
-        case showProgress
-        case legacy
-        case verbose
-    }
-}
-
-extension Blimp.Approach.Platform {
-    var asCoreSetting: TransporterSetting.Platform {
-        switch self {
-            case .iOS: .iOS
-            case .macOS: .macOS
-        }
-    }
-}
-
-// MARK: - Mappings
-
-extension Blimp.Approach.Setting {
-    var asCoreSetting: TransporterSetting {
-        switch self {
-            case .validate: TransporterSetting.validate
-            case .upload: TransporterSetting.upload
-            case .appVersion(let version): TransporterSetting.appVersion(version)
-            case .buildNumber(let number): TransporterSetting.buildNumber(number)
-            case .file(let file): TransporterSetting.file(file)
-            case .platform(let platform): TransporterSetting.platform(platform.asCoreSetting)
-            case .maxUploadSpeed: TransporterSetting.maxUploadSpeed
-            case .showProgress: TransporterSetting.showProgress
-            case .legacy: TransporterSetting.oldAltool
-            case .verbose: TransporterSetting.verbose
-        }
-    }
-}
-
-extension Array where Element == Blimp.Approach.Setting {
-    var asCoreSettings: [TransporterSetting] {
-        map { $0.asCoreSetting }
     }
 }
 

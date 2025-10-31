@@ -1,3 +1,4 @@
+import Foundation
 import OpenAPIRuntime
 import OpenAPIURLSession
 import JWTProvider
@@ -5,10 +6,17 @@ import Cronista
 import Auth
 import ClientTransport
 
-public struct TestflightAPI {
+public struct TestflightAPI: Sendable {
+
     private let jwtProvider: any JWTProviding
     private let client: any APIProtocol
-    private let logger = Cronista(module: "blimp", category: "TestFlightAPI")
+
+    nonisolated(unsafe)
+    private let logger = Cronista(
+        module: "blimp",
+        category: "TestFlightAPI",
+        isFileLoggingEnabled: true
+    )
 
     public init(jwtProvider: any JWTProviding) {
         self.jwtProvider = jwtProvider
@@ -21,6 +29,180 @@ public struct TestflightAPI {
                 AuthMiddleware { try jwtProvider.token() }
             ]
         )
+    }
+
+    public func createBuildUpload(
+        appId: String,
+        appVersion: String,
+        buildNumber: String,
+        platform: TestflightAPI.Platform,
+        file: UploadFileDescriptor
+    ) async throws -> BuildUploadPlan {
+        let request = Components.Schemas.BuildUploadCreateRequest(
+            data: .init(
+                _type: .buildUploads,
+                attributes: .init(
+                    cfBundleShortVersionString: appVersion,
+                    cfBundleVersion: buildNumber,
+                    platform: platform.asApiPlatform
+                ),
+                relationships: .init(
+                    app: .init(
+                        data: .init(_type: .apps, id: appId)
+                    )
+                )
+            )
+        )
+
+        let response = try await client.buildUploads_createInstance(.init(body: .json(request)))
+
+        switch response {
+        case .created(let created):
+            let payload = try created.body.json
+            let buildUpload = payload.data
+            let status = try buildUpload.asUploadStatus()
+
+            let existingFiles = payload.included?.compactMap { item -> Components.Schemas.BuildUploadFile? in
+                if case let .buildUploadFiles(fileItem) = item {
+                    return fileItem
+                }
+                return nil
+            } ?? []
+
+            let assetFile = existingFiles.first(where: { $0.matches(assetType: file.assetType) && ($0.attributes?.uploadOperations?.isEmpty == false) })
+
+            let resolvedFile: Components.Schemas.BuildUploadFile
+            if let assetFile {
+                resolvedFile = assetFile
+            } else {
+                resolvedFile = try await createBuildUploadFile(uploadId: buildUpload.id, file: file)
+            }
+
+            let operations = try resolvedFile.makeUploadOperations()
+
+            return BuildUploadPlan(
+                uploadId: buildUpload.id,
+                uploadFileId: resolvedFile.id,
+                operations: operations,
+                status: status
+            )
+        case .badRequest(let badRequest):
+            let message = (try? badRequest.body.json.errorDescription) ?? "Bad request"
+            logger.error(message)
+            throw Error.badRequest(message)
+        case .unauthorized(let unauthorized):
+            let message = (try? unauthorized.body.json.errorDescription) ?? "Unauthorized"
+            logger.error(message)
+            throw Error.badResponse(message)
+        case .forbidden(let forbidden):
+            let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
+            logger.error(message)
+            throw Error.badResponse(message)
+        case .unprocessableContent(let unprocessable):
+            let message = (try? unprocessable.body.json.errorDescription) ?? "Unprocessable content"
+            logger.error(message)
+            throw Error.badResponse(message)
+        case .conflict(let conflict):
+            let message = (try? conflict.body.json.errorDescription) ?? "Conflict"
+            logger.error(message)
+            throw Error.badResponse(message)
+        case .tooManyRequests(let tooMany):
+            let message = (try? tooMany.body.json.errorDescription) ?? "Too many requests"
+            logger.error(message)
+            throw Error.badResponse(message)
+        case .undocumented(let statusCode, let undocumentedPayload):
+            logger.error("\(statusCode): \(undocumentedPayload.body.debugDescription)")
+            throw Error.undocumented("\(statusCode): \(undocumentedPayload.body.debugDescription)")
+        }
+    }
+
+    public func markUploadComplete(uploadFileId: String) async throws {
+        let updateRequest = Components.Schemas.BuildUploadFileUpdateRequest(
+            data: .init(
+                _type: .buildUploadFiles,
+                id: uploadFileId,
+                attributes: .init(
+                    uploaded: true
+                )
+            )
+        )
+
+        let response = try await client.buildUploadFiles_updateInstance(
+            .init(
+                path: .init(id: uploadFileId),
+                body: .json(updateRequest)
+            )
+        )
+
+        switch response {
+        case .ok:
+            return
+        case .badRequest(let badRequest):
+            let message = (try? badRequest.body.json.errorDescription) ?? "Bad request"
+            logger.error(message)
+            throw Error.badRequest(message)
+        case .unauthorized(let unauthorized):
+            let message = (try? unauthorized.body.json.errorDescription) ?? "Unauthorized"
+            logger.error(message)
+            throw Error.badResponse(message)
+        case .forbidden(let forbidden):
+            let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
+            logger.error(message)
+            throw Error.badResponse(message)
+        case .notFound:
+            logger.error("Not found error: \(response)")
+            throw Error.badResponse("Upload file \(uploadFileId) not found")
+        case .unprocessableContent(let unprocessable):
+            let message = (try? unprocessable.body.json.errorDescription) ?? "Unprocessable content"
+            logger.error(message)
+            throw Error.badResponse(message)
+        case .conflict(let conflict):
+            let message = (try? conflict.body.json.errorDescription) ?? "Conflict"
+            logger.error(message)
+            throw Error.badResponse(message)
+        case .tooManyRequests(let tooMany):
+            let message = (try? tooMany.body.json.errorDescription) ?? "Too many requests"
+            logger.error(message)
+            throw Error.badResponse(message)
+        case .undocumented(let statusCode, let undocumentedPayload):
+            throw Error.undocumented("\(statusCode): \(undocumentedPayload.body.debugDescription)")
+        }
+    }
+
+    public func getUploadStatus(uploadId: String) async throws -> UploadStatus {
+        let response = try await client.buildUploads_getInstance(
+            .init(
+                path: .init(id: uploadId),
+                query: .init(fields_lbrack_buildUploads_rbrack_: [.state])
+            )
+        )
+
+        switch response {
+        case .ok(let ok):
+            let payload = try ok.body.json
+            return try payload.data.asUploadStatus()
+        case .badRequest(let badRequest):
+            let message = (try? badRequest.body.json.errorDescription) ?? "Bad request"
+            logger.error(message)
+            throw Error.badRequest(message)
+        case .unauthorized(let unauthorized):
+            let message = (try? unauthorized.body.json.errorDescription) ?? "Unauthorized"
+            logger.error(message)
+            throw Error.badResponse(message)
+        case .forbidden(let forbidden):
+            let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
+            logger.error(message)
+            throw Error.badResponse(message)
+        case .notFound:
+            logger.error("Not found error: \(response)")
+            throw Error.badResponse("Upload \(uploadId) not found")
+        case .tooManyRequests(let tooMany):
+            let message = (try? tooMany.body.json.errorDescription) ?? "Too many requests"
+            logger.error(message)
+            throw Error.badResponse(message)
+        case .undocumented(let statusCode, let undocumentedPayload):
+            throw Error.undocumented("\(statusCode): \(undocumentedPayload.body.debugDescription)")
+        }
     }
 
     public func getBuildID(
@@ -71,7 +253,7 @@ public struct TestflightAPI {
                 logger.info("Too many requests. 429, \(response)")
         }
 
-        throw Error.badResponse
+        throw Error.badResponse("Unexpected response in getBuildID for appId: \(appId), appVersion: \(appVersion), buildNumber: \(buildNumber)")
     }
 
     public func getBuildProcessingResult(id: String) async throws -> BuildProcessingResult {
@@ -90,7 +272,7 @@ public struct TestflightAPI {
             let buildBundleID = try? response.ok.body.json.data.relationships?.buildBundles?.data?.first?.id,
             let buildLocalizationIDs = try? (response.ok.body.json.data.relationships?.betaBuildLocalizations?.data?.compactMap { $0.id })
         else {
-            throw Error.badResponse
+            throw Error.badResponse()
         }
 
         return .init(
@@ -234,10 +416,8 @@ public struct TestflightAPI {
             case .ok(let ok):
                 let data = try ok.body.json.data
                 return try data.map { build in
-                    guard
-                        let id = build.relationships?.buildBundles?.data?.first?.id
-                    else {
-                        throw Error.badResponse
+                    guard let id = build.relationships?.buildBundles?.data?.first?.id else {
+                        throw Error.badResponse()
                     }
 
                     return id
@@ -248,7 +428,7 @@ public struct TestflightAPI {
                 logger.info("Too many requests. 429, \(response)")
         }
 
-        throw Error.badResponse
+        throw Error.badResponse()
     }
 
     public func getBundleBuildSizes(
@@ -278,7 +458,7 @@ public struct TestflightAPI {
                         let downloadBytes = attributes.downloadBytes,
                         let installBytes = attributes.installBytes
                     else {
-                        throw Error.badResponse
+                        throw Error.badResponse()
                     }
 
                     guard
@@ -305,13 +485,68 @@ public struct TestflightAPI {
                 logger.info("Too many requests. 429, \(response)")
         }
 
-        throw Error.badResponse
+        throw Error.badResponse()
     }
 }
 
 // MARK: - Private
 
 private extension TestflightAPI {
+
+    func createBuildUploadFile(uploadId: String, file: UploadFileDescriptor) async throws -> Components.Schemas.BuildUploadFile {
+        let request = Components.Schemas.BuildUploadFileCreateRequest(
+            data: .init(
+                _type: .buildUploadFiles,
+                attributes: .init(
+                    assetType: file.assetType.generatedValue,
+                    fileName: file.fileName,
+                    fileSize: file.fileSize,
+                    uti: file.uti.generatedValue
+                ),
+                relationships: .init(
+                    buildUpload: .init(
+                        data: .init(
+                            _type: .buildUploads,
+                            id: uploadId
+                        )
+                    )
+                )
+            )
+        )
+
+        let response = try await client.buildUploadFiles_createInstance(
+            .init(body: .json(request))
+        )
+
+        switch response {
+        case .created(let created):
+            let resource = try created.body.json.data
+            guard !(resource.attributes?.uploadOperations?.isEmpty ?? true) else {
+                throw Error.badResponse("No upload operations returned for build upload file")
+            }
+            return resource
+        case .badRequest(let badRequest):
+            let message = (try? badRequest.body.json.errorDescription) ?? "Bad request"
+            throw Error.badRequest(message)
+        case .unauthorized(let unauthorized):
+            let message = (try? unauthorized.body.json.errorDescription) ?? "Unauthorized"
+            throw Error.badResponse(message)
+        case .forbidden(let forbidden):
+            let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
+            throw Error.badResponse(message)
+        case .unprocessableContent(let unprocessable):
+            let message = (try? unprocessable.body.json.errorDescription) ?? "Unprocessable content"
+            throw Error.badResponse(message)
+        case .conflict(let conflict):
+            let message = (try? conflict.body.json.errorDescription) ?? "Conflict"
+            throw Error.badResponse(message)
+        case .tooManyRequests(let tooMany):
+            let message = (try? tooMany.body.json.errorDescription) ?? "Too many requests"
+            throw Error.badResponse(message)
+        case .undocumented(let statusCode, let undocumentedPayload):
+            throw Error.undocumented("\(statusCode): \(undocumentedPayload.body.debugDescription)")
+        }
+    }
 
     func getBetaGroupIds(appId: String, betaGroups: [String]) async throws -> [String] {
         let betaGroupsResponse = try await client.betaGroups_getCollection(
@@ -399,24 +634,5 @@ private extension TestflightAPI {
         )
 
         logger.info("Sent beta tester invitation email")
-    }
-}
-
-// MARK: - Private
-
-private extension String {
-
-    var redactedEmail: String {
-        guard let atIndex = self.firstIndex(of: "@") else { return self }
-
-        let namePart = self[..<atIndex]
-        let domainPart = self[self.index(after: atIndex)...]
-
-        // Show the first and last character of the username, mask the rest
-        let prefix = namePart.prefix(1)
-        let suffix = namePart.count > 1 ? namePart.suffix(1) : ""
-        let maskedPart = String(repeating: "*", count: max(0, namePart.count - 2))
-
-        return "\(prefix)\(maskedPart)\(suffix)@\(domainPart)"
     }
 }

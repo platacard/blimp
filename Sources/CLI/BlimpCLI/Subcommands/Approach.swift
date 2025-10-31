@@ -23,10 +23,7 @@ struct Approach: AsyncParsableCommand {
     var buildNumber: String
     
     @Option(help: "platform to upload to. Possible values are: `ios`, `macos`")
-    var platform: Blimp.Approach.Platform = .iOS
-    
-    @Flag(inversion: .prefixedNo, help: "Validate the build before uploading")
-    var validate: Bool = false
+    var platform: Platform = .iOS
 
     @Flag(inversion: .prefixedNo, help: "Sometimes upload is more stable with speed limit, same technique used by fastlane.")
     var limitMaxUploadSpeed: Bool = true
@@ -36,18 +33,27 @@ struct Approach: AsyncParsableCommand {
 
     @Flag(help: "Produce more output")
     var verbose = false
+
+    @Flag(help: "Use legacy altool uploader instead of App Store Connect API. Deprecated, requires additional setup")
+    var legacyUploader = false
     
     private var logger: Cronista { Cronista(module: "blimp", category: "Approach") }
     
     func run() async throws {
-        let altool = AltoolTransporter()
-        let approach = Blimp.Approach(transporter: altool)
+        let uploader: AppStoreConnectUploader
 
-        if validate {
-           try await run(approach: approach, mode: .validate)
+        if legacyUploader {
+            uploader = AltoolUploaderAdapter()
+        } else {
+            uploader = AppStoreConnectAPIUploader()
         }
-        
-        try await run(approach: approach, mode: .upload)
+
+        let approach = Blimp.Approach(
+            uploader: uploader,
+            ignoreUploaderFailure: ignoreUploaderFailure
+        )
+
+        try await run(approach: approach)
     }
 }
 
@@ -55,35 +61,19 @@ struct Approach: AsyncParsableCommand {
 
 extension Approach {
     
-    enum TransporterMode {
-        case validate
-        case upload
-    }
-    
-    func run(approach: Blimp.Approach, mode: TransporterMode) async throws {
-        let message: String
-        var arguments: [Blimp.Approach.Setting] = [
-            .appVersion(appVersion),
-            .buildNumber(buildNumber),
-            .file(ipaPath),
-            .platform(platform),
-            .showProgress
-        ] + (limitMaxUploadSpeed ? [.maxUploadSpeed] : [])
-
-        switch mode {
-        case .validate:
-            message = "Validating \(ipaPath)..."
-            arguments.insert(.validate, at: 0)
-        case .upload:
-            message = "Uploading \(ipaPath)..."
-            arguments.insert(.upload, at: 0)
-        }
-        
-        logger.info(message)
-        
+    func run(approach: Blimp.Approach) async throws {
         logger.info("Starting upload of \(bundleId)...")
-        try approach.start(bundleId: bundleId, arguments: arguments, verbose: verbose)
         
+        let config = UploadConfig(
+            bundleId: bundleId,
+            appVersion: appVersion,
+            buildNumber: buildNumber,
+            filePath: ipaPath,
+            platform: platform
+        )
+
+        try await approach.start(config: config, verbose: verbose)
+
         logger.info("Starting processing of \(bundleId)...")
         let processingResult = try await approach.hold(bundleId: bundleId, appVersion: appVersion, buildNumber: buildNumber)
         
@@ -100,15 +90,19 @@ extension Approach {
 
 // MARK: - Argument parser adapters
 
-extension Blimp.Approach.Platform: ExpressibleByArgument {
+extension Platform: ExpressibleByArgument {
     public init?(argument: String) {
         switch argument {
         case "ios", "iOS":
             self = .iOS
         case "macos", "macOS":
             self = .macOS
+        case "tvOS", "tvos":
+            self = .tvOS
+        case "visionOS", "visionos":
+            self = .visionOS
         default:
-            fatalError("unsupported platform in \(Self.self)")
+            fatalError("Unsupported platform: \(argument). Supported platforms: ios, macos, tvos, visionos")
         }
     }
 }

@@ -30,14 +30,13 @@ dependencies: [
 
 - Archiving and exporting the iOS app
 - Authenticating with the App Store Connect API
-- Uploading iOS apps to App Store Connect and waiting for processing
+- Uploading iOS apps to App Store Connect via the modern build upload API and waiting for processing
 - Assigning beta groups and sending builds for review
 - Inviting developers and beta testers to TestFlight
 
 ### What's yet to be implemented
 
 - Managing provisioning profiles and certificates. For now, we use an isolated [match](https://docs.fastlane.tools/actions/match/) part of fastlane.
-- Uploading using App Store Connect’s latest API v4.1 (currently using `altool`)
 - Testing support for watchOS, macOS, and other less-used platforms
 
 ----
@@ -58,16 +57,7 @@ You can try things out by calling the `blimp` CLI via `swift run blimp {command}
  
 >❗️ Moreover, `blimp` CLI provides an example of how you can use `BlimpKit` in your CLI. We recommend trying out the `swift-argument-parser` package, it works great for us.
 
-You'll need the [App Store Connect API Key](https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api). `blimp` will handle the API authentication process for you once the `.p8` file is placed in the `~/.appstoreconnect/private_keys` folder. Currently, uploads use `altool`, but we plan to migrate to the App Store Connect API (API uploads), which will enable authentication via environment variables and simplify CI integration. You can track progress on this feature in our [roadmap](https://github.com/orgs/platacard/projects/3).
-
-Then, expose these environment variables to your shell:
-
-```bash
-export APP_STORE_CONNECT_API_KEY=...
-export APP_STORE_CONNECT_API_KEY_ISSUER_ID=...
-```
-
-You can get these values from the App Store Connect API Keys page.
+You'll need the [App Store Connect API Key](https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api). Uploads now default to the modern App Store Connect build upload API.
 
 Using binary artifact:
 ```bash
@@ -93,7 +83,7 @@ Then, you can use the binary artifact directly:
 `blimp` aims to keep its dependencies to a minimum. It uses Apple's OpenAPI generator to create App Store Connect API clients. Swift Crypto is used for JWT signing. Swift Argument Parser is used for the command line interface implementation. Finally, our own `cronista` and `corredor` are used for logging and calling CLI tools.
 
 - Archiving and exporting are done via `xcodebuild`.
-- Uploading is done via `altool`.
+- Uploading is done via the App Store Connect build upload API (with an optional legacy `altool` fallback).
 - Processing is done via the App Store Connect API.
 
 ## Attributions

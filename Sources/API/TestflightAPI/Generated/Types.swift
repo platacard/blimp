@@ -41,6 +41,18 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `POST /v1/buildBetaNotifications`.
     /// - Remark: Generated from `#/paths//v1/buildBetaNotifications/post(buildBetaNotifications_createInstance)`.
     func buildBetaNotifications_createInstance(_ input: Operations.buildBetaNotifications_createInstance.Input) async throws -> Operations.buildBetaNotifications_createInstance.Output
+    /// - Remark: HTTP `POST /v1/buildUploadFiles`.
+    /// - Remark: Generated from `#/paths//v1/buildUploadFiles/post(buildUploadFiles_createInstance)`.
+    func buildUploadFiles_createInstance(_ input: Operations.buildUploadFiles_createInstance.Input) async throws -> Operations.buildUploadFiles_createInstance.Output
+    /// - Remark: HTTP `PATCH /v1/buildUploadFiles/{id}`.
+    /// - Remark: Generated from `#/paths//v1/buildUploadFiles/{id}/patch(buildUploadFiles_updateInstance)`.
+    func buildUploadFiles_updateInstance(_ input: Operations.buildUploadFiles_updateInstance.Input) async throws -> Operations.buildUploadFiles_updateInstance.Output
+    /// - Remark: HTTP `POST /v1/buildUploads`.
+    /// - Remark: Generated from `#/paths//v1/buildUploads/post(buildUploads_createInstance)`.
+    func buildUploads_createInstance(_ input: Operations.buildUploads_createInstance.Input) async throws -> Operations.buildUploads_createInstance.Output
+    /// - Remark: HTTP `GET /v1/buildUploads/{id}`.
+    /// - Remark: Generated from `#/paths//v1/buildUploads/{id}/get(buildUploads_getInstance)`.
+    func buildUploads_getInstance(_ input: Operations.buildUploads_getInstance.Input) async throws -> Operations.buildUploads_getInstance.Output
     /// - Remark: HTTP `GET /v1/builds`.
     /// - Remark: Generated from `#/paths//v1/builds/get(builds_getCollection)`.
     func builds_getCollection(_ input: Operations.builds_getCollection.Input) async throws -> Operations.builds_getCollection.Output
@@ -201,6 +213,54 @@ extension APIProtocol {
         try await buildBetaNotifications_createInstance(Operations.buildBetaNotifications_createInstance.Input(
             headers: headers,
             body: body
+        ))
+    }
+    /// - Remark: HTTP `POST /v1/buildUploadFiles`.
+    /// - Remark: Generated from `#/paths//v1/buildUploadFiles/post(buildUploadFiles_createInstance)`.
+    internal func buildUploadFiles_createInstance(
+        headers: Operations.buildUploadFiles_createInstance.Input.Headers = .init(),
+        body: Operations.buildUploadFiles_createInstance.Input.Body
+    ) async throws -> Operations.buildUploadFiles_createInstance.Output {
+        try await buildUploadFiles_createInstance(Operations.buildUploadFiles_createInstance.Input(
+            headers: headers,
+            body: body
+        ))
+    }
+    /// - Remark: HTTP `PATCH /v1/buildUploadFiles/{id}`.
+    /// - Remark: Generated from `#/paths//v1/buildUploadFiles/{id}/patch(buildUploadFiles_updateInstance)`.
+    internal func buildUploadFiles_updateInstance(
+        path: Operations.buildUploadFiles_updateInstance.Input.Path,
+        headers: Operations.buildUploadFiles_updateInstance.Input.Headers = .init(),
+        body: Operations.buildUploadFiles_updateInstance.Input.Body
+    ) async throws -> Operations.buildUploadFiles_updateInstance.Output {
+        try await buildUploadFiles_updateInstance(Operations.buildUploadFiles_updateInstance.Input(
+            path: path,
+            headers: headers,
+            body: body
+        ))
+    }
+    /// - Remark: HTTP `POST /v1/buildUploads`.
+    /// - Remark: Generated from `#/paths//v1/buildUploads/post(buildUploads_createInstance)`.
+    internal func buildUploads_createInstance(
+        headers: Operations.buildUploads_createInstance.Input.Headers = .init(),
+        body: Operations.buildUploads_createInstance.Input.Body
+    ) async throws -> Operations.buildUploads_createInstance.Output {
+        try await buildUploads_createInstance(Operations.buildUploads_createInstance.Input(
+            headers: headers,
+            body: body
+        ))
+    }
+    /// - Remark: HTTP `GET /v1/buildUploads/{id}`.
+    /// - Remark: Generated from `#/paths//v1/buildUploads/{id}/get(buildUploads_getInstance)`.
+    internal func buildUploads_getInstance(
+        path: Operations.buildUploads_getInstance.Input.Path,
+        query: Operations.buildUploads_getInstance.Input.Query = .init(),
+        headers: Operations.buildUploads_getInstance.Input.Headers = .init()
+    ) async throws -> Operations.buildUploads_getInstance.Output {
+        try await buildUploads_getInstance(Operations.buildUploads_getInstance.Input(
+            path: path,
+            query: query,
+            headers: headers
         ))
     }
     /// - Remark: HTTP `GET /v1/builds`.
@@ -6608,6 +6668,366 @@ internal enum Components {
                 case links
             }
         }
+        /// - Remark: Generated from `#/components/schemas/BuildUploadFile`.
+        internal struct BuildUploadFile: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/BuildUploadFile/type`.
+            internal enum _typePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case buildUploadFiles = "buildUploadFiles"
+            }
+            /// - Remark: Generated from `#/components/schemas/BuildUploadFile/type`.
+            internal var _type: Components.Schemas.BuildUploadFile._typePayload
+            /// - Remark: Generated from `#/components/schemas/BuildUploadFile/id`.
+            internal var id: Swift.String
+            /// - Remark: Generated from `#/components/schemas/BuildUploadFile/attributes`.
+            internal struct attributesPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFile/attributes/assetDeliveryState`.
+                internal var assetDeliveryState: Components.Schemas.AppMediaAssetState?
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFile/attributes/assetToken`.
+                internal var assetToken: Swift.String?
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFile/attributes/assetType`.
+                internal enum assetTypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case ASSET = "ASSET"
+                    case ASSET_DESCRIPTION = "ASSET_DESCRIPTION"
+                    case ASSET_SPI = "ASSET_SPI"
+                }
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFile/attributes/assetType`.
+                internal var assetType: Components.Schemas.BuildUploadFile.attributesPayload.assetTypePayload?
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFile/attributes/fileName`.
+                internal var fileName: Swift.String?
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFile/attributes/fileSize`.
+                internal var fileSize: Swift.Int64?
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFile/attributes/sourceFileChecksums`.
+                internal var sourceFileChecksums: Components.Schemas.Checksums?
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFile/attributes/uploadOperations`.
+                internal var uploadOperations: [Components.Schemas.DeliveryFileUploadOperation]?
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFile/attributes/uti`.
+                internal enum utiPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case com_period_apple_period_binary_hyphen_property_hyphen_list = "com.apple.binary-property-list"
+                    case com_period_apple_period_ipa = "com.apple.ipa"
+                    case com_period_apple_period_pkg = "com.apple.pkg"
+                    case com_period_apple_period_xml_hyphen_property_hyphen_list = "com.apple.xml-property-list"
+                    case com_period_pkware_period_zip_hyphen_archive = "com.pkware.zip-archive"
+                }
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFile/attributes/uti`.
+                internal var uti: Components.Schemas.BuildUploadFile.attributesPayload.utiPayload?
+                /// Creates a new `attributesPayload`.
+                ///
+                /// - Parameters:
+                ///   - assetDeliveryState:
+                ///   - assetToken:
+                ///   - assetType:
+                ///   - fileName:
+                ///   - fileSize:
+                ///   - sourceFileChecksums:
+                ///   - uploadOperations:
+                ///   - uti:
+                internal init(
+                    assetDeliveryState: Components.Schemas.AppMediaAssetState? = nil,
+                    assetToken: Swift.String? = nil,
+                    assetType: Components.Schemas.BuildUploadFile.attributesPayload.assetTypePayload? = nil,
+                    fileName: Swift.String? = nil,
+                    fileSize: Swift.Int64? = nil,
+                    sourceFileChecksums: Components.Schemas.Checksums? = nil,
+                    uploadOperations: [Components.Schemas.DeliveryFileUploadOperation]? = nil,
+                    uti: Components.Schemas.BuildUploadFile.attributesPayload.utiPayload? = nil
+                ) {
+                    self.assetDeliveryState = assetDeliveryState
+                    self.assetToken = assetToken
+                    self.assetType = assetType
+                    self.fileName = fileName
+                    self.fileSize = fileSize
+                    self.sourceFileChecksums = sourceFileChecksums
+                    self.uploadOperations = uploadOperations
+                    self.uti = uti
+                }
+                internal enum CodingKeys: String, CodingKey {
+                    case assetDeliveryState
+                    case assetToken
+                    case assetType
+                    case fileName
+                    case fileSize
+                    case sourceFileChecksums
+                    case uploadOperations
+                    case uti
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/BuildUploadFile/attributes`.
+            internal var attributes: Components.Schemas.BuildUploadFile.attributesPayload?
+            /// - Remark: Generated from `#/components/schemas/BuildUploadFile/links`.
+            internal var links: Components.Schemas.ResourceLinks?
+            /// Creates a new `BuildUploadFile`.
+            ///
+            /// - Parameters:
+            ///   - _type:
+            ///   - id:
+            ///   - attributes:
+            ///   - links:
+            internal init(
+                _type: Components.Schemas.BuildUploadFile._typePayload,
+                id: Swift.String,
+                attributes: Components.Schemas.BuildUploadFile.attributesPayload? = nil,
+                links: Components.Schemas.ResourceLinks? = nil
+            ) {
+                self._type = _type
+                self.id = id
+                self.attributes = attributes
+                self.links = links
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case _type = "type"
+                case id
+                case attributes
+                case links
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/BuildUploadFileResponse`.
+        internal struct BuildUploadFileResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/BuildUploadFileResponse/data`.
+            internal var data: Components.Schemas.BuildUploadFile
+            /// - Remark: Generated from `#/components/schemas/BuildUploadFileResponse/links`.
+            internal var links: Components.Schemas.DocumentLinks
+            /// Creates a new `BuildUploadFileResponse`.
+            ///
+            /// - Parameters:
+            ///   - data:
+            ///   - links:
+            internal init(
+                data: Components.Schemas.BuildUploadFile,
+                links: Components.Schemas.DocumentLinks
+            ) {
+                self.data = data
+                self.links = links
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case data
+                case links
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest`.
+        internal struct BuildUploadFileCreateRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data`.
+            internal struct dataPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/type`.
+                internal enum _typePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case buildUploadFiles = "buildUploadFiles"
+                }
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/type`.
+                internal var _type: Components.Schemas.BuildUploadFileCreateRequest.dataPayload._typePayload
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/attributes`.
+                internal struct attributesPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/attributes/assetType`.
+                    internal enum assetTypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case ASSET = "ASSET"
+                        case ASSET_DESCRIPTION = "ASSET_DESCRIPTION"
+                        case ASSET_SPI = "ASSET_SPI"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/attributes/assetType`.
+                    internal var assetType: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.attributesPayload.assetTypePayload
+                    /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/attributes/fileName`.
+                    internal var fileName: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/attributes/fileSize`.
+                    internal var fileSize: Swift.Int64
+                    /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/attributes/uti`.
+                    internal enum utiPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case com_period_apple_period_binary_hyphen_property_hyphen_list = "com.apple.binary-property-list"
+                        case com_period_apple_period_ipa = "com.apple.ipa"
+                        case com_period_apple_period_pkg = "com.apple.pkg"
+                        case com_period_apple_period_xml_hyphen_property_hyphen_list = "com.apple.xml-property-list"
+                        case com_period_pkware_period_zip_hyphen_archive = "com.pkware.zip-archive"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/attributes/uti`.
+                    internal var uti: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.attributesPayload.utiPayload
+                    /// Creates a new `attributesPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - assetType:
+                    ///   - fileName:
+                    ///   - fileSize:
+                    ///   - uti:
+                    internal init(
+                        assetType: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.attributesPayload.assetTypePayload,
+                        fileName: Swift.String,
+                        fileSize: Swift.Int64,
+                        uti: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.attributesPayload.utiPayload
+                    ) {
+                        self.assetType = assetType
+                        self.fileName = fileName
+                        self.fileSize = fileSize
+                        self.uti = uti
+                    }
+                    internal enum CodingKeys: String, CodingKey {
+                        case assetType
+                        case fileName
+                        case fileSize
+                        case uti
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/attributes`.
+                internal var attributes: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.attributesPayload
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/relationships`.
+                internal struct relationshipsPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/relationships/buildUpload`.
+                    internal struct buildUploadPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/relationships/buildUpload/data`.
+                        internal struct dataPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/relationships/buildUpload/data/type`.
+                            internal enum _typePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case buildUploads = "buildUploads"
+                            }
+                            /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/relationships/buildUpload/data/type`.
+                            internal var _type: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.relationshipsPayload.buildUploadPayload.dataPayload._typePayload
+                            /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/relationships/buildUpload/data/id`.
+                            internal var id: Swift.String
+                            /// Creates a new `dataPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - _type:
+                            ///   - id:
+                            internal init(
+                                _type: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.relationshipsPayload.buildUploadPayload.dataPayload._typePayload,
+                                id: Swift.String
+                            ) {
+                                self._type = _type
+                                self.id = id
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case _type = "type"
+                                case id
+                            }
+                        }
+                        /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/relationships/buildUpload/data`.
+                        internal var data: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.relationshipsPayload.buildUploadPayload.dataPayload
+                        /// Creates a new `buildUploadPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - data:
+                        internal init(data: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.relationshipsPayload.buildUploadPayload.dataPayload) {
+                            self.data = data
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case data
+                        }
+                    }
+                    /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/relationships/buildUpload`.
+                    internal var buildUpload: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.relationshipsPayload.buildUploadPayload
+                    /// Creates a new `relationshipsPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - buildUpload:
+                    internal init(buildUpload: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.relationshipsPayload.buildUploadPayload) {
+                        self.buildUpload = buildUpload
+                    }
+                    internal enum CodingKeys: String, CodingKey {
+                        case buildUpload
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data/relationships`.
+                internal var relationships: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.relationshipsPayload
+                /// Creates a new `dataPayload`.
+                ///
+                /// - Parameters:
+                ///   - _type:
+                ///   - attributes:
+                ///   - relationships:
+                internal init(
+                    _type: Components.Schemas.BuildUploadFileCreateRequest.dataPayload._typePayload,
+                    attributes: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.attributesPayload,
+                    relationships: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.relationshipsPayload
+                ) {
+                    self._type = _type
+                    self.attributes = attributes
+                    self.relationships = relationships
+                }
+                internal enum CodingKeys: String, CodingKey {
+                    case _type = "type"
+                    case attributes
+                    case relationships
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/BuildUploadFileCreateRequest/data`.
+            internal var data: Components.Schemas.BuildUploadFileCreateRequest.dataPayload
+            /// Creates a new `BuildUploadFileCreateRequest`.
+            ///
+            /// - Parameters:
+            ///   - data:
+            internal init(data: Components.Schemas.BuildUploadFileCreateRequest.dataPayload) {
+                self.data = data
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case data
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/BuildUploadFileUpdateRequest`.
+        internal struct BuildUploadFileUpdateRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/BuildUploadFileUpdateRequest/data`.
+            internal struct dataPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFileUpdateRequest/data/type`.
+                internal enum _typePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case buildUploadFiles = "buildUploadFiles"
+                }
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFileUpdateRequest/data/type`.
+                internal var _type: Components.Schemas.BuildUploadFileUpdateRequest.dataPayload._typePayload
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFileUpdateRequest/data/id`.
+                internal var id: Swift.String
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFileUpdateRequest/data/attributes`.
+                internal struct attributesPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/components/schemas/BuildUploadFileUpdateRequest/data/attributes/sourceFileChecksums`.
+                    internal var sourceFileChecksums: Components.Schemas.Checksums?
+                    /// - Remark: Generated from `#/components/schemas/BuildUploadFileUpdateRequest/data/attributes/uploaded`.
+                    internal var uploaded: Swift.Bool?
+                    /// Creates a new `attributesPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - sourceFileChecksums:
+                    ///   - uploaded:
+                    internal init(
+                        sourceFileChecksums: Components.Schemas.Checksums? = nil,
+                        uploaded: Swift.Bool? = nil
+                    ) {
+                        self.sourceFileChecksums = sourceFileChecksums
+                        self.uploaded = uploaded
+                    }
+                    internal enum CodingKeys: String, CodingKey {
+                        case sourceFileChecksums
+                        case uploaded
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/BuildUploadFileUpdateRequest/data/attributes`.
+                internal var attributes: Components.Schemas.BuildUploadFileUpdateRequest.dataPayload.attributesPayload?
+                /// Creates a new `dataPayload`.
+                ///
+                /// - Parameters:
+                ///   - _type:
+                ///   - id:
+                ///   - attributes:
+                internal init(
+                    _type: Components.Schemas.BuildUploadFileUpdateRequest.dataPayload._typePayload,
+                    id: Swift.String,
+                    attributes: Components.Schemas.BuildUploadFileUpdateRequest.dataPayload.attributesPayload? = nil
+                ) {
+                    self._type = _type
+                    self.id = id
+                    self.attributes = attributes
+                }
+                internal enum CodingKeys: String, CodingKey {
+                    case _type = "type"
+                    case id
+                    case attributes
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/BuildUploadFileUpdateRequest/data`.
+            internal var data: Components.Schemas.BuildUploadFileUpdateRequest.dataPayload
+            /// Creates a new `BuildUploadFileUpdateRequest`.
+            ///
+            /// - Parameters:
+            ///   - data:
+            internal init(data: Components.Schemas.BuildUploadFileUpdateRequest.dataPayload) {
+                self.data = data
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case data
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/BuildUpload`.
         internal struct BuildUpload: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/BuildUpload/type`.
@@ -6957,6 +7377,208 @@ internal enum Components {
                 case attributes
                 case relationships
                 case links
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/BuildUploadResponse`.
+        internal struct BuildUploadResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/BuildUploadResponse/data`.
+            internal var data: Components.Schemas.BuildUpload
+            /// - Remark: Generated from `#/components/schemas/BuildUploadResponse/includedPayload`.
+            internal enum includedPayloadPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/BuildUploadResponse/includedPayload/Build`.
+                case builds(Components.Schemas.Build)
+                /// - Remark: Generated from `#/components/schemas/BuildUploadResponse/includedPayload/BuildUploadFile`.
+                case buildUploadFiles(Components.Schemas.BuildUploadFile)
+                internal enum CodingKeys: String, CodingKey {
+                    case _type = "type"
+                }
+                internal init(from decoder: any Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                    let discriminator = try container.decode(
+                        Swift.String.self,
+                        forKey: ._type
+                    )
+                    switch discriminator {
+                    case "builds":
+                        self = .builds(try .init(from: decoder))
+                    case "buildUploadFiles":
+                        self = .buildUploadFiles(try .init(from: decoder))
+                    default:
+                        throw Swift.DecodingError.unknownOneOfDiscriminator(
+                            discriminatorKey: CodingKeys._type,
+                            discriminatorValue: discriminator,
+                            codingPath: decoder.codingPath
+                        )
+                    }
+                }
+                internal func encode(to encoder: any Encoder) throws {
+                    switch self {
+                    case let .builds(value):
+                        try value.encode(to: encoder)
+                    case let .buildUploadFiles(value):
+                        try value.encode(to: encoder)
+                    }
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/BuildUploadResponse/included`.
+            internal typealias includedPayload = [Components.Schemas.BuildUploadResponse.includedPayloadPayload]
+            /// - Remark: Generated from `#/components/schemas/BuildUploadResponse/included`.
+            internal var included: Components.Schemas.BuildUploadResponse.includedPayload?
+            /// - Remark: Generated from `#/components/schemas/BuildUploadResponse/links`.
+            internal var links: Components.Schemas.DocumentLinks
+            /// Creates a new `BuildUploadResponse`.
+            ///
+            /// - Parameters:
+            ///   - data:
+            ///   - included:
+            ///   - links:
+            internal init(
+                data: Components.Schemas.BuildUpload,
+                included: Components.Schemas.BuildUploadResponse.includedPayload? = nil,
+                links: Components.Schemas.DocumentLinks
+            ) {
+                self.data = data
+                self.included = included
+                self.links = links
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case data
+                case included
+                case links
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest`.
+        internal struct BuildUploadCreateRequest: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data`.
+            internal struct dataPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/type`.
+                internal enum _typePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case buildUploads = "buildUploads"
+                }
+                /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/type`.
+                internal var _type: Components.Schemas.BuildUploadCreateRequest.dataPayload._typePayload
+                /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/attributes`.
+                internal struct attributesPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/attributes/cfBundleShortVersionString`.
+                    internal var cfBundleShortVersionString: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/attributes/cfBundleVersion`.
+                    internal var cfBundleVersion: Swift.String
+                    /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/attributes/platform`.
+                    internal var platform: Components.Schemas.Platform
+                    /// Creates a new `attributesPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - cfBundleShortVersionString:
+                    ///   - cfBundleVersion:
+                    ///   - platform:
+                    internal init(
+                        cfBundleShortVersionString: Swift.String,
+                        cfBundleVersion: Swift.String,
+                        platform: Components.Schemas.Platform
+                    ) {
+                        self.cfBundleShortVersionString = cfBundleShortVersionString
+                        self.cfBundleVersion = cfBundleVersion
+                        self.platform = platform
+                    }
+                    internal enum CodingKeys: String, CodingKey {
+                        case cfBundleShortVersionString
+                        case cfBundleVersion
+                        case platform
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/attributes`.
+                internal var attributes: Components.Schemas.BuildUploadCreateRequest.dataPayload.attributesPayload
+                /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/relationships`.
+                internal struct relationshipsPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/relationships/app`.
+                    internal struct appPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/relationships/app/data`.
+                        internal struct dataPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/relationships/app/data/type`.
+                            internal enum _typePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case apps = "apps"
+                            }
+                            /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/relationships/app/data/type`.
+                            internal var _type: Components.Schemas.BuildUploadCreateRequest.dataPayload.relationshipsPayload.appPayload.dataPayload._typePayload
+                            /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/relationships/app/data/id`.
+                            internal var id: Swift.String
+                            /// Creates a new `dataPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - _type:
+                            ///   - id:
+                            internal init(
+                                _type: Components.Schemas.BuildUploadCreateRequest.dataPayload.relationshipsPayload.appPayload.dataPayload._typePayload,
+                                id: Swift.String
+                            ) {
+                                self._type = _type
+                                self.id = id
+                            }
+                            internal enum CodingKeys: String, CodingKey {
+                                case _type = "type"
+                                case id
+                            }
+                        }
+                        /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/relationships/app/data`.
+                        internal var data: Components.Schemas.BuildUploadCreateRequest.dataPayload.relationshipsPayload.appPayload.dataPayload
+                        /// Creates a new `appPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - data:
+                        internal init(data: Components.Schemas.BuildUploadCreateRequest.dataPayload.relationshipsPayload.appPayload.dataPayload) {
+                            self.data = data
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case data
+                        }
+                    }
+                    /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/relationships/app`.
+                    internal var app: Components.Schemas.BuildUploadCreateRequest.dataPayload.relationshipsPayload.appPayload
+                    /// Creates a new `relationshipsPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - app:
+                    internal init(app: Components.Schemas.BuildUploadCreateRequest.dataPayload.relationshipsPayload.appPayload) {
+                        self.app = app
+                    }
+                    internal enum CodingKeys: String, CodingKey {
+                        case app
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data/relationships`.
+                internal var relationships: Components.Schemas.BuildUploadCreateRequest.dataPayload.relationshipsPayload
+                /// Creates a new `dataPayload`.
+                ///
+                /// - Parameters:
+                ///   - _type:
+                ///   - attributes:
+                ///   - relationships:
+                internal init(
+                    _type: Components.Schemas.BuildUploadCreateRequest.dataPayload._typePayload,
+                    attributes: Components.Schemas.BuildUploadCreateRequest.dataPayload.attributesPayload,
+                    relationships: Components.Schemas.BuildUploadCreateRequest.dataPayload.relationshipsPayload
+                ) {
+                    self._type = _type
+                    self.attributes = attributes
+                    self.relationships = relationships
+                }
+                internal enum CodingKeys: String, CodingKey {
+                    case _type = "type"
+                    case attributes
+                    case relationships
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/BuildUploadCreateRequest/data`.
+            internal var data: Components.Schemas.BuildUploadCreateRequest.dataPayload
+            /// Creates a new `BuildUploadCreateRequest`.
+            ///
+            /// - Parameters:
+            ///   - data:
+            internal init(data: Components.Schemas.BuildUploadCreateRequest.dataPayload) {
+                self.data = data
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case data
             }
         }
         /// - Remark: Generated from `#/components/schemas/Build`.
@@ -9361,6 +9983,65 @@ internal enum Components {
             case INVALID = "INVALID"
             case EXPIRED = "EXPIRED"
         }
+        /// - Remark: Generated from `#/components/schemas/AppMediaAssetState`.
+        internal struct AppMediaAssetState: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/AppMediaAssetState/errors`.
+            internal var errors: [Components.Schemas.AppMediaStateError]?
+            /// - Remark: Generated from `#/components/schemas/AppMediaAssetState/warnings`.
+            internal var warnings: [Components.Schemas.AppMediaStateError]?
+            /// - Remark: Generated from `#/components/schemas/AppMediaAssetState/state`.
+            internal enum statePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case AWAITING_UPLOAD = "AWAITING_UPLOAD"
+                case UPLOAD_COMPLETE = "UPLOAD_COMPLETE"
+                case COMPLETE = "COMPLETE"
+                case FAILED = "FAILED"
+            }
+            /// - Remark: Generated from `#/components/schemas/AppMediaAssetState/state`.
+            internal var state: Components.Schemas.AppMediaAssetState.statePayload?
+            /// Creates a new `AppMediaAssetState`.
+            ///
+            /// - Parameters:
+            ///   - errors:
+            ///   - warnings:
+            ///   - state:
+            internal init(
+                errors: [Components.Schemas.AppMediaStateError]? = nil,
+                warnings: [Components.Schemas.AppMediaStateError]? = nil,
+                state: Components.Schemas.AppMediaAssetState.statePayload? = nil
+            ) {
+                self.errors = errors
+                self.warnings = warnings
+                self.state = state
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case errors
+                case warnings
+                case state
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/AppMediaStateError`.
+        internal struct AppMediaStateError: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/AppMediaStateError/code`.
+            internal var code: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/AppMediaStateError/description`.
+            internal var description: Swift.String?
+            /// Creates a new `AppMediaStateError`.
+            ///
+            /// - Parameters:
+            ///   - code:
+            ///   - description:
+            internal init(
+                code: Swift.String? = nil,
+                description: Swift.String? = nil
+            ) {
+                self.code = code
+                self.description = description
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case code
+                case description
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/AppStoreVersionState`.
         internal enum AppStoreVersionState: String, Codable, Hashable, Sendable, CaseIterable {
             case ACCEPTED = "ACCEPTED"
@@ -9439,6 +10120,143 @@ internal enum Components {
             case FAILED = "FAILED"
             case COMPLETE = "COMPLETE"
         }
+        /// - Remark: Generated from `#/components/schemas/ChecksumAlgorithm`.
+        internal enum ChecksumAlgorithm: String, Codable, Hashable, Sendable, CaseIterable {
+            case MD5 = "MD5"
+            case SHA_256 = "SHA_256"
+        }
+        /// - Remark: Generated from `#/components/schemas/Checksums`.
+        internal struct Checksums: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/Checksums/file`.
+            internal struct filePayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/Checksums/file/hash`.
+                internal var hash: Swift.String?
+                /// - Remark: Generated from `#/components/schemas/Checksums/file/algorithm`.
+                internal var algorithm: Components.Schemas.ChecksumAlgorithm?
+                /// Creates a new `filePayload`.
+                ///
+                /// - Parameters:
+                ///   - hash:
+                ///   - algorithm:
+                internal init(
+                    hash: Swift.String? = nil,
+                    algorithm: Components.Schemas.ChecksumAlgorithm? = nil
+                ) {
+                    self.hash = hash
+                    self.algorithm = algorithm
+                }
+                internal enum CodingKeys: String, CodingKey {
+                    case hash
+                    case algorithm
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/Checksums/file`.
+            internal var file: Components.Schemas.Checksums.filePayload?
+            /// - Remark: Generated from `#/components/schemas/Checksums/composite`.
+            internal struct compositePayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/Checksums/composite/hash`.
+                internal var hash: Swift.String?
+                /// - Remark: Generated from `#/components/schemas/Checksums/composite/algorithm`.
+                internal enum algorithmPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case MD5 = "MD5"
+                }
+                /// - Remark: Generated from `#/components/schemas/Checksums/composite/algorithm`.
+                internal var algorithm: Components.Schemas.Checksums.compositePayload.algorithmPayload?
+                /// Creates a new `compositePayload`.
+                ///
+                /// - Parameters:
+                ///   - hash:
+                ///   - algorithm:
+                internal init(
+                    hash: Swift.String? = nil,
+                    algorithm: Components.Schemas.Checksums.compositePayload.algorithmPayload? = nil
+                ) {
+                    self.hash = hash
+                    self.algorithm = algorithm
+                }
+                internal enum CodingKeys: String, CodingKey {
+                    case hash
+                    case algorithm
+                }
+            }
+            /// - Remark: Generated from `#/components/schemas/Checksums/composite`.
+            internal var composite: Components.Schemas.Checksums.compositePayload?
+            /// Creates a new `Checksums`.
+            ///
+            /// - Parameters:
+            ///   - file:
+            ///   - composite:
+            internal init(
+                file: Components.Schemas.Checksums.filePayload? = nil,
+                composite: Components.Schemas.Checksums.compositePayload? = nil
+            ) {
+                self.file = file
+                self.composite = composite
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case file
+                case composite
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/DeliveryFileUploadOperation`.
+        internal struct DeliveryFileUploadOperation: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/DeliveryFileUploadOperation/method`.
+            internal var method: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/DeliveryFileUploadOperation/url`.
+            internal var url: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/DeliveryFileUploadOperation/length`.
+            internal var length: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/DeliveryFileUploadOperation/offset`.
+            internal var offset: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/DeliveryFileUploadOperation/requestHeaders`.
+            internal var requestHeaders: [Components.Schemas.HttpHeader]?
+            /// - Remark: Generated from `#/components/schemas/DeliveryFileUploadOperation/expiration`.
+            internal var expiration: Foundation.Date?
+            /// - Remark: Generated from `#/components/schemas/DeliveryFileUploadOperation/partNumber`.
+            internal var partNumber: Swift.Int64?
+            /// - Remark: Generated from `#/components/schemas/DeliveryFileUploadOperation/entityTag`.
+            internal var entityTag: Swift.String?
+            /// Creates a new `DeliveryFileUploadOperation`.
+            ///
+            /// - Parameters:
+            ///   - method:
+            ///   - url:
+            ///   - length:
+            ///   - offset:
+            ///   - requestHeaders:
+            ///   - expiration:
+            ///   - partNumber:
+            ///   - entityTag:
+            internal init(
+                method: Swift.String? = nil,
+                url: Swift.String? = nil,
+                length: Swift.Int64? = nil,
+                offset: Swift.Int64? = nil,
+                requestHeaders: [Components.Schemas.HttpHeader]? = nil,
+                expiration: Foundation.Date? = nil,
+                partNumber: Swift.Int64? = nil,
+                entityTag: Swift.String? = nil
+            ) {
+                self.method = method
+                self.url = url
+                self.length = length
+                self.offset = offset
+                self.requestHeaders = requestHeaders
+                self.expiration = expiration
+                self.partNumber = partNumber
+                self.entityTag = entityTag
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case method
+                case url
+                case length
+                case offset
+                case requestHeaders
+                case expiration
+                case partNumber
+                case entityTag
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/DeviceFamily`.
         internal enum DeviceFamily: String, Codable, Hashable, Sendable, CaseIterable {
             case IPHONE = "IPHONE"
@@ -9492,6 +10310,29 @@ internal enum Components {
             case BETA_REJECTED = "BETA_REJECTED"
             case BETA_APPROVED = "BETA_APPROVED"
             case NOT_APPLICABLE = "NOT_APPLICABLE"
+        }
+        /// - Remark: Generated from `#/components/schemas/HttpHeader`.
+        internal struct HttpHeader: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/HttpHeader/name`.
+            internal var name: Swift.String?
+            /// - Remark: Generated from `#/components/schemas/HttpHeader/value`.
+            internal var value: Swift.String?
+            /// Creates a new `HttpHeader`.
+            ///
+            /// - Parameters:
+            ///   - name:
+            ///   - value:
+            internal init(
+                name: Swift.String? = nil,
+                value: Swift.String? = nil
+            ) {
+                self.name = name
+                self.value = value
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case name
+                case value
+            }
         }
         /// - Remark: Generated from `#/components/schemas/IconAssetType`.
         internal enum IconAssetType: String, Codable, Hashable, Sendable, CaseIterable {
@@ -14448,6 +15289,1785 @@ internal enum Operations {
             /// - Throws: An error if `self` is not `.tooManyRequests`.
             /// - SeeAlso: `.tooManyRequests`.
             internal var tooManyRequests: Operations.buildBetaNotifications_createInstance.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// - Remark: HTTP `POST /v1/buildUploadFiles`.
+    /// - Remark: Generated from `#/paths//v1/buildUploadFiles/post(buildUploadFiles_createInstance)`.
+    internal enum buildUploadFiles_createInstance {
+        internal static let id: Swift.String = "buildUploadFiles_createInstance"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.buildUploadFiles_createInstance.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.buildUploadFiles_createInstance.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.buildUploadFiles_createInstance.Input.Headers
+            /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/requestBody`.
+            internal enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/requestBody/content/application\/json`.
+                case json(Components.Schemas.BuildUploadFileCreateRequest)
+            }
+            internal var body: Operations.buildUploadFiles_createInstance.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            ///   - body:
+            internal init(
+                headers: Operations.buildUploadFiles_createInstance.Input.Headers = .init(),
+                body: Operations.buildUploadFiles_createInstance.Input.Body
+            ) {
+                self.headers = headers
+                self.body = body
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploadFiles_createInstance.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploadFiles_createInstance.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// Parameter error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploadFiles/post(buildUploadFiles_createInstance)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.buildUploadFiles_createInstance.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.buildUploadFiles_createInstance.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/responses/401/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploadFiles_createInstance.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploadFiles_createInstance.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// Unauthorized error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploadFiles/post(buildUploadFiles_createInstance)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.buildUploadFiles_createInstance.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.buildUploadFiles_createInstance.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/responses/403/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploadFiles_createInstance.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploadFiles_createInstance.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// Forbidden error
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploadFiles/post(buildUploadFiles_createInstance)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.buildUploadFiles_createInstance.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.buildUploadFiles_createInstance.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/responses/422/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/responses/422/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploadFiles_createInstance.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploadFiles_createInstance.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Unprocessable request entity error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploadFiles/post(buildUploadFiles_createInstance)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.buildUploadFiles_createInstance.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            internal var unprocessableContent: Operations.buildUploadFiles_createInstance.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Created: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/responses/201/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/responses/201/content/application\/json`.
+                    case json(Components.Schemas.BuildUploadFileResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.BuildUploadFileResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploadFiles_createInstance.Output.Created.Body
+                /// Creates a new `Created`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploadFiles_createInstance.Output.Created.Body) {
+                    self.body = body
+                }
+            }
+            /// Single BuildUploadFile
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploadFiles/post(buildUploadFiles_createInstance)/responses/201`.
+            ///
+            /// HTTP response code: `201 created`.
+            case created(Operations.buildUploadFiles_createInstance.Output.Created)
+            /// The associated value of the enum case if `self` is `.created`.
+            ///
+            /// - Throws: An error if `self` is not `.created`.
+            /// - SeeAlso: `.created`.
+            internal var created: Operations.buildUploadFiles_createInstance.Output.Created {
+                get throws {
+                    switch self {
+                    case let .created(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "created",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Conflict: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/responses/409/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/responses/409/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploadFiles_createInstance.Output.Conflict.Body
+                /// Creates a new `Conflict`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploadFiles_createInstance.Output.Conflict.Body) {
+                    self.body = body
+                }
+            }
+            /// Request entity error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploadFiles/post(buildUploadFiles_createInstance)/responses/409`.
+            ///
+            /// HTTP response code: `409 conflict`.
+            case conflict(Operations.buildUploadFiles_createInstance.Output.Conflict)
+            /// The associated value of the enum case if `self` is `.conflict`.
+            ///
+            /// - Throws: An error if `self` is not `.conflict`.
+            /// - SeeAlso: `.conflict`.
+            internal var conflict: Operations.buildUploadFiles_createInstance.Output.Conflict {
+                get throws {
+                    switch self {
+                    case let .conflict(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "conflict",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploadFiles/POST/responses/429/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploadFiles_createInstance.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploadFiles_createInstance.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// Rate limit exceeded error
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploadFiles/post(buildUploadFiles_createInstance)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.buildUploadFiles_createInstance.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.buildUploadFiles_createInstance.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// - Remark: HTTP `PATCH /v1/buildUploadFiles/{id}`.
+    /// - Remark: Generated from `#/paths//v1/buildUploadFiles/{id}/patch(buildUploadFiles_updateInstance)`.
+    internal enum buildUploadFiles_updateInstance {
+        internal static let id: Swift.String = "buildUploadFiles_updateInstance"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/path`.
+            internal struct Path: Sendable, Hashable {
+                /// the id of the requested resource
+                ///
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/path/id`.
+                internal var id: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - id: the id of the requested resource
+                internal init(id: Swift.String) {
+                    self.id = id
+                }
+            }
+            internal var path: Operations.buildUploadFiles_updateInstance.Input.Path
+            /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.buildUploadFiles_updateInstance.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.buildUploadFiles_updateInstance.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.buildUploadFiles_updateInstance.Input.Headers
+            /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/requestBody`.
+            internal enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/requestBody/content/application\/json`.
+                case json(Components.Schemas.BuildUploadFileUpdateRequest)
+            }
+            internal var body: Operations.buildUploadFiles_updateInstance.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            ///   - body:
+            internal init(
+                path: Operations.buildUploadFiles_updateInstance.Input.Path,
+                headers: Operations.buildUploadFiles_updateInstance.Input.Headers = .init(),
+                body: Operations.buildUploadFiles_updateInstance.Input.Body
+            ) {
+                self.path = path
+                self.headers = headers
+                self.body = body
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/400/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploadFiles_updateInstance.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploadFiles_updateInstance.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// Parameter error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploadFiles/{id}/patch(buildUploadFiles_updateInstance)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.buildUploadFiles_updateInstance.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.buildUploadFiles_updateInstance.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/401/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploadFiles_updateInstance.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploadFiles_updateInstance.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// Unauthorized error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploadFiles/{id}/patch(buildUploadFiles_updateInstance)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.buildUploadFiles_updateInstance.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.buildUploadFiles_updateInstance.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/403/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploadFiles_updateInstance.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploadFiles_updateInstance.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// Forbidden error
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploadFiles/{id}/patch(buildUploadFiles_updateInstance)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.buildUploadFiles_updateInstance.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.buildUploadFiles_updateInstance.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct NotFound: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/404/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/404/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploadFiles_updateInstance.Output.NotFound.Body
+                /// Creates a new `NotFound`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploadFiles_updateInstance.Output.NotFound.Body) {
+                    self.body = body
+                }
+            }
+            /// Not found error
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploadFiles/{id}/patch(buildUploadFiles_updateInstance)/responses/404`.
+            ///
+            /// HTTP response code: `404 notFound`.
+            case notFound(Operations.buildUploadFiles_updateInstance.Output.NotFound)
+            /// The associated value of the enum case if `self` is `.notFound`.
+            ///
+            /// - Throws: An error if `self` is not `.notFound`.
+            /// - SeeAlso: `.notFound`.
+            internal var notFound: Operations.buildUploadFiles_updateInstance.Output.NotFound {
+                get throws {
+                    switch self {
+                    case let .notFound(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/422/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/422/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploadFiles_updateInstance.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploadFiles_updateInstance.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Unprocessable request entity error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploadFiles/{id}/patch(buildUploadFiles_updateInstance)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.buildUploadFiles_updateInstance.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            internal var unprocessableContent: Operations.buildUploadFiles_updateInstance.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/200/content/application\/json`.
+                    case json(Components.Schemas.BuildUploadFileResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.BuildUploadFileResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploadFiles_updateInstance.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploadFiles_updateInstance.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Single BuildUploadFile
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploadFiles/{id}/patch(buildUploadFiles_updateInstance)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.buildUploadFiles_updateInstance.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.buildUploadFiles_updateInstance.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Conflict: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/409/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/409/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploadFiles_updateInstance.Output.Conflict.Body
+                /// Creates a new `Conflict`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploadFiles_updateInstance.Output.Conflict.Body) {
+                    self.body = body
+                }
+            }
+            /// Request entity error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploadFiles/{id}/patch(buildUploadFiles_updateInstance)/responses/409`.
+            ///
+            /// HTTP response code: `409 conflict`.
+            case conflict(Operations.buildUploadFiles_updateInstance.Output.Conflict)
+            /// The associated value of the enum case if `self` is `.conflict`.
+            ///
+            /// - Throws: An error if `self` is not `.conflict`.
+            /// - SeeAlso: `.conflict`.
+            internal var conflict: Operations.buildUploadFiles_updateInstance.Output.Conflict {
+                get throws {
+                    switch self {
+                    case let .conflict(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "conflict",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploadFiles/{id}/PATCH/responses/429/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploadFiles_updateInstance.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploadFiles_updateInstance.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// Rate limit exceeded error
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploadFiles/{id}/patch(buildUploadFiles_updateInstance)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.buildUploadFiles_updateInstance.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.buildUploadFiles_updateInstance.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// - Remark: HTTP `POST /v1/buildUploads`.
+    /// - Remark: Generated from `#/paths//v1/buildUploads/post(buildUploads_createInstance)`.
+    internal enum buildUploads_createInstance {
+        internal static let id: Swift.String = "buildUploads_createInstance"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/buildUploads/POST/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.buildUploads_createInstance.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.buildUploads_createInstance.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.buildUploads_createInstance.Input.Headers
+            /// - Remark: Generated from `#/paths/v1/buildUploads/POST/requestBody`.
+            internal enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploads/POST/requestBody/content/application\/json`.
+                case json(Components.Schemas.BuildUploadCreateRequest)
+            }
+            internal var body: Operations.buildUploads_createInstance.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            ///   - body:
+            internal init(
+                headers: Operations.buildUploads_createInstance.Input.Headers = .init(),
+                body: Operations.buildUploads_createInstance.Input.Body
+            ) {
+                self.headers = headers
+                self.body = body
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploads/POST/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploads/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploads_createInstance.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploads_createInstance.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// Parameter error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploads/post(buildUploads_createInstance)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.buildUploads_createInstance.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.buildUploads_createInstance.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploads/POST/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploads/POST/responses/401/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploads_createInstance.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploads_createInstance.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// Unauthorized error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploads/post(buildUploads_createInstance)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.buildUploads_createInstance.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.buildUploads_createInstance.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploads/POST/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploads/POST/responses/403/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploads_createInstance.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploads_createInstance.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// Forbidden error
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploads/post(buildUploads_createInstance)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.buildUploads_createInstance.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.buildUploads_createInstance.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploads/POST/responses/422/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploads/POST/responses/422/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploads_createInstance.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploads_createInstance.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// Unprocessable request entity error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploads/post(buildUploads_createInstance)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.buildUploads_createInstance.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            internal var unprocessableContent: Operations.buildUploads_createInstance.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Created: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploads/POST/responses/201/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploads/POST/responses/201/content/application\/json`.
+                    case json(Components.Schemas.BuildUploadResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.BuildUploadResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploads_createInstance.Output.Created.Body
+                /// Creates a new `Created`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploads_createInstance.Output.Created.Body) {
+                    self.body = body
+                }
+            }
+            /// Single BuildUpload
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploads/post(buildUploads_createInstance)/responses/201`.
+            ///
+            /// HTTP response code: `201 created`.
+            case created(Operations.buildUploads_createInstance.Output.Created)
+            /// The associated value of the enum case if `self` is `.created`.
+            ///
+            /// - Throws: An error if `self` is not `.created`.
+            /// - SeeAlso: `.created`.
+            internal var created: Operations.buildUploads_createInstance.Output.Created {
+                get throws {
+                    switch self {
+                    case let .created(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "created",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Conflict: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploads/POST/responses/409/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploads/POST/responses/409/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploads_createInstance.Output.Conflict.Body
+                /// Creates a new `Conflict`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploads_createInstance.Output.Conflict.Body) {
+                    self.body = body
+                }
+            }
+            /// Request entity error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploads/post(buildUploads_createInstance)/responses/409`.
+            ///
+            /// HTTP response code: `409 conflict`.
+            case conflict(Operations.buildUploads_createInstance.Output.Conflict)
+            /// The associated value of the enum case if `self` is `.conflict`.
+            ///
+            /// - Throws: An error if `self` is not `.conflict`.
+            /// - SeeAlso: `.conflict`.
+            internal var conflict: Operations.buildUploads_createInstance.Output.Conflict {
+                get throws {
+                    switch self {
+                    case let .conflict(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "conflict",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploads/POST/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploads/POST/responses/429/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploads_createInstance.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploads_createInstance.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// Rate limit exceeded error
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploads/post(buildUploads_createInstance)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.buildUploads_createInstance.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.buildUploads_createInstance.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// - Remark: HTTP `GET /v1/buildUploads/{id}`.
+    /// - Remark: Generated from `#/paths//v1/buildUploads/{id}/get(buildUploads_getInstance)`.
+    internal enum buildUploads_getInstance {
+        internal static let id: Swift.String = "buildUploads_getInstance"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/path`.
+            internal struct Path: Sendable, Hashable {
+                /// the id of the requested resource
+                ///
+                /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/path/id`.
+                internal var id: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - id: the id of the requested resource
+                internal init(id: Swift.String) {
+                    self.id = id
+                }
+            }
+            internal var path: Operations.buildUploads_getInstance.Input.Path
+            /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/query`.
+            internal struct Query: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/query/fields_lbrack_buildUploads_rbrack_Payload`.
+                internal enum fields_lbrack_buildUploads_rbrack_PayloadPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case cfBundleShortVersionString = "cfBundleShortVersionString"
+                    case cfBundleVersion = "cfBundleVersion"
+                    case createdDate = "createdDate"
+                    case state = "state"
+                    case platform = "platform"
+                    case uploadedDate = "uploadedDate"
+                    case build = "build"
+                    case assetFile = "assetFile"
+                    case assetDescriptionFile = "assetDescriptionFile"
+                    case assetSpiFile = "assetSpiFile"
+                    case buildUploadFiles = "buildUploadFiles"
+                }
+                /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/query/fields[buildUploads]`.
+                internal typealias fields_lbrack_buildUploads_rbrack_Payload = [Operations.buildUploads_getInstance.Input.Query.fields_lbrack_buildUploads_rbrack_PayloadPayload]
+                /// the fields to include for returned resources of type buildUploads
+                ///
+                /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/query/fields[buildUploads]`.
+                internal var fields_lbrack_buildUploads_rbrack_: Operations.buildUploads_getInstance.Input.Query.fields_lbrack_buildUploads_rbrack_Payload?
+                /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/query/includePayload`.
+                internal enum includePayloadPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case build = "build"
+                    case assetFile = "assetFile"
+                    case assetDescriptionFile = "assetDescriptionFile"
+                    case assetSpiFile = "assetSpiFile"
+                }
+                /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/query/include`.
+                internal typealias includePayload = [Operations.buildUploads_getInstance.Input.Query.includePayloadPayload]
+                /// comma-separated list of relationships to include
+                ///
+                /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/query/include`.
+                internal var include: Operations.buildUploads_getInstance.Input.Query.includePayload?
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - fields_lbrack_buildUploads_rbrack_: the fields to include for returned resources of type buildUploads
+                ///   - include: comma-separated list of relationships to include
+                internal init(
+                    fields_lbrack_buildUploads_rbrack_: Operations.buildUploads_getInstance.Input.Query.fields_lbrack_buildUploads_rbrack_Payload? = nil,
+                    include: Operations.buildUploads_getInstance.Input.Query.includePayload? = nil
+                ) {
+                    self.fields_lbrack_buildUploads_rbrack_ = fields_lbrack_buildUploads_rbrack_
+                    self.include = include
+                }
+            }
+            internal var query: Operations.buildUploads_getInstance.Input.Query
+            /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.buildUploads_getInstance.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.buildUploads_getInstance.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.buildUploads_getInstance.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - query:
+            ///   - headers:
+            internal init(
+                path: Operations.buildUploads_getInstance.Input.Path,
+                query: Operations.buildUploads_getInstance.Input.Query = .init(),
+                headers: Operations.buildUploads_getInstance.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.query = query
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploads_getInstance.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploads_getInstance.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// Parameter error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploads/{id}/get(buildUploads_getInstance)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.buildUploads_getInstance.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.buildUploads_getInstance.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/responses/401/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploads_getInstance.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploads_getInstance.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// Unauthorized error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploads/{id}/get(buildUploads_getInstance)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.buildUploads_getInstance.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.buildUploads_getInstance.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/responses/403/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploads_getInstance.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploads_getInstance.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// Forbidden error
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploads/{id}/get(buildUploads_getInstance)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.buildUploads_getInstance.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.buildUploads_getInstance.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct NotFound: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/responses/404/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/responses/404/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploads_getInstance.Output.NotFound.Body
+                /// Creates a new `NotFound`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploads_getInstance.Output.NotFound.Body) {
+                    self.body = body
+                }
+            }
+            /// Not found error
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploads/{id}/get(buildUploads_getInstance)/responses/404`.
+            ///
+            /// HTTP response code: `404 notFound`.
+            case notFound(Operations.buildUploads_getInstance.Output.NotFound)
+            /// The associated value of the enum case if `self` is `.notFound`.
+            ///
+            /// - Throws: An error if `self` is not `.notFound`.
+            /// - SeeAlso: `.notFound`.
+            internal var notFound: Operations.buildUploads_getInstance.Output.NotFound {
+                get throws {
+                    switch self {
+                    case let .notFound(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.BuildUploadResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.BuildUploadResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploads_getInstance.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploads_getInstance.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Single BuildUpload
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploads/{id}/get(buildUploads_getInstance)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.buildUploads_getInstance.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.buildUploads_getInstance.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/buildUploads/{id}/GET/responses/429/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.buildUploads_getInstance.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.buildUploads_getInstance.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// Rate limit exceeded error
+            ///
+            /// - Remark: Generated from `#/paths//v1/buildUploads/{id}/get(buildUploads_getInstance)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.buildUploads_getInstance.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.buildUploads_getInstance.Output.TooManyRequests {
                 get throws {
                     switch self {
                     case let .tooManyRequests(response):
