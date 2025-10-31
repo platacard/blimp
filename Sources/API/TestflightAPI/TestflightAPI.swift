@@ -253,7 +253,7 @@ public struct TestflightAPI: Sendable {
                 logger.info("Too many requests. 429, \(response)")
         }
 
-        throw Error.badResponse()
+        throw Error.badResponse("Unexpected response in getBuildID for appId: \(appId), appVersion: \(appVersion), buildNumber: \(buildNumber)")
     }
 
     public func getBuildProcessingResult(id: String) async throws -> BuildProcessingResult {
