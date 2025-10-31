@@ -157,7 +157,7 @@ private extension AppStoreConnectAPIUploader {
                 throw ASCTransporterError.serverError(statusCode: httpResponse.statusCode)
             }
         } catch {
-            currentUploadAttempt[zeroDefault: operation.url.absoluteString] += 1
+            currentUploadAttempt[operation.url.absoluteString, default: 0] += 1
 
             let attempts = currentUploadAttempt[operation.url.absoluteString] ?? 0
 
@@ -266,13 +266,5 @@ private extension Platform {
         case .visionOS: .visionOS
         case .tvOS: .tvOS
         }
-    }
-}
-
-extension Dictionary where Key == String, Value == Int {
-    // Custom subscript that returns 0 for missing keys and allows mutation
-    subscript(zeroDefault key: String) -> Int {
-        get { self[key] ?? 0 }
-        set { self[key] = newValue }
     }
 }
