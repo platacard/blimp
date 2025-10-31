@@ -12,7 +12,6 @@ public extension Blimp {
         package var type: FlightStage.Type { Self.self }
         private var logger: Cronista { Cronista(module: "blimp", category: "Approach") }
         private let uploader: AppStoreConnectUploader
-        private let legacyUploader: AltoolUploader?
 
         private let testflightAPI: TestflightAPI
         private let appsAPI: AppsAPI
@@ -20,12 +19,10 @@ public extension Blimp {
 
         public init(
             uploader: AppStoreConnectUploader,
-            legacyUploader: AltoolUploader? = nil,
             jwtProvider: JWTProviding = DefaultJWTProvider(),
             ignoreUploaderFailure: Bool = false
         ) {
             self.uploader = uploader
-            self.legacyUploader = legacyUploader
             self.testflightAPI = TestflightAPI(jwtProvider: jwtProvider)
             self.appsAPI = AppsAPI(jwtProvider: jwtProvider)
             self.ignoreUploaderFailure = ignoreUploaderFailure
@@ -34,30 +31,6 @@ public extension Blimp {
 }
 
 public extension Blimp.Approach {
-
-    /// Upload the build with legacy altool uploader.
-    func start(arguments: [AltoolUploader.TransporterSetting], verbose: Bool) throws {
-        do {
-            guard let legacyUploader else {
-                logger.error("To use Altool Initialize Blimp.Approach(uploader:legacyUploader:) instead.")
-                throw TransporterError.toolError(NSError(domain: "Uninitialized altool uploader", code: -1))
-            }
-            try legacyUploader.upload(
-                arguments: arguments,
-                verbose: verbose
-            )
-        } catch let TransporterError.toolError(error) {
-            logger.warning("Transporter error: [\(error.localizedDescription)]!")
-            if ignoreUploaderFailure { return }
-
-            throw error
-        } catch {
-            logger.warning("Some transporter error: [\(error.localizedDescription)]!")
-
-            throw error
-        }
-    }
-    
     /// Upload the build with App Store Connect API
     func start(config: UploadConfig, verbose: Bool) async throws {
         do {

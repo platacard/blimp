@@ -34,13 +34,20 @@ struct Approach: AsyncParsableCommand {
     @Flag(help: "Produce more output")
     var verbose = false
 
-    @Flag(help: "Use legacy altool uploader instead of App Store Connect API")
+    @Flag(help: "Use legacy altool uploader instead of App Store Connect API. Deprecated, requires additional setup")
     var legacyUploader = false
     
     private var logger: Cronista { Cronista(module: "blimp", category: "Approach") }
     
     func run() async throws {
-        let uploader = AppStoreConnectAPIUploader()
+        let uploader: AppStoreConnectUploader
+
+        if legacyUploader {
+            uploader = AltoolUploaderAdapter()
+        } else {
+            uploader = AppStoreConnectAPIUploader()
+        }
+
         let approach = Blimp.Approach(
             uploader: uploader,
             ignoreUploaderFailure: ignoreUploaderFailure
