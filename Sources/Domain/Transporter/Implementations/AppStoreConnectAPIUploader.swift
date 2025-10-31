@@ -183,7 +183,7 @@ private extension AppStoreConnectAPIUploader {
         try handle.seek(toOffset: UInt64(offset))
         let data = try handle.read(upToCount: Int(length))
 
-        guard let data, data.count == length else {
+        guard let data, Int64(data.count) == length else {
             throw ASCTransporterError.invalidFile("Failed to read expected number of bytes for chunk starting at offset \(offset)")
         }
 
