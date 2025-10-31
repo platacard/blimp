@@ -119,12 +119,13 @@ private extension AppStoreConnectAPIUploader {
             return
         }
 
-        await withThrowingTaskGroup(of: Void.self) { group in
+        try await withThrowingTaskGroup { group in
             for i in 0 ..< operations.count {
                 group.addTask { [self] in
                     try await uploadOperation(operations[i], fileURL: fileURL, verbose: verbose)
                 }
             }
+            try await group.waitForAll()
         }
     }
 
