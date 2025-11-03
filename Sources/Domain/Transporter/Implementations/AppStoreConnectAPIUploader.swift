@@ -14,8 +14,6 @@ public actor AppStoreConnectAPIUploader: AppStoreConnectUploader {
     private let urlSession: URLSession
 
     private let pollInterval: Int?
-
-    private let maxPollAttempts: Int
     private let maxUploadRetries: Int
 
     private var currentUploadAttempt: [String: Int] = [:]
@@ -33,7 +31,6 @@ public actor AppStoreConnectAPIUploader: AppStoreConnectUploader {
         self.urlSession = urlSession
         self.maxUploadRetries = max(1, maxUploadRetries)
         self.pollInterval = pollInterval
-        self.maxPollAttempts = max(1, uploadStatusMaxAttempts)
     }
 
     public func upload(config: UploadConfig, verbose: Bool) async throws {
@@ -91,19 +88,27 @@ public actor AppStoreConnectAPIUploader: AppStoreConnectUploader {
             throw TransporterError.toolError(error)
         }
 
-        let finalStatus = try await pollUploadCompletion(uploadId: plan.uploadId, verbose: verbose)
+        let finalStatus = try await ensureUploadStatus(uploadId: plan.uploadId, verbose: verbose)
+        
+        finalStatus.warnings.forEach {
+            logger.warning($0.description)
+        }
+        
+        finalStatus.errors.forEach {
+            logger.error($0.description)
+        }
 
         switch finalStatus.phase {
+        case .processing:
+            logger.info("IPA uploaded successfully via App Store Connect API. It will now start processing by TestFlight. Please wait...")
         case .complete:
-            if !finalStatus.warnings.isEmpty {
-                finalStatus.warnings.forEach { logger.warning("Upload warning: \($0)") }
-            }
-            logger.info("IPA uploaded successfully via App Store Connect API.")
+            logger.info("Unexpected `complete` status before processing is finished. Check your App Store Connect app page for details")
         case .failed:
-            finalStatus.errors.forEach { logger.error($0) }
+            logger.error("Check status failed `.awaitingUpload`. Check error logs above for more details.")
             throw TransporterError.toolError(ASCTransporterError.uploadFailed(finalStatus.errors))
-        case .awaitingUpload, .processing:
-            logger.warning("Upload finished with unexpected state: \(finalStatus.phase)")
+        case .awaitingUpload:
+            logger.error("Unexpected `.awaitingUpload` status after the binary successfully uploaded")
+            throw TransporterError.toolError(ASCTransporterError.uploadFailed(["Awaiting upload after binary uploaded"]))
         }
     }
 }
@@ -191,31 +196,11 @@ private extension AppStoreConnectAPIUploader {
         return data
     }
 
-    func pollUploadCompletion(uploadId: String, verbose: Bool) async throws -> TestflightAPI.UploadStatus {
-        var attempt = 0
-
-        while attempt < maxPollAttempts {
-            let status = try await testflightAPI.getUploadStatus(uploadId: uploadId)
-
-            switch status.phase {
-            case .awaitingUpload, .processing:
-                guard let pollInterval else {
-                    logger.info("No poll interval specified. The processing is skipped")
-                    return status
-                }
-
-                attempt += 1
-
-                if verbose {
-                    logger.info("Upload state: \(status.phase) (attempt \(attempt)/\(maxPollAttempts))")
-                }
-                try await Task.sleep(for: .seconds(pollInterval))
-            case .complete, .failed:
-                return status
-            }
-        }
-
-        throw ASCTransporterError.uploadTimedOut
+    func ensureUploadStatus(uploadId: String, verbose: Bool) async throws -> TestflightAPI.UploadStatus {
+        let status = try await testflightAPI.getUploadStatus(uploadId: uploadId)
+        logger.info("Upload status of \(uploadId): \(status.phase)")
+        
+        return status
     }
 }
 
@@ -238,22 +223,19 @@ private enum ASCTransporterError: Error, CustomStringConvertible {
     case invalidResponse(String)
     case serverError(statusCode: Int)
     case uploadFailed([String])
-    case uploadTimedOut
 
     var description: String {
         switch self {
         case .missingRequiredArgument(let message):
-            return message
+            message
         case .invalidFile(let message):
-            return message
+            message
         case .invalidResponse(let message):
-            return message
+            message
         case .serverError(let statusCode):
-            return "Server returned status \(statusCode) while uploading chunk"
+            "Server returned status \(statusCode) while uploading chunk"
         case .uploadFailed(let errors):
-            return errors.joined(separator: " | ")
-        case .uploadTimedOut:
-            return "Timed out waiting for App Store Connect to finish processing the uploaded build"
+            errors.joined(separator: " | ")
         }
     }
 }
