@@ -40,8 +40,8 @@ public struct DefaultJWTProvider: JWTProviding {
     
     /// Creates a new JWT token to use for accessing ASC API
     /// - Parameters:
-    ///   - keyId:  Your issuer ID from the API Keys page in App Store Connect (Ex: 57246542-96fe-1a63-e053-0824d011072a)
-    ///   - keyIssuer: Your private key ID from App Store Connect (Ex: 2X9R4HXF34)
+    ///   - keyId:  Your private key ID from App Store Connect (Ex: 2X9R4HXF34)
+    ///   - keyIssuer: Your issuer ID from the API Keys page in App Store Connect (Ex: 57246542-96fe-1a63-e053-0824d011072a)
     ///   - privateKey:  Your private key from the .p8 file. Without the -----BEGIN PRIVATE KEY----- and -----END PRIVATE KEY----- lines.
     ///   - lifetimeSec: lifetime > 20 min (1200s) is not valid, set to max of 1200, 120 is the default.
     public func token(keyId: String, keyIssuer: String, privateKey: String, lifetimeSec: TimeInterval) throws -> String {
