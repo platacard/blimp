@@ -49,7 +49,7 @@ let package = Package(
         .domain(
             name: "BlimpKit",
             dependencies: [
-                "Transporter",
+                "Uploader",
                 "AppsAPI",
                 "ProvisioningAPI",
                 "TestflightAPI",
@@ -68,7 +68,7 @@ let package = Package(
             ]
         ),
         .domain(
-            name: "Transporter",
+            name: "Uploader",
             dependencies: [
                 "ASCCredentials",
                 "AppsAPI",
@@ -85,7 +85,8 @@ let package = Package(
         .apiTest(name: "AppsAPI"),
         .apiTest(name: "TestflightAPI"),
         .coreTest(name: "DeployHelpers", resources: [.process("Resources")]),
-        .domainTest(name: "Transporter"),
+        .domainTest(name: "Uploader"),
+        .domainTest(name: "JWTProvider"),
         .domainTest(name: "BlimpKit")
     ]
 )

@@ -1,7 +1,7 @@
 import XCTest
-@testable import Transporter
+@testable import JWTProvider
 
-final class TransporterTests: XCTestCase {
+final class JwtProviderTests: XCTestCase {
     func testExample() throws {
         // XCTest Documentation
         // https://developer.apple.com/documentation/xctest
