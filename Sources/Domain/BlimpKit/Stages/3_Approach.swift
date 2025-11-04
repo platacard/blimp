@@ -1,6 +1,6 @@
 import Foundation
 import Cronista
-import Transporter
+import Uploader
 import JWTProvider
 import AppsAPI
 import TestflightAPI

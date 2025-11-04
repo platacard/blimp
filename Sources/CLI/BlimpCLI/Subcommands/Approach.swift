@@ -2,7 +2,7 @@ import Foundation
 import BlimpKit
 import ArgumentParser
 import Cronista
-import Transporter
+import Uploader
 
 struct Approach: AsyncParsableCommand {
     static let configuration = CommandConfiguration(

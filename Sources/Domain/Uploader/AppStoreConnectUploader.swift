@@ -5,11 +5,6 @@ public protocol AppStoreConnectUploader {
     func upload(config: UploadConfig, verbose: Bool) async throws
 }
 
-public enum AuthOption {
-    case apiKey(String)
-    case apiIssuer(String)
-}
-
 public struct UploadConfig: Sendable {
     let bundleId: String
     let appVersion: String

@@ -28,6 +28,24 @@ final class PlistHelperTests: XCTestCase {
         let noKeyValue = sut.getStringValue(key: "no_key", path: plist)
         XCTAssertNil(noKeyValue)
     }
+    
+    func testHelperFailsToReadFromInvalidPath() {
+        // Given
+        let invalidPath = "/nonexistent/path.plist"
+        // When
+        let value = sut.getStringValue(key: "TestKey", path: invalidPath)
+        // Then
+        XCTAssertNil(value)
+    }
+    
+    func testHelperGetValueWithStringType() throws {
+        // Given
+        let plist = try plistPath()
+        // When
+        let stringValue: String? = sut.getValue(key: "TestKey", path: plist)
+        // Then
+        XCTAssertEqual(stringValue, "TestValue")
+    }
 }
 
 // MARK: - Helpers

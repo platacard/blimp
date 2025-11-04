@@ -21,7 +21,7 @@ public struct AltoolUploader: ASCCredentialsTrait {
     public init() {}
     
     public func upload(arguments: [TransporterSetting], verbose: Bool) throws {
-        guard let apiKeyId, let apiIssuerId else {
+        guard let apiKeyId, let apiIssuerId, let apiPrivateKey else {
             throw TransporterError.authRequired
         }
 
@@ -33,6 +33,7 @@ public struct AltoolUploader: ASCCredentialsTrait {
                 arguments: arguments + [
                     AuthOption.apiKey(apiKeyId),
                     AuthOption.apiIssuer(apiIssuerId),
+                    AuthOption.apiPrivateKey(apiPrivateKey)
                 ] + extraArguments
             )
             .run()
@@ -48,13 +49,15 @@ public struct AltoolUploader: ASCCredentialsTrait {
 
 // MARK: - Subtype Extensions
 
-extension AuthOption: BashArgument {
+extension AltoolUploader.AuthOption: BashArgument {
     public var bashArgument: String {
         switch self {
         case .apiKey(let key):
             "--apiKey \(key)"
         case .apiIssuer(let issuer):
             "--apiIssuer \"\(issuer)\""
+        case .apiPrivateKey(let privateKey):
+            "--auth-string \"\(privateKey)\""
         }
     }
 }
@@ -70,6 +73,14 @@ public extension AltoolUploader {
         case showProgress
         case oldAltool
         case verbose
+    }
+}
+
+public extension AltoolUploader {
+    enum AuthOption {
+        case apiKey(String)
+        case apiIssuer(String)
+        case apiPrivateKey(String)
     }
 }
 
