@@ -59,6 +59,32 @@ You can try things out by calling the `blimp` CLI via `swift run blimp {command}
 
 You'll need the [App Store Connect API Key](https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api). Uploads now default to the modern App Store Connect build upload API.
 
+### Authenticating
+
+Environment expects 3 variables:
+
+- `APPSTORE_CONNECT_API_ISSUER_ID`
+- `APPSTORE_CONNECT_API_KEY_ID`
+- `APP_STORE_CONNECT_API_PRIVATE_KEY`
+
+To get the private key, go to https://appstoreconnect.apple.com/access/integrations/api and create your own key. This is also the page to find your private key ID and the issuer ID.
+
+After downloading your private key, you can open the .p8 file containing the private key in any text editor:
+
+```
+-----BEGIN PRIVATE KEY-----
+FDFDGgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdw...
+49AgEGCCqG\...
+...
+-----END PRIVATE KEY-----
+```
+
+Copy the contents and remove all the whitespacesa and newlines, -----BEGIN PRIVATE KEY----- and -----END PRIVATE KEY-----.
+
+Use `export APP_STORE_CONNECT_API_PRIVATE_KEY={bare_key_without_newlines} && ...` locally or create environment variables for your CI provider. JWT token for API client will be created (and recreated on expiration) authomatically if needed variables are in place.
+
+### Running
+
 Using binary artifact:
 ```bash
 swift build -c release
@@ -69,7 +95,7 @@ Then, you can use the binary artifact directly:
 ./build/release/blimp {command}
 ```
 
-### Available commands
+#### Available commands
 
 > Use -h with each command to see all available parameters and their default values.
 
