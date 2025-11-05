@@ -57,8 +57,6 @@ You can try things out by calling the `blimp` CLI via `swift run blimp {command}
  
 >❗️ Moreover, `blimp` CLI provides an example of how you can use `BlimpKit` in your CLI. We recommend trying out the `swift-argument-parser` package, it works great for us.
 
-You'll need the [App Store Connect API Key](https://developer.apple.com/documentation/appstoreconnectapi/creating_api_keys_for_app_store_connect_api). Uploads now default to the modern App Store Connect build upload API.
-
 ### Authenticating
 
 Environment expects 3 variables:
