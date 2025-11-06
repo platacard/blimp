@@ -63,7 +63,7 @@ Environment expects 3 variables:
 
 - `APPSTORE_CONNECT_API_ISSUER_ID`
 - `APPSTORE_CONNECT_API_KEY_ID`
-- `APP_STORE_CONNECT_API_PRIVATE_KEY`
+- `APPSTORE_CONNECT_API_PRIVATE_KEY`
 
 To get the private key, go to https://appstoreconnect.apple.com/access/integrations/api and create your own key. This is also the page to find your private key ID and the issuer ID.
 
@@ -79,7 +79,7 @@ FDFDGgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdw...
 
 Copy the contents and remove all the whitespacesa and newlines, -----BEGIN PRIVATE KEY----- and -----END PRIVATE KEY-----.
 
-Use `export APP_STORE_CONNECT_API_PRIVATE_KEY={bare_key_without_newlines} && ...` locally or create environment variables for your CI provider. JWT token for API client will be created (and recreated on expiration) authomatically if needed variables are in place.
+Use `export APPSTORE_CONNECT_API_PRIVATE_KEY={bare_key_without_newlines} && ...` locally or create environment variables for your CI provider. JWT token for API client will be created (and recreated on expiration) authomatically if needed variables are in place.
 
 ### Running
 
