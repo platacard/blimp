@@ -2,33 +2,23 @@ import Foundation
 
 public extension ProvisioningAPI {
     enum Platform: String, Sendable, CaseIterable {
-        case iOS = "iOS"
-        case macOS = "macOS"
-        case tvOS = "tvOS"
+        case ios = "ios"
+        case macos = "macos"
+        case tvos = "tvos"
         case catalyst = "catalyst"
-
-        public var displayName: String {
-            switch self {
-            case .iOS: return "iOS"
-            case .macOS: return "macOS"
-            case .tvOS: return "tvOS"
-            case .catalyst: return "Mac Catalyst"
-            }
-        }
 
         var asApiPlatform: Components.Schemas.BundleIdPlatform {
             switch self {
-            case .iOS: .ios
-            case .macOS: .macOs
-            case .tvOS, .catalyst: .universal
+            case .ios, .tvos: .ios
+            case .macos, .catalyst: .macOs
             }
         }
 
         var asDeviceFilterPlatform: Operations.DevicesGetCollection.Input.Query.FilterLbrackPlatformRbrackPayloadPayload {
             switch self {
-            case .iOS: .ios
-            case .macOS: .macOs
-            case .tvOS, .catalyst: .universal
+            case .ios: .ios
+            case .macos: .macOs
+            case .tvos, .catalyst: .universal
             }
         }
     }

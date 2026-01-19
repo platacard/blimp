@@ -20,7 +20,7 @@ struct ListDevices: AsyncParsableCommand {
             print("Devices:")
             for device in devices {
                 let status = device.status == .enabled ? "✓" : "✗"
-                let platformStr = device.platform?.displayName ?? "unknown"
+                let platformStr = device.platform?.rawValue ?? "unknown"
                 print("  \(status) \(device.name) (\(platformStr))")
                 print("    ID: \(device.id)")
                 print("    UDID: \(device.udid)")
