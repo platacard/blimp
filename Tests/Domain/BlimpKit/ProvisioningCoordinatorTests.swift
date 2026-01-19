@@ -42,16 +42,12 @@ final class ProvisioningCoordinatorTests: XCTestCase {
         let cert = mockAPI.certificates.first
         XCTAssertEqual(cert?.type, .development)
         
-        // Should have stored certificate in git (cer + p12)
+        // Should have stored certificate in git (p12 only)
         // Cert ID is generated, so we need to use the one from API
         guard let createdCert = cert else { return }
-        let certPath = "certificates/ios/DEVELOPMENT/\(createdCert.id).cer"
         let p12Path = "certificates/ios/DEVELOPMENT/\(createdCert.id).p12"
 
-        let certExists = await mockGit.fileExists(path: certPath)
         let p12Exists = await mockGit.fileExists(path: p12Path)
-
-        XCTAssertTrue(certExists)
         XCTAssertTrue(p12Exists)
 
         // Should have created a profile
@@ -74,11 +70,9 @@ final class ProvisioningCoordinatorTests: XCTestCase {
         let bundleId = "com.example.app"
         mockAPI.bundleIds[bundleId] = "bundle-id-123"
         
-        // Pre-populate certificate in API and Git
+        // Pre-populate certificate in API and Git (p12 only)
         let cert = try await mockAPI.createCertificate(csrContent: "csr", type: .development)
-        let certPath = "certificates/ios/DEVELOPMENT/\(cert.id).cer"
         let p12Path = "certificates/ios/DEVELOPMENT/\(cert.id).p12"
-        try await mockGit.writeFile(path: certPath, content: Data())
         try await mockGit.writeFile(path: p12Path, content: Data())
 
         // Execute
@@ -98,11 +92,9 @@ final class ProvisioningCoordinatorTests: XCTestCase {
         let bundleId = "com.example.app"
         mockAPI.bundleIds[bundleId] = "bundle-id-123"
 
-        // Create existing profile
+        // Create existing profile (p12 only)
         let cert = try await mockAPI.createCertificate(csrContent: "csr", type: .development)
-        let certPath = "certificates/ios/DEVELOPMENT/\(cert.id).cer"
         let p12Path = "certificates/ios/DEVELOPMENT/\(cert.id).p12"
-        try await mockGit.writeFile(path: certPath, content: Data())
         try await mockGit.writeFile(path: p12Path, content: Data())
 
         let profile = try await mockAPI.createProfile(name: bundleId, type: .iosAppDevelopment, bundleId: "bundle-id-123", certificateIds: [cert.id], deviceIds: nil)

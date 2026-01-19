@@ -11,19 +11,15 @@ public struct OpenSSLCertificateGenerator: CertificateGenerating {
         let csrPath = tempDir.appendingPathComponent("\(uuid).csr")
         let keyPath = tempDir.appendingPathComponent("\(uuid).key")
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/openssl")
-        process.arguments = [
-            "req", "-new", "-newkey", "rsa:2048", "-nodes",
-            "-out", csrPath.path,
-            "-keyout", keyPath.path,
-            "-subj", "/CN=Blimp"
-        ]
-        try process.run()
-        process.waitUntilExit()
-
-        guard process.terminationStatus == 0 else {
-            throw Error.commandFailed("openssl req failed with status \(process.terminationStatus)")
+        do {
+            try Shell.arguments([
+                "openssl", "req", "-new", "-newkey", "rsa:2048", "-nodes",
+                "-out", csrPath.path,
+                "-keyout", keyPath.path,
+                "-subj", "/CN=Blimp"
+            ]).run()
+        } catch {
+            throw Error.commandFailed("openssl req failed: \(error.localizedDescription)")
         }
 
         let csrData = try Data(contentsOf: csrPath)
@@ -48,20 +44,20 @@ public struct OpenSSLCertificateGenerator: CertificateGenerating {
         try certContent.write(to: certPath)
         try privateKey.write(to: keyPath)
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/openssl")
-        process.arguments = [
-            "pkcs12", "-export",
-            "-inkey", keyPath.path,
-            "-in", certPath.path,
-            "-out", p12Path.path,
-            "-passout", "pass:\(passphrase)"
-        ]
-        try process.run()
-        process.waitUntilExit()
-
-        guard process.terminationStatus == 0 else {
-            throw Error.commandFailed("openssl pkcs12 failed with status \(process.terminationStatus)")
+        // Pass passphrase via environment variable for security
+        do {
+            try Shell.arguments(
+                [
+                    "openssl", "pkcs12", "-export",
+                    "-inkey", keyPath.path,
+                    "-in", certPath.path,
+                    "-out", p12Path.path,
+                    "-passout", "env:BLIMP_P12_PASSPHRASE"
+                ],
+                environment: ["BLIMP_P12_PASSPHRASE": passphrase]
+            ).run()
+        } catch {
+            throw Error.commandFailed("openssl pkcs12 failed: \(error.localizedDescription)")
         }
 
         let p12Data = try Data(contentsOf: p12Path)
