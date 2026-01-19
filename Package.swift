@@ -1,4 +1,4 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 
 import PackageDescription
 
@@ -17,7 +17,8 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-openapi-urlsession", exact: "1.1.0"),
         .package(url: "https://github.com/platacard/cronista", from: "1.1.0"),
         .package(url: "https://github.com/platacard/corredor", from: "1.1.0"),
-        .package(url: "https://github.com/platacard/dotcontext.git", from: "1.0.1")
+        .package(url: "https://github.com/platacard/dotcontext.git", from: "1.0.1"),
+        .package(url: "https://github.com/platacard/gito.git", branch: "feature/storage-management")
     ],
     targets: [
         .cli(
@@ -56,7 +57,9 @@ let package = Package(
                 "JWTProvider",
                 "DeployHelpers",
                 .product(name: "Cronista", package: "cronista"),
-                .product(name: "Corredor", package: "corredor")
+                .product(name: "Corredor", package: "corredor"),
+                .product(name: "Crypto", package: "swift-crypto"),
+                .product(name: "Gito", package: "gito")
             ]
         ),
         .domain(
@@ -83,11 +86,24 @@ let package = Package(
         // MARK: - Tests
 
         .apiTest(name: "AppsAPI"),
+        .apiTest(name: "ProvisioningAPI", dependencies: [
+            "ProvisioningAPI",
+            "ASCCredentials",
+            "JWTProvider",
+            .product(name: "Crypto", package: "swift-crypto")
+        ]),
         .apiTest(name: "TestflightAPI"),
         .coreTest(name: "DeployHelpers", resources: [.process("Resources")]),
         .domainTest(name: "Uploader"),
         .domainTest(name: "JWTProvider"),
-        .domainTest(name: "BlimpKit")
+        .testTarget(
+            name: "BlimpKitTests",
+            dependencies: [
+                "BlimpKit",
+                .product(name: "Gito", package: "gito")
+            ],
+            path: "Tests/Domain/BlimpKit"
+        )
     ]
 )
 
@@ -143,7 +159,7 @@ extension Target {
             plugins: plugins
         )
     }
-    
+
     static func domain(
         name: String,
         dependencies: [Target.Dependency] = [],
@@ -156,7 +172,7 @@ extension Target {
             resources: resources
         )
     }
-    
+
     static func cli(
         name: String,
         dependencies: [Target.Dependency] = [],
@@ -169,19 +185,20 @@ extension Target {
             resources: resources
         )
     }
-    
+
     static func apiTest(
         name: String,
+        dependencies: [Target.Dependency]? = nil,
         resources: [Resource] = []
     ) -> Target {
         .testTarget(
             name: "\(name)Tests",
-            dependencies: [Dependency(stringLiteral: name), "ASCCredentials", "JWTProvider"],
+            dependencies: dependencies ?? [Dependency(stringLiteral: name), "ASCCredentials", "JWTProvider"],
             path: "Tests/API/\(name)",
             resources: resources
         )
     }
-    
+
     static func coreTest(
         name: String,
         resources: [Resource] = []
@@ -193,7 +210,7 @@ extension Target {
             resources: resources
         )
     }
-    
+
     static func domainTest(
         name: String,
         resources: [Resource] = []

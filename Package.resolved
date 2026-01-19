@@ -1,5 +1,5 @@
 {
-  "originHash" : "5d5044d4972ef96fde499f1510c7403ea70d0a14fcded2a8634f1f39c9cb7ea0",
+  "originHash" : "2ea60b412a89c5504226d1a779698bcbb803140b2fb913b7c03e58a70b6a69d3",
   "pins" : [
     {
       "identity" : "corredor",
@@ -26,6 +26,15 @@
       "state" : {
         "revision" : "c05288da9f8399dca4f47c5435c6c306e51bbf1c",
         "version" : "1.0.1"
+      }
+    },
+    {
+      "identity" : "gito",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/platacard/gito.git",
+      "state" : {
+        "branch" : "feature/storage-management",
+        "revision" : "cbed14e70e8518d1461be5ab93fd634e54862dba"
       }
     },
     {
