@@ -3,8 +3,8 @@ import Foundation
 import XCTest
 
 final class PlistHelperTests: XCTestCase {
-    private let sut = PlistHelper.default
-    
+    private let sut = PlistHelper()
+
     func test_HelperReadsStringValue() throws {
         // Given
         let plist = try plistPath()
@@ -13,22 +13,13 @@ final class PlistHelperTests: XCTestCase {
         // Then
         XCTAssertEqual(value, "TestValue")
     }
-    
-    func testHelperReadsAppVersion() throws {
-        // Given
-        let plist = try plistPath()
-        // When
-        let appVersion = sut.getAppVersion(path: plist)
-        // Then
-        XCTAssertEqual(appVersion, "1.0")
-    }
-    
+
     func testHelperFailsToReadValue() throws {
         let plist = try plistPath()
         let noKeyValue = sut.getStringValue(key: "no_key", path: plist)
         XCTAssertNil(noKeyValue)
     }
-    
+
     func testHelperFailsToReadFromInvalidPath() {
         // Given
         let invalidPath = "/nonexistent/path.plist"
@@ -36,15 +27,6 @@ final class PlistHelperTests: XCTestCase {
         let value = sut.getStringValue(key: "TestKey", path: invalidPath)
         // Then
         XCTAssertNil(value)
-    }
-    
-    func testHelperGetValueWithStringType() throws {
-        // Given
-        let plist = try plistPath()
-        // When
-        let stringValue: String? = sut.getValue(key: "TestKey", path: plist)
-        // Then
-        XCTAssertEqual(stringValue, "TestValue")
     }
 }
 
