@@ -3,7 +3,7 @@ import OpenAPIRuntime
 import HTTPTypes
 
 /// A client middleware that injects a value into the `Authorization` header field of the request.
-package struct AuthMiddleware {
+package struct AuthMiddleware: Sendable {
 
     /// The value for the `Authorization` header field.
     private let token: @Sendable () throws -> String

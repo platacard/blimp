@@ -1,3 +1,3 @@
 import Foundation
 
-public struct Blimp {}
+public enum Blimp {}

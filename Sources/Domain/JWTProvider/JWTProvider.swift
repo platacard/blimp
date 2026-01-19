@@ -2,7 +2,7 @@ import Foundation
 import Cronista
 import ASCCredentials
 
-public protocol JWTProviding: ASCCredentialsTrait, Sendable {
+public protocol JWTProviding: Sendable, ASCCredentialsTrait {
     /// Get token from implemented token provider
     /// - Parameters:
     ///   - keyId: id of the private key
@@ -35,9 +35,11 @@ public extension JWTProviding {
 }
 
 public struct DefaultJWTProvider: JWTProviding {
-        
+
     public init() {}
-    
+
+    public var env: [String: String] { ProcessInfo.processInfo.environment }
+
     /// Creates a new JWT token to use for accessing ASC API
     /// - Parameters:
     ///   - keyId:  Your private key ID from App Store Connect (Ex: 2X9R4HXF34)
@@ -48,15 +50,15 @@ public struct DefaultJWTProvider: JWTProviding {
         guard let base64Key = Data(base64Encoded: privateKey) else {
             throw JWTProviderError.invalidBase64EncodedPrivateKey
         }
-        
+
         let jwt = JWT(keyIdentifier: keyId, issuerIdentifier: keyIssuer, expireDuration: lifetimeSec)
         let signedJWT = try jwt.signedToken(using: .init(derRepresentation: base64Key), dateProvider: { .now })
-        
+
         return signedJWT
     }
 }
 
-enum JWTProviderError: Error {
+enum JWTProviderError: Error, Sendable {
     case credentialsNotFound
     case privateKeyNotFound
     case signingFailed

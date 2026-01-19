@@ -9,21 +9,20 @@ struct Weight: AsyncParsableCommand {
         commandName: "weight",
         abstract: "App size for TestFlight builds"
     )
-    
+
     @Option(help: "App id")
     var id: String
-    
+
     @Option
     var devices: [String]
-    
-    private var logger: Cronista { Cronista(module: "blimp", category: "Weight") }
-    
+
     func run() async throws {
+        let logger = Cronista(module: "blimp", category: "Weight")
         let provider = DefaultJWTProvider()
         let api = TestflightAPI(jwtProvider: provider)
-        
+
         let bundleIDs = try await api.getBuildBundleIDs(appId: id, state: .approved)
-        
+
         for bundleID in bundleIDs {
             let buildSizes = try await api.getBundleBuildSizes(
                 buildBundleID: bundleID,

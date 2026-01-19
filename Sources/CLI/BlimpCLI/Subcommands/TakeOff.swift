@@ -87,6 +87,8 @@ struct TakeOff: AsyncParsableCommand {
     }
 
     func run() async throws {
+        let logger = Cronista(module: "blimp", category: "TakeOff")
+        let plistHelper = PlistHelper()
         let takeoff = Blimp.TakeOff()
         guard let buildConfiguration = Blimp.TakeOff.Configuration(rawValue: configuration) else {
             throw ValidationError("Invalid configuration: \(configuration)")

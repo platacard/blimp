@@ -6,16 +6,16 @@ import Auth
 import ClientTransport
 
 public struct AppsAPI: Sendable {
-    
+
     private let jwtProvider: any JWTProviding
     private let client: any APIProtocol
-    
-    nonisolated(unsafe)
-    private let logger = Cronista(module: "Blimp", category: "AppsAPI")
+
+    nonisolated(unsafe) private let logger: Cronista
 
     public init(jwtProvider: any JWTProviding) {
         self.jwtProvider = jwtProvider
-        
+        self.logger = Cronista(module: "Blimp", category: "AppsAPI")
+
         self.client = Client(
             serverURL: try! Servers.Server1.url(),
             configuration: .init(dateTranscoder: .iso8601WithFractionalSeconds),
@@ -27,8 +27,8 @@ public struct AppsAPI: Sendable {
     }
     
     public func getAppId(bundleId: String) async throws -> String {
-        let response = try await client.apps_getCollection(
-            Operations.apps_getCollection.Input(
+        let response = try await client.appsGetCollection(
+            Operations.AppsGetCollection.Input(
                 query: .init(filter_lbrack_bundleId_rbrack_: [bundleId])
             )
         )

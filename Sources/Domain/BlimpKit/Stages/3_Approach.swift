@@ -8,20 +8,21 @@ import TestflightAPI
 public extension Blimp {
     /// Approach stage:
     /// - TestFlight / App Store delivery operations
-    struct Approach: FlightStage {
+    struct Approach: FlightStage, Sendable {
         package var type: FlightStage.Type { Self.self }
-        private var logger: Cronista { Cronista(module: "blimp", category: "Approach") }
         private let uploader: AppStoreConnectUploader
-
         private let testflightAPI: TestflightAPI
         private let appsAPI: AppsAPI
         private let ignoreUploaderFailure: Bool
+
+        nonisolated(unsafe) private let logger: Cronista
 
         public init(
             uploader: AppStoreConnectUploader,
             jwtProvider: JWTProviding = DefaultJWTProvider(),
             ignoreUploaderFailure: Bool = false
         ) {
+            self.logger = Cronista(module: "blimp", category: "Approach")
             self.uploader = uploader
             self.testflightAPI = TestflightAPI(jwtProvider: jwtProvider)
             self.appsAPI = AppsAPI(jwtProvider: jwtProvider)
@@ -146,20 +147,20 @@ extension Blimp.Approach {
 // MARK: - Subtypes
 
 public extension Blimp.Approach {
-    
-    struct ProcessResult {
+
+    struct ProcessResult: Sendable {
         public let buildId: String
         public let buildBundleId: String
         public let buildLocalizationIds: [String]
     }
-    
-    struct AppSize {
+
+    struct AppSize: Sendable {
         public let deviceName: String
         public let downloadSize: Int
         public let installSize: Int
     }
-    
-    enum Error: Swift.Error {
+
+    enum Error: Swift.Error, Sendable {
         case noBuildId
         case failedProcessing
         case invalidBinary

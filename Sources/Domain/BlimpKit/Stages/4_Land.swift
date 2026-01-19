@@ -5,15 +5,17 @@ import JWTProvider
 import Cronista
 
 public extension Blimp {
-    /// Approach stage:
+    /// Land stage:
     /// - TestFlight / App Store delivery operations
-    struct Land: FlightStage {
+    struct Land: FlightStage, Sendable {
         package var type: FlightStage.Type { Self.self }
-        private var logger: Cronista { Cronista(module: "blimp", category: "Land") }
         private let testflightAPI: TestflightAPI
         private let appsAPI: AppsAPI
-        
+
+        nonisolated(unsafe) private let logger: Cronista
+
         public init(jwtProvider: JWTProviding = DefaultJWTProvider()) {
+            self.logger = Cronista(module: "blimp", category: "Land")
             self.testflightAPI = TestflightAPI(jwtProvider: jwtProvider)
             self.appsAPI = AppsAPI(jwtProvider: jwtProvider)
         }
