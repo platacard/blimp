@@ -78,35 +78,35 @@ public struct ExportOptions: Sendable, Encodable {
     // MARK: - Signing Properties
 
     /// The signing style to use when re-signing the app for distribution
-    public let signingStyle: SigningStyle?
+    public let signingStyle: SigningStyle
 
     /// Certificate name, SHA-1 hash, or automatic selector for signing
-    public let signingCertificate: SigningCertificate?
+    public let signingCertificate: SigningCertificate
 
     /// Provisioning profile mapping: bundle identifier -> profile name or UUID
-    public let provisioningProfiles: [String: String]?
+    public let provisioningProfiles: [String: String]
 
     /// The Developer team ID to use for this export
-    public let teamID: String?
+    public let teamID: String
 
     // MARK: - App Store Connect Properties
 
     /// Should Xcode manage the app's build number when uploading to App Store Connect?
-    public let manageAppVersionAndBuildNumber: Bool?
+    public let manageAppVersionAndBuildNumber: Bool
 
     /// When enabled, this build cannot be distributed via external TestFlight or the App Store
-    public let testFlightInternalTestingOnly: Bool?
+    public let testFlightInternalTestingOnly: Bool
 
     /// For App Store exports, should the package include symbols?
-    public let uploadSymbols: Bool?
+    public let uploadSymbols: Bool
 
     // MARK: - Export Behavior Properties
 
     /// Determines whether the app is exported locally or uploaded to Apple
-    public let destination: Destination?
+    public let destination: Destination
 
     /// Should symbols be stripped from Swift libraries in your IPA?
-    public let stripSwiftSymbols: Bool?
+    public let stripSwiftSymbols: Bool
 
     /// For non-App Store exports, thinning configuration
     public let thinning: String?
@@ -115,28 +115,28 @@ public struct ExportOptions: Sendable, Encodable {
     public let iCloudContainerEnvironment: String?
 
     /// For non-App Store exports, embed on-demand resources asset packs in bundle
-    public let embedOnDemandResourcesAssetPacksInBundle: Bool?
+    public let embedOnDemandResourcesAssetPacksInBundle: Bool
 
     /// For App Store exports, should Xcode generate App Store Information?
-    public let generateAppStoreInformation: Bool?
+    public let generateAppStoreInformation: Bool
 
     // MARK: - Initialization
 
     public init(
         method: Method,
-        signingStyle: SigningStyle? = nil,
-        signingCertificate: SigningCertificate? = nil,
-        provisioningProfiles: [String: String]? = nil,
-        teamID: String? = nil,
-        manageAppVersionAndBuildNumber: Bool? = nil,
-        testFlightInternalTestingOnly: Bool? = nil,
-        uploadSymbols: Bool? = nil,
-        destination: Destination? = nil,
-        stripSwiftSymbols: Bool? = nil,
+        signingStyle: SigningStyle,
+        signingCertificate: SigningCertificate,
+        provisioningProfiles: [String: String] = [:],
+        teamID: String,
+        manageAppVersionAndBuildNumber: Bool = false,
+        testFlightInternalTestingOnly: Bool = false,
+        uploadSymbols: Bool = true,
+        destination: Destination = .export,
+        stripSwiftSymbols: Bool = true,
         thinning: String? = nil,
         iCloudContainerEnvironment: String? = nil,
-        embedOnDemandResourcesAssetPacksInBundle: Bool? = nil,
-        generateAppStoreInformation: Bool? = nil
+        embedOnDemandResourcesAssetPacksInBundle: Bool = false,
+        generateAppStoreInformation: Bool = false
     ) {
         self.method = method
         self.signingStyle = signingStyle

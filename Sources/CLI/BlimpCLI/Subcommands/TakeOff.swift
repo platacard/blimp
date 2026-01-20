@@ -37,10 +37,10 @@ struct TakeOff: AsyncParsableCommand {
     var method: String = "app-store-connect"
 
     @Option(help: "Signing style: manual or automatic")
-    var signingStyle: String?
+    var signingStyle: String = "manual"
 
     @Option(help: "Signing certificate: 'Apple Distribution', 'Apple Development', or custom name")
-    var signingCertificate: String?
+    var signingCertificate: String
 
     @Option(
         name: .customLong("provisioning-profile"),
@@ -50,7 +50,7 @@ struct TakeOff: AsyncParsableCommand {
     var provisioningProfiles: [ProvisioningProfile] = []
 
     @Option(help: "Developer team ID")
-    var teamID: String?
+    var teamID: String
 
     @Flag(
         name: .customLong("manage-version"),
@@ -69,11 +69,6 @@ struct TakeOff: AsyncParsableCommand {
         help: "Include symbols for App Store exports"
     )
     var uploadSymbols = true
-
-    // MARK: - Legacy Option
-
-    @Option(help: "Legacy: Export options plist path. Overrides individual export options if provided")
-    var deployConfig: String?
 
     // MARK: - Flags
 
@@ -118,36 +113,31 @@ struct TakeOff: AsyncParsableCommand {
 
         logger.info("Exporting archive at \(archivePath)...")
 
-        if let deployConfig {
-            try takeoff.export(
-                arguments: [
-                    .exportArchive(archivePath),
-                    .exportPath(ipaPath),
-                    .optionsPlistPath(deployConfig)
-                ],
-                verbose: verbose
-            )
-        } else {
-            let exportOptions = buildExportOptions()
-            try takeoff.export(
-                archivePath: archivePath,
-                exportPath: ipaPath,
-                options: exportOptions,
-                verbose: verbose
-            )
-        }
+        let exportOptions = try buildExportOptions()
+        try takeoff.export(
+            archivePath: archivePath,
+            exportPath: ipaPath,
+            options: exportOptions,
+            verbose: verbose
+        )
 
         logger.info("Done! Exported IPA is at \(ipaPath)/\(scheme).ipa")
     }
 
-    private func buildExportOptions() -> ExportOptions {
+    private func buildExportOptions() throws -> ExportOptions {
         let exportMethod = ExportOptions.Method(rawValue: method) ?? .appStoreConnect
-        let style = signingStyle.flatMap { ExportOptions.SigningStyle(rawValue: $0) }
-        let certificate = signingCertificate.flatMap { ExportOptions.SigningCertificate(rawValue: $0) }
+        guard let style = ExportOptions.SigningStyle(rawValue: signingStyle) else {
+            throw ValidationError("Unknown signing style: \(signingStyle.debugDescription)")
+        }
+        guard let certificate = ExportOptions.SigningCertificate(rawValue: signingCertificate) else {
+            throw ValidationError("Unknown certificate: \(signingCertificate.debugDescription)")
+        }
 
-        let profiles: [String: String]? = provisioningProfiles.isEmpty
-            ? nil
-            : Dictionary(uniqueKeysWithValues: provisioningProfiles.map { ($0.bundleId, $0.profileName) })
+        let profiles: [String: String] = provisioningProfiles.isEmpty ? [:] : Dictionary(
+            uniqueKeysWithValues: provisioningProfiles.map {
+                ($0.bundleId, $0.profileName)
+            }
+        )
 
         return ExportOptions(
             method: exportMethod,
@@ -155,9 +145,9 @@ struct TakeOff: AsyncParsableCommand {
             signingCertificate: certificate,
             provisioningProfiles: profiles,
             teamID: teamID,
-            manageAppVersionAndBuildNumber: manageAppVersionAndBuildNumber ? true : nil,
-            testFlightInternalTestingOnly: testFlightInternalTestingOnly ? true : nil,
-            uploadSymbols: uploadSymbols ? true : nil
+            manageAppVersionAndBuildNumber: manageAppVersionAndBuildNumber,
+            testFlightInternalTestingOnly: testFlightInternalTestingOnly,
+            uploadSymbols: uploadSymbols
         )
     }
 }

@@ -23,16 +23,6 @@ public extension Blimp.TakeOff {
         .run()
     }
 
-    /// Export the archive from the previous step to `*.ipa`
-    func export(arguments: [ExportArgument], verbose: Bool) throws {
-        try Shell.command(
-            "set -o pipefail && xcodebuild",
-            arguments: arguments,
-            options: verbose ? [.printOutput] : []
-        )
-        .run()
-    }
-
     /// Export the archive using ExportOptions, generating the plist on-the-fly
     func export(
         archivePath: String,
@@ -59,6 +49,22 @@ public extension Blimp.TakeOff {
         )
     }
 }
+
+// MARK: - Helpers
+
+private extension Blimp.TakeOff {
+
+    func export(arguments: [ExportArgument], verbose: Bool) throws {
+        try Shell.command(
+            "set -o pipefail && xcodebuild",
+            arguments: arguments,
+            options: verbose ? [.printOutput] : []
+        )
+        .run()
+    }
+}
+
+// MARK: - Subtypes
 
 public extension Blimp.TakeOff {
     
