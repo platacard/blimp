@@ -11,37 +11,6 @@ extension Blimp.Maintenance {
     static let `default` = Blimp.Maintenance(jwtProvider: DefaultJWTProvider())
 }
 
-// MARK: - Passphrase
-
-func resolvePassphrase(_ cliValue: String?) throws -> String {
-    // Environment variable first (CI-friendly)
-    if let value = ProcessInfo.processInfo.environment["BLIMP_PASSPHRASE"] { return value }
-    if let value = cliValue { return value }
-
-    // Interactive fallback
-    print("Enter passphrase: ", terminator: "")
-    guard let pass = readSecureInput() else {
-        throw ValidationError("Failed to read passphrase")
-    }
-    return pass
-}
-
-private func readSecureInput() -> String? {
-    var oldTermios = termios()
-    tcgetattr(STDIN_FILENO, &oldTermios)
-
-    var newTermios = oldTermios
-    newTermios.c_lflag &= ~UInt(ECHO)
-    tcsetattr(STDIN_FILENO, TCSANOW, &newTermios)
-
-    let result = readLine()
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldTermios)
-    print()
-
-    return result
-}
-
 // MARK: - Platform
 
 extension ProvisioningAPI.Platform: ExpressibleByArgument {}
