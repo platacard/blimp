@@ -43,7 +43,7 @@ public struct FileEncrypter: EncryptionService, Sendable {
                         passBytes.baseAddress, passBytes.count,
                         saltBytes.baseAddress, saltBytes.count,
                         CCPseudoRandomAlgorithm(kCCPRFHmacAlgSHA256),
-                        100_000,
+                        600_000,
                         keyBytes.baseAddress, keyBytes.count
                     )
                 }

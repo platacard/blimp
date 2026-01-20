@@ -5,9 +5,12 @@ import Cronista
 import Gito
 
 public extension Blimp {
-    /// Maintenance stage:
-    /// - Managing the provisioning profiles and certificates
-    /// - Other checks and services
+    /// Maintenance stage
+    ///
+    /// Provides:
+    /// - Device registration
+    /// - Certificate generation, revocation and encrypted storage
+    /// - Provisioning profile synchronization, listing, and removal
     struct Maintenance: Sendable {
         private let api: ProvisioningAPI
 
