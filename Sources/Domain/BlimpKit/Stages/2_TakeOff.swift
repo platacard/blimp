@@ -12,7 +12,7 @@ public extension Blimp {
 }
 
 public extension Blimp.TakeOff {
-    
+
     /// Archive the app with given settings
     func archive(arguments: [ArchiveArgument], verbose: Bool) throws {
         try Shell.command(
@@ -22,7 +22,7 @@ public extension Blimp.TakeOff {
         )
         .run()
     }
-    
+
     /// Export the archive from the previous step to `*.ipa`
     func export(arguments: [ExportArgument], verbose: Bool) throws {
         try Shell.command(
@@ -31,6 +31,32 @@ public extension Blimp.TakeOff {
             options: verbose ? [.printOutput] : []
         )
         .run()
+    }
+
+    /// Export the archive using ExportOptions, generating the plist on-the-fly
+    func export(
+        archivePath: String,
+        exportPath: String,
+        options: ExportOptions,
+        verbose: Bool
+    ) throws {
+        let tempPlistURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("blimp-export-options-\(UUID().uuidString).plist")
+
+        defer {
+            try? FileManager.default.removeItem(at: tempPlistURL)
+        }
+
+        try options.writePlist(to: tempPlistURL)
+
+        try export(
+            arguments: [
+                .exportArchive(archivePath),
+                .exportPath(exportPath),
+                .optionsPlistPath(tempPlistURL.path)
+            ],
+            verbose: verbose
+        )
     }
 }
 
@@ -68,18 +94,21 @@ public extension Blimp.TakeOff {
     enum ArchiveArgument: BashArgument {
         case clean
         case workspacePath(String)
+        case projectPath(String)
         case scheme(String)
         case archivePath(String)
         case configuration(Configuration)
         case destination(Destination)
         case cleanOutput
-        
+
         public var bashArgument: String {
             switch self {
             case .clean:
                 "clean"
             case .workspacePath(let path):
                 "-workspace \(path)"
+            case .projectPath(let path):
+                "-project \(path)"
             case .scheme(let schemeName):
                 "-scheme \(schemeName)"
             case .archivePath(let path):
@@ -92,7 +121,7 @@ public extension Blimp.TakeOff {
                     "-destination generic/platform=iOS"
                 }
             case .cleanOutput:
-                "| xcbeautify" // TODO: Install if not present
+                "| xcbeautify"
             }
         }
     }
