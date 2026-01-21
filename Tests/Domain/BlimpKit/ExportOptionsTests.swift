@@ -40,17 +40,20 @@ final class ExportOptionsTests: XCTestCase {
     // MARK: - ExportOptions Initialization Tests
 
     func testExportOptionsMinimalInit() {
-        let options = ExportOptions(method: .appStoreConnect)
+        let options = ExportOptions(
+            method: .appStoreConnect,
+            signingStyle: .manual,
+            signingCertificate: .appleDistribution,
+            teamID: "123"
+        )
 
         XCTAssertEqual(options.method, .appStoreConnect)
-        XCTAssertNil(options.signingStyle)
-        XCTAssertNil(options.signingCertificate)
-        XCTAssertNil(options.provisioningProfiles)
-        XCTAssertNil(options.teamID)
-        XCTAssertNil(options.manageAppVersionAndBuildNumber)
-        XCTAssertNil(options.testFlightInternalTestingOnly)
-        XCTAssertNil(options.uploadSymbols)
-        XCTAssertNil(options.destination)
+        XCTAssertEqual(options.provisioningProfiles, [:])
+        XCTAssertEqual(options.manageAppVersionAndBuildNumber, false)
+        XCTAssertEqual(options.testFlightInternalTestingOnly, false)
+        XCTAssertEqual(options.uploadSymbols, true)
+        XCTAssertEqual(options.destination, .export)
+        XCTAssertEqual(options.teamID, "123")
     }
 
     func testExportOptionsFullInit() {
@@ -85,13 +88,21 @@ final class ExportOptionsTests: XCTestCase {
     // MARK: - Plist Generation Tests
 
     func testPlistGenerationMinimal() throws {
-        let options = ExportOptions(method: .appStoreConnect)
+        let options = ExportOptions(
+            method: .appStoreConnect,
+            signingStyle: .manual,
+            signingCertificate: .appleDistribution,
+            teamID: "123"
+        )
         let plistData = try options.plistData()
 
         let plist = try PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any]
 
         XCTAssertNotNil(plist)
         XCTAssertEqual(plist?["method"] as? String, "app-store-connect")
+        XCTAssertEqual(plist?["signingStyle"] as? String, "manual")
+        XCTAssertEqual(plist?["signingCertificate"] as? String, "Apple Distribution")
+        XCTAssertEqual(plist?["teamID"] as? String, "123")
     }
 
     func testPlistGenerationWithProvisioningProfiles() throws {
@@ -104,7 +115,8 @@ final class ExportOptionsTests: XCTestCase {
             method: .appStoreConnect,
             signingStyle: .manual,
             signingCertificate: .appleDistribution,
-            provisioningProfiles: profiles
+            provisioningProfiles: profiles,
+            teamID: "123"
         )
 
         let plistData = try options.plistData()
@@ -114,6 +126,7 @@ final class ExportOptionsTests: XCTestCase {
         XCTAssertEqual(plist?["method"] as? String, "app-store-connect")
         XCTAssertEqual(plist?["signingStyle"] as? String, "manual")
         XCTAssertEqual(plist?["signingCertificate"] as? String, "Apple Distribution")
+        XCTAssertEqual(plist?["teamID"] as? String, "123")
 
         let plistProfiles = plist?["provisioningProfiles"] as? [String: String]
         XCTAssertEqual(plistProfiles?["com.example.app"], "App Profile")
@@ -163,6 +176,7 @@ final class ExportOptionsTests: XCTestCase {
             signingStyle: .manual,
             signingCertificate: .appleDistribution,
             provisioningProfiles: profiles,
+            teamID: "123",
             manageAppVersionAndBuildNumber: false,
             testFlightInternalTestingOnly: false
         )
@@ -179,6 +193,7 @@ final class ExportOptionsTests: XCTestCase {
 
         XCTAssertEqual(plist?["method"] as? String, "app-store-connect")
         XCTAssertEqual(plist?["signingStyle"] as? String, "manual")
+        XCTAssertEqual(plist?["teamID"] as? String, "123")
 
         try FileManager.default.removeItem(at: plistPath)
     }
