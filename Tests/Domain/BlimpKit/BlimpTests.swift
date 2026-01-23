@@ -94,25 +94,27 @@ final class BlimpTests: XCTestCase {
     }
     
     func testTakeOffArchiveArguments() {
-        // Given/When/Then
         let clean = Blimp.TakeOff.ArchiveArgument.clean
         XCTAssertEqual(clean.bashArgument, "clean")
-        
+
         let workspacePath = Blimp.TakeOff.ArchiveArgument.workspacePath("/path/to/workspace.xcworkspace")
         XCTAssertEqual(workspacePath.bashArgument, "-workspace /path/to/workspace.xcworkspace")
-        
+
+        let projectPath = Blimp.TakeOff.ArchiveArgument.projectPath("/path/to/project.xcodeproj")
+        XCTAssertEqual(projectPath.bashArgument, "-project /path/to/project.xcodeproj")
+
         let scheme = Blimp.TakeOff.ArchiveArgument.scheme("MyScheme")
         XCTAssertEqual(scheme.bashArgument, "-scheme MyScheme")
-        
+
         let archivePath = Blimp.TakeOff.ArchiveArgument.archivePath("/path/to/archive.xcarchive")
         XCTAssertEqual(archivePath.bashArgument, "-archivePath /path/to/archive.xcarchive")
-        
+
         let configuration = Blimp.TakeOff.ArchiveArgument.configuration(.release)
         XCTAssertEqual(configuration.bashArgument, "-configuration Release")
-        
+
         let destination = Blimp.TakeOff.ArchiveArgument.destination(.anyIOSDevice)
         XCTAssertEqual(destination.bashArgument, "-destination generic/platform=iOS")
-        
+
         let cleanOutput = Blimp.TakeOff.ArchiveArgument.cleanOutput
         XCTAssertEqual(cleanOutput.bashArgument, "| xcbeautify")
     }
