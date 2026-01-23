@@ -125,12 +125,14 @@ struct TakeOff: AsyncParsableCommand {
     }
 
     private func buildExportOptions() throws -> ExportOptions {
-        let exportMethod = ExportOptions.Method(rawValue: method) ?? .appStoreConnect
+        guard let exportMethod = ExportOptions.Method(rawValue: method) else {
+            throw ValidationError("Unknown export method: \(method)")
+        }
         guard let style = ExportOptions.SigningStyle(rawValue: signingStyle) else {
-            throw ValidationError("Unknown signing style: \(signingStyle.debugDescription)")
+            throw ValidationError("Unknown signing style: \(signingStyle)")
         }
         guard let certificate = ExportOptions.SigningCertificate(rawValue: signingCertificate) else {
-            throw ValidationError("Unknown certificate: \(signingCertificate.debugDescription)")
+            throw ValidationError("Unknown certificate: \(signingCertificate)")
         }
 
         let profiles: [String: String] = provisioningProfiles.isEmpty ? [:] : Dictionary(
