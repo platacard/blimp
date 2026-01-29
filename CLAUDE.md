@@ -123,6 +123,18 @@ try? data.write(to: path)
 try data.write(to: path)
 ```
 
+❌ Anti-Pattern: Editing Generated Code
+NEVER edit files in `Generated/` directories. These files are auto-generated from OpenAPI specs and will be overwritten. If the generated code is missing functionality:
+1. Update the OpenAPI spec (e.g., `openapi.json`)
+2. Regenerate the code using the OpenAPI generator
+3. If the spec is correct but code is wrong, check the generator config
+
+```swift
+// BAD: Editing Sources/API/*/Generated/Types.swift directly
+
+// GOOD: Update openapi.json, then regenerate
+```
+
 ❌ Anti-Pattern: Excessive verbose comments
 
 ```swift
