@@ -71,7 +71,6 @@ public extension ProvisioningAPI {
         public enum Status: String, Sendable {
             case enabled = "ENABLED"
             case disabled = "DISABLED"
-            case processing = "PROCESSING"
         }
 
         public init(id: String, name: String, udid: String, platform: Platform?, status: Status) {
