@@ -11,7 +11,8 @@ struct BlimpCLI: AsyncParsableCommand {
             TakeOff.self,
             Approach.self,
             Land.self,
-            Hangar.self
+            Hangar.self,
+            Maintenance.self
         ]
     )
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol AppStoreConnectUploader {
+public protocol AppStoreConnectUploader: Sendable {
     /// Upload the resource with the selected transporter, typically IPA file
     func upload(config: UploadConfig, verbose: Bool) async throws
 }

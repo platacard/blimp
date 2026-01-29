@@ -1,7 +1,7 @@
 import Foundation
 
 /// Credentials for App Store Connect (ASC)
-public protocol ASCCredentialsTrait {
+public protocol ASCCredentialsTrait: Sendable {
     var env: [String: String] { get }
     var apiKeyId: String? { get }
     var apiIssuerId: String? { get }
@@ -15,6 +15,12 @@ public extension ASCCredentialsTrait {
     var apiKeyId: String? { env[C.apiKeyId] }
     var apiIssuerId: String? { env[C.apiIssuerId] }
     var apiPrivateKey: String? { env[C.apiPrivateKey] }
+}
+
+// Concrete type for usage
+public actor ASCCredentials: ASCCredentialsTrait {
+    public init(from _: Source) {}
+    public enum Source { case environment }
 }
 
 // MARK: - Constants

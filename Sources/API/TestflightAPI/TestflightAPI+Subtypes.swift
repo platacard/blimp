@@ -3,34 +3,34 @@ import OpenAPIURLSession
 import Foundation
 
 public extension TestflightAPI {
-    enum BetaProcessingState: CaseIterable {
+    enum BetaProcessingState: CaseIterable, Sendable {
         case processing
         case failed
         case invalid
         case valid
     }
     
-    enum BetaBuildState {
+    enum BetaBuildState: Sendable {
         case waitingForReview
         case inReview
         case approved
         case rejected
     }
     
-    enum BetaBuildSort {
+    enum BetaBuildSort: Sendable {
         case appVersionAsc
         case appVersionDesc
         case uploadDateAsc
         case uploadDateDesc
     }
     
-    struct BuildProcessingResult {
+    struct BuildProcessingResult: Sendable {
         public let processingState: BetaProcessingState
         public let buildBundleID: String
         public let buildLocalizationIDs: [String]
     }
 
-    enum Platform {
+    enum Platform: Sendable {
         case iOS
         case macOS
         case tvOS
@@ -39,13 +39,13 @@ public extension TestflightAPI {
         var asApiPlatform: Components.Schemas.Platform {
             switch self {
             case .iOS:
-                return .IOS
+                return .ios
             case .macOS:
-                return .MAC_OS
+                return .macOs
             case .tvOS:
-                return .TV_OS
+                return .tvOs
             case .visionOS:
-                return .VISION_OS
+                return .visionOs
             }
         }
     }
@@ -152,51 +152,51 @@ public extension TestflightAPI {
 }
 
 
-typealias BuildCollectionQuery = Operations.builds_getCollection.Input.Query
+typealias BuildCollectionQuery = Operations.BuildsGetCollection.Input.Query
 
 extension TestflightAPI.BetaProcessingState {
-    typealias FilterProcessingState = BuildCollectionQuery.filter_lbrack_processingState_rbrack_PayloadPayload
-    
+    typealias FilterProcessingState = BuildCollectionQuery.FilterLbrackProcessingStateRbrackPayloadPayload
+
     var asGeneratedApiState: FilterProcessingState {
         switch self {
-        case .processing: .PROCESSING
-        case .failed: .FAILED
-        case .invalid: .INVALID
-        case .valid: .VALID
+        case .processing: .processing
+        case .failed: .failed
+        case .invalid: .invalid
+        case .valid: .valid
         }
     }
 }
 
 // MARK: - Generated code mappings
 
-typealias AttributeProcessingState = Components.Schemas.Build.attributesPayload.processingStatePayload
+typealias AttributeProcessingState = Components.Schemas.Build.AttributesPayload.ProcessingStatePayload
 
 extension AttributeProcessingState {
     var asProcessingState: TestflightAPI.BetaProcessingState {
         switch self {
-        case .PROCESSING: .processing
-        case .FAILED: .failed
-        case .INVALID: .invalid
-        case .VALID: .valid
+        case .processing: .processing
+        case .failed: .failed
+        case .invalid: .invalid
+        case .valid: .valid
         }
     }
 }
 
 extension TestflightAPI.BetaBuildState {
-    typealias GeneratedBuildState = BuildCollectionQuery.filter_lbrack_betaAppReviewSubmission_period_betaReviewState_rbrack_PayloadPayload
-    
+    typealias GeneratedBuildState = BuildCollectionQuery.FilterLbrackBetaAppReviewSubmissionBetaReviewStateRbrackPayloadPayload
+
     var asGeneratedApiState: GeneratedBuildState {
         switch self {
-        case .waitingForReview: .WAITING_FOR_REVIEW
-        case .inReview: .IN_REVIEW
-        case .rejected: .REJECTED
-        case .approved: .APPROVED
+        case .waitingForReview: .waitingForReview
+        case .inReview: .inReview
+        case .rejected: .rejected
+        case .approved: .approved
         }
     }
 }
 
 extension TestflightAPI.BetaBuildSort {
-    typealias QuerySortPayload = Operations.builds_getCollection.Input.Query.sortPayloadPayload
+    typealias QuerySortPayload = Operations.BuildsGetCollection.Input.Query.SortPayloadPayload
 
     var asGeneratedApiPayload: QuerySortPayload {
         switch self {
@@ -209,31 +209,31 @@ extension TestflightAPI.BetaBuildSort {
 }
 
 extension TestflightAPI.UploadFileDescriptor.AssetType {
-    var generatedValue: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.attributesPayload.assetTypePayload {
+    var generatedValue: Components.Schemas.BuildUploadFileCreateRequest.DataPayload.AttributesPayload.AssetTypePayload {
         switch self {
         case .asset:
-            return .ASSET
+            return .asset
         case .assetDescription:
-            return .ASSET_DESCRIPTION
+            return .assetDescription
         case .assetSPI:
-            return .ASSET_SPI
+            return .assetSpi
         }
     }
 }
 
 extension TestflightAPI.UploadFileDescriptor.UTI {
-    var generatedValue: Components.Schemas.BuildUploadFileCreateRequest.dataPayload.attributesPayload.utiPayload {
+    var generatedValue: Components.Schemas.BuildUploadFileCreateRequest.DataPayload.AttributesPayload.UtiPayload {
         switch self {
         case .ipa:
-            return .com_period_apple_period_ipa
+            return .com_apple_ipa
         case .pkg:
-            return .com_period_apple_period_pkg
+            return .com_apple_pkg
         case .zip:
-            return .com_period_pkware_period_zip_hyphen_archive
+            return .com_pkware_zipArchive
         case .binaryPropertyList:
-            return .com_period_apple_period_binary_hyphen_property_hyphen_list
+            return .com_apple_binaryPropertyList
         case .xmlPropertyList:
-            return .com_period_apple_period_xml_hyphen_property_hyphen_list
+            return .com_apple_xmlPropertyList
         }
     }
 }
@@ -245,7 +245,7 @@ extension Components.Schemas.BuildUploadFile {
         }
 
         switch (value, assetType) {
-        case (.ASSET, .asset), (.ASSET_DESCRIPTION, .assetDescription), (.ASSET_SPI, .assetSPI):
+        case (.asset, .asset), (.assetDescription, .assetDescription), (.assetSpi, .assetSPI):
             return true
         default:
             return false
@@ -304,13 +304,13 @@ extension Components.Schemas.BuildUpload {
 
         let phase: TestflightAPI.UploadStatus.Phase
         switch rawState {
-        case .AWAITING_UPLOAD:
+        case .awaitingUpload:
             phase = .awaitingUpload
-        case .PROCESSING:
+        case .processing:
             phase = .processing
-        case .COMPLETE:
+        case .complete:
             phase = .complete
-        case .FAILED:
+        case .failed:
             phase = .failed
         }
 

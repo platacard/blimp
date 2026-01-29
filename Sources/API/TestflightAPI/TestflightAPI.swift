@@ -11,15 +11,15 @@ public struct TestflightAPI: Sendable {
     private let jwtProvider: any JWTProviding
     private let client: any APIProtocol
 
-    nonisolated(unsafe)
-    private let logger = Cronista(
-        module: "blimp",
-        category: "TestFlightAPI",
-        isFileLoggingEnabled: true
-    )
+    nonisolated(unsafe) private let logger: Cronista
 
     public init(jwtProvider: any JWTProviding) {
         self.jwtProvider = jwtProvider
+        self.logger = Cronista(
+            module: "blimp",
+            category: "TestFlightAPI",
+            isFileLoggingEnabled: true
+        )
 
         self.client = Client(
             serverURL: try! Servers.Server1.url(),
@@ -54,7 +54,7 @@ public struct TestflightAPI: Sendable {
             )
         )
 
-        let response = try await client.buildUploads_createInstance(.init(body: .json(request)))
+        let response = try await client.buildUploadsCreateInstance(.init(body: .json(request)))
 
         switch response {
         case .created(let created):
@@ -127,7 +127,7 @@ public struct TestflightAPI: Sendable {
             )
         )
 
-        let response = try await client.buildUploadFiles_updateInstance(
+        let response = try await client.buildUploadFilesUpdateInstance(
             .init(
                 path: .init(id: uploadFileId),
                 body: .json(updateRequest)
@@ -170,7 +170,7 @@ public struct TestflightAPI: Sendable {
     }
 
     public func getUploadStatus(uploadId: String) async throws -> UploadStatus {
-        let response = try await client.buildUploads_getInstance(
+        let response = try await client.buildUploadsGetInstance(
             .init(
                 path: .init(id: uploadId),
                 query: .init(fields_lbrack_buildUploads_rbrack_: [.state])
@@ -213,12 +213,12 @@ public struct TestflightAPI: Sendable {
         limit: Int = 10,
         sorted sort: [BetaBuildSort] = [.uploadDateDesc]
     ) async throws -> String? {
-        let response = try await client.builds_getCollection(
-            Operations.builds_getCollection.Input(
+        let response = try await client.buildsGetCollection(
+            Operations.BuildsGetCollection.Input(
                 query: .init(
                     filter_lbrack_version_rbrack_: [buildNumber],
                     filter_lbrack_processingState_rbrack_: states.map { $0.asGeneratedApiState },
-                    filter_lbrack_preReleaseVersion_period_version_rbrack_: [appVersion],
+                    filter_lbrack_preReleaseVersion_version_rbrack_: [appVersion],
                     filter_lbrack_app_rbrack_: [appId],
                     sort: sort.map { $0.asGeneratedApiPayload },
                     fields_lbrack_builds_rbrack_: [.app, .betaGroups, .buildBetaDetail, .preReleaseVersion, .version],
@@ -257,7 +257,7 @@ public struct TestflightAPI: Sendable {
     }
 
     public func getBuildProcessingResult(id: String) async throws -> BuildProcessingResult {
-        let response = try await client.builds_getInstance(
+        let response = try await client.buildsGetInstance(
             .init(
                 path: .init(id: id),
                 query: .init(
@@ -287,14 +287,14 @@ public struct TestflightAPI: Sendable {
         firstName: String,
         lastName: String
     ) async throws {
-        let response = try await client.userInvitations_createInstance(
+        let response = try await client.userInvitationsCreateInstance(
             body: .json(.init(data: .init(
                 _type: .userInvitations,
                 attributes: .init(
                     email: email,
                     firstName: firstName,
                     lastName: lastName,
-                    roles: [.DEVELOPER],
+                    roles: [.developer],
                     allAppsVisible: true,
                     provisioningAllowed: false
                 )
@@ -336,10 +336,10 @@ public struct TestflightAPI: Sendable {
     public func setBetaGroups(appId: String, buildId: String, betaGroups: [String], isInternal: Bool = false) async throws {
         let betaGroupsIds = try await getBetaGroupIds(appId: appId, betaGroups: betaGroups)
 
-        typealias Groups = Components.Schemas.BuildBetaGroupsLinkagesRequest.dataPayload
+        typealias Groups = Components.Schemas.BuildBetaGroupsLinkagesRequest.DataPayload
         let mappedGroups: Groups = betaGroupsIds.map { .init(_type: .betaGroups, id: $0) }
 
-        let response = try await client.builds_betaGroups_createToManyRelationship(
+        let response = try await client.buildsBetaGroupsCreateToManyRelationship(
             .init(
                 path: .init(id: buildId),
                 body: .json(.init(data: mappedGroups))
@@ -354,7 +354,7 @@ public struct TestflightAPI: Sendable {
     public func setChangelog(localizationIds: [String], changelog: String) async throws {
         // TODO: the first for TF is always en-US. Improve this to create the new locales if needed
         if let localizationId = localizationIds.first {
-            let response = try await client.betaBuildLocalizations_updateInstance(
+            let response = try await client.betaBuildLocalizationsUpdateInstance(
                 .init(
                     path: .init(id: localizationId),
                     body: .json(
@@ -375,7 +375,7 @@ public struct TestflightAPI: Sendable {
     }
 
     public func sendToTestflightReview(buildId: String) async throws {
-        let result = try await client.betaAppReviewSubmissions_createInstance(
+        let result = try await client.betaAppReviewSubmissionsCreateInstance(
             body: .json(.init(data: .init(
                 _type: .betaAppReviewSubmissions,
                 relationships: .init(build: .init(data: .init(_type: .builds, id: buildId)))
@@ -392,17 +392,17 @@ public struct TestflightAPI: Sendable {
         state: BetaBuildState,
         limit: Int = 10
     ) async throws -> [String] {
-        let response = try await client.builds_getCollection(
-            Operations.builds_getCollection.Input(
+        let response = try await client.buildsGetCollection(
+            Operations.BuildsGetCollection.Input(
                 query: .init(
-                    filter_lbrack_betaAppReviewSubmission_period_betaReviewState_rbrack_: [state.asGeneratedApiState],
+                    filter_lbrack_betaAppReviewSubmission_betaReviewState_rbrack_: [state.asGeneratedApiState],
                     filter_lbrack_app_rbrack_: [appId],
                     fields_lbrack_builds_rbrack_: [.app, .betaGroups, .buildBundles],
                     fields_lbrack_apps_rbrack_: [.bundleId, .builds],
                     limit: limit,
                     include: [.app, .buildBetaDetail, .buildBundles]
                 ),
-                headers: Operations.builds_getCollection.Input.Headers()
+                headers: Operations.BuildsGetCollection.Input.Headers()
             )
         )
 
@@ -435,7 +435,7 @@ public struct TestflightAPI: Sendable {
         buildBundleID: String,
         devices: [String]
     ) async throws -> [BundleBuildFileSize] {
-        let response = try await client.buildBundles_buildBundleFileSizes_getToManyRelated(
+        let response = try await client.buildBundlesBuildBundleFileSizesGetToManyRelated(
             path: .init(id: buildBundleID)
         )
 
@@ -514,9 +514,7 @@ private extension TestflightAPI {
             )
         )
 
-        let response = try await client.buildUploadFiles_createInstance(
-            .init(body: .json(request))
-        )
+        let response = try await client.buildUploadFilesCreateInstance(.init(body: .json(request)))
 
         switch response {
         case .created(let created):
@@ -549,7 +547,7 @@ private extension TestflightAPI {
     }
 
     func getBetaGroupIds(appId: String, betaGroups: [String]) async throws -> [String] {
-        let betaGroupsResponse = try await client.betaGroups_getCollection(
+        let betaGroupsResponse = try await client.betaGroupsGetCollection(
             .init(
                 query: .init(
                     filter_lbrack_name_rbrack_: betaGroups,
@@ -562,7 +560,7 @@ private extension TestflightAPI {
     }
 
     func getBetaTesterId(appId: String, email: String) async throws -> String? {
-        let betaTestersResponse = try await client.betaTesters_getCollection(
+        let betaTestersResponse = try await client.betaTestersGetCollection(
             .init(query: .init(
                 filter_lbrack_email_rbrack_: [email],
                 filter_lbrack_apps_rbrack_: [appId]
@@ -572,7 +570,7 @@ private extension TestflightAPI {
         let singleTesterData = try betaTestersResponse.ok.body.json.data.first(where: { $0.attributes?.email == email })
         let singleTesterState = singleTesterData?.attributes?.state
 
-        if singleTesterState == .REVOKED {
+        if singleTesterState == .revoked {
             logger.info("Tester \(email.redactedEmail) has been revoked, will invite again")
             return nil
         } else {
@@ -582,7 +580,7 @@ private extension TestflightAPI {
 
     func assignExistingTesterToGroups(_ betaGroupIds: [String], _ betaTesterId: String, appId: String) async throws {
         for betaGroupId in betaGroupIds {
-            _ = try await client.betaTesters_betaGroups_createToManyRelationship(
+            _ = try await client.betaTestersBetaGroupsCreateToManyRelationship(
                 path: .init(id: betaTesterId),
                 body: .json(.init(data: [.init(_type: .betaGroups, id: betaGroupId)]))
             )
@@ -592,10 +590,10 @@ private extension TestflightAPI {
     }
 
     func createNewBetaTester(_ betaGroupIds: [String], appId: String, firstName: String, lastName: String, email: String) async throws -> String? {
-        typealias Groups = Components.Schemas.BetaTesterCreateRequest.dataPayload.relationshipsPayload.betaGroupsPayload.dataPayloadPayload
+        typealias Groups = Components.Schemas.BetaTesterCreateRequest.DataPayload.RelationshipsPayload.BetaGroupsPayload.DataPayloadPayload
         let mappedGroups: [Groups] = betaGroupIds.map { .init(_type: .betaGroups, id: $0) }
 
-        let result = try await client.betaTesters_createInstance(
+        let result = try await client.betaTestersCreateInstance(
             .init(body: .json(.init(
                 data: .init(
                     _type: .betaTesters,
@@ -619,7 +617,7 @@ private extension TestflightAPI {
     }
 
     func resendBetaTesterInviteMail(appId: String, betaTesterId: String) async throws {
-        _ = try await client.betaTesterInvitations_createInstance(
+        _ = try await client.betaTesterInvitationsCreateInstance(
             .init(body: .json(.init(data: .init(
                 _type: .betaTesterInvitations,
                 relationships: .init(

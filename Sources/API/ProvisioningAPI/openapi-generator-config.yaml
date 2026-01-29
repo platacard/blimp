@@ -3,12 +3,19 @@ generate:
   - types
 filter:
   operations:
-    - certificates-get_collection # GET /v1/certificates
-    - bundleIds-profiles-get_to_many_related # GET /v1/bundleIds/{id}/profiles
-    - profiles-get_collection # GET /v1/profiles
-    - profiles-create_instance # POST /v1/profiles
-    - profiles-delete_instance # DELETE /v1/profiles/{id}
-    - devices-create_instance # POST /v1/devices
+    - devices_getCollection # GET /v1/devices
+    - devices_createInstance # POST /v1/devices
+    - devices_updateInstance # PATCH /v1/devices/{id} set device enabled/disabled
+    - profiles_getCollection # GET /v1/profiles
+    - profiles_createInstance # POST /v1/profiles
+    - profiles_deleteInstance # DELETE /v1/profiles/{id}
+    - certificates_getCollection # GET /v1/certificates
+    - certificates_getInstance # GET /v1/certificates/{id}
+    - certificates_createInstance # POST /v1/certificates
+    - certificates_deleteInstance # DELETE /v1/certificates/{id}
+    - bundleIds_getCollection # GET /v1/bundleIds
+namingStrategy: idiomatic
 
 # Run from root when changed:
 # ./Scripts/update_api.sh ProvisioningAPI
+

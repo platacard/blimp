@@ -39,10 +39,10 @@ internal struct Client: APIProtocol {
     }
     /// - Remark: HTTP `GET /v1/apps`.
     /// - Remark: Generated from `#/paths//v1/apps/get(apps_getCollection)`.
-    internal func apps_getCollection(_ input: Operations.apps_getCollection.Input) async throws -> Operations.apps_getCollection.Output {
+    internal func appsGetCollection(_ input: Operations.AppsGetCollection.Input) async throws -> Operations.AppsGetCollection.Output {
         try await client.send(
             input: input,
-            forOperation: Operations.apps_getCollection.id,
+            forOperation: Operations.AppsGetCollection.id,
             serializer: { input in
                 let path = try converter.renderedPath(
                     template: "/v1/apps",
@@ -79,35 +79,35 @@ internal struct Client: APIProtocol {
                     style: .form,
                     explode: false,
                     name: "filter[appStoreVersions.appStoreState]",
-                    value: input.query.filter_lbrack_appStoreVersions_period_appStoreState_rbrack_
+                    value: input.query.filter_lbrack_appStoreVersions_appStoreState_rbrack_
                 )
                 try converter.setQueryItemAsURI(
                     in: &request,
                     style: .form,
                     explode: false,
                     name: "filter[appStoreVersions.platform]",
-                    value: input.query.filter_lbrack_appStoreVersions_period_platform_rbrack_
+                    value: input.query.filter_lbrack_appStoreVersions_platform_rbrack_
                 )
                 try converter.setQueryItemAsURI(
                     in: &request,
                     style: .form,
                     explode: false,
                     name: "filter[appStoreVersions.appVersionState]",
-                    value: input.query.filter_lbrack_appStoreVersions_period_appVersionState_rbrack_
+                    value: input.query.filter_lbrack_appStoreVersions_appVersionState_rbrack_
                 )
                 try converter.setQueryItemAsURI(
                     in: &request,
                     style: .form,
                     explode: false,
                     name: "filter[reviewSubmissions.state]",
-                    value: input.query.filter_lbrack_reviewSubmissions_period_state_rbrack_
+                    value: input.query.filter_lbrack_reviewSubmissions_state_rbrack_
                 )
                 try converter.setQueryItemAsURI(
                     in: &request,
                     style: .form,
                     explode: false,
                     name: "filter[reviewSubmissions.platform]",
-                    value: input.query.filter_lbrack_reviewSubmissions_period_platform_rbrack_
+                    value: input.query.filter_lbrack_reviewSubmissions_platform_rbrack_
                 )
                 try converter.setQueryItemAsURI(
                     in: &request,
@@ -441,7 +441,7 @@ internal struct Client: APIProtocol {
                 switch response.status.code {
                 case 400:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.apps_getCollection.Output.BadRequest.Body
+                    let body: Operations.AppsGetCollection.Output.BadRequest.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -463,7 +463,7 @@ internal struct Client: APIProtocol {
                     return .badRequest(.init(body: body))
                 case 401:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.apps_getCollection.Output.Unauthorized.Body
+                    let body: Operations.AppsGetCollection.Output.Unauthorized.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -485,7 +485,7 @@ internal struct Client: APIProtocol {
                     return .unauthorized(.init(body: body))
                 case 403:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.apps_getCollection.Output.Forbidden.Body
+                    let body: Operations.AppsGetCollection.Output.Forbidden.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -507,7 +507,7 @@ internal struct Client: APIProtocol {
                     return .forbidden(.init(body: body))
                 case 200:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.apps_getCollection.Output.Ok.Body
+                    let body: Operations.AppsGetCollection.Output.Ok.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -529,7 +529,7 @@ internal struct Client: APIProtocol {
                     return .ok(.init(body: body))
                 case 429:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.apps_getCollection.Output.TooManyRequests.Body
+                    let body: Operations.AppsGetCollection.Output.TooManyRequests.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -563,10 +563,10 @@ internal struct Client: APIProtocol {
     }
     /// - Remark: HTTP `GET /v1/apps/{id}/betaGroups`.
     /// - Remark: Generated from `#/paths//v1/apps/{id}/betaGroups/get(apps_betaGroups_getToManyRelated)`.
-    internal func apps_betaGroups_getToManyRelated(_ input: Operations.apps_betaGroups_getToManyRelated.Input) async throws -> Operations.apps_betaGroups_getToManyRelated.Output {
+    internal func appsBetaGroupsGetToManyRelated(_ input: Operations.AppsBetaGroupsGetToManyRelated.Input) async throws -> Operations.AppsBetaGroupsGetToManyRelated.Output {
         try await client.send(
             input: input,
-            forOperation: Operations.apps_betaGroups_getToManyRelated.id,
+            forOperation: Operations.AppsBetaGroupsGetToManyRelated.id,
             serializer: { input in
                 let path = try converter.renderedPath(
                     template: "/v1/apps/{}/betaGroups",
@@ -603,7 +603,7 @@ internal struct Client: APIProtocol {
                 switch response.status.code {
                 case 400:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.apps_betaGroups_getToManyRelated.Output.BadRequest.Body
+                    let body: Operations.AppsBetaGroupsGetToManyRelated.Output.BadRequest.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -625,7 +625,7 @@ internal struct Client: APIProtocol {
                     return .badRequest(.init(body: body))
                 case 401:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.apps_betaGroups_getToManyRelated.Output.Unauthorized.Body
+                    let body: Operations.AppsBetaGroupsGetToManyRelated.Output.Unauthorized.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -647,7 +647,7 @@ internal struct Client: APIProtocol {
                     return .unauthorized(.init(body: body))
                 case 403:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.apps_betaGroups_getToManyRelated.Output.Forbidden.Body
+                    let body: Operations.AppsBetaGroupsGetToManyRelated.Output.Forbidden.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -669,7 +669,7 @@ internal struct Client: APIProtocol {
                     return .forbidden(.init(body: body))
                 case 404:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.apps_betaGroups_getToManyRelated.Output.NotFound.Body
+                    let body: Operations.AppsBetaGroupsGetToManyRelated.Output.NotFound.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -691,7 +691,7 @@ internal struct Client: APIProtocol {
                     return .notFound(.init(body: body))
                 case 200:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.apps_betaGroups_getToManyRelated.Output.Ok.Body
+                    let body: Operations.AppsBetaGroupsGetToManyRelated.Output.Ok.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [
@@ -713,7 +713,191 @@ internal struct Client: APIProtocol {
                     return .ok(.init(body: body))
                 case 429:
                     let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
-                    let body: Operations.apps_betaGroups_getToManyRelated.Output.TooManyRequests.Body
+                    let body: Operations.AppsBetaGroupsGetToManyRelated.Output.TooManyRequests.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.ErrorResponse.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .tooManyRequests(.init(body: body))
+                default:
+                    return .undocumented(
+                        statusCode: response.status.code,
+                        .init(
+                            headerFields: response.headerFields,
+                            body: responseBody
+                        )
+                    )
+                }
+            }
+        )
+    }
+    /// - Remark: HTTP `GET /v1/bundleIds/{id}/profiles`.
+    /// - Remark: Generated from `#/paths//v1/bundleIds/{id}/profiles/get(bundleIds_profiles_getToManyRelated)`.
+    internal func bundleIdsProfilesGetToManyRelated(_ input: Operations.BundleIdsProfilesGetToManyRelated.Input) async throws -> Operations.BundleIdsProfilesGetToManyRelated.Output {
+        try await client.send(
+            input: input,
+            forOperation: Operations.BundleIdsProfilesGetToManyRelated.id,
+            serializer: { input in
+                let path = try converter.renderedPath(
+                    template: "/v1/bundleIds/{}/profiles",
+                    parameters: [
+                        input.path.id
+                    ]
+                )
+                var request: HTTPTypes.HTTPRequest = .init(
+                    soar_path: path,
+                    method: .get
+                )
+                suppressMutabilityWarning(&request)
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: false,
+                    name: "fields[profiles]",
+                    value: input.query.fields_lbrack_profiles_rbrack_
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "limit",
+                    value: input.query.limit
+                )
+                converter.setAcceptHeader(
+                    in: &request.headerFields,
+                    contentTypes: input.headers.accept
+                )
+                return (request, nil)
+            },
+            deserializer: { response, responseBody in
+                switch response.status.code {
+                case 400:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.BundleIdsProfilesGetToManyRelated.Output.BadRequest.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.ErrorResponse.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .badRequest(.init(body: body))
+                case 401:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.BundleIdsProfilesGetToManyRelated.Output.Unauthorized.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.ErrorResponse.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .unauthorized(.init(body: body))
+                case 403:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.BundleIdsProfilesGetToManyRelated.Output.Forbidden.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.ErrorResponse.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .forbidden(.init(body: body))
+                case 404:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.BundleIdsProfilesGetToManyRelated.Output.NotFound.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.ErrorResponse.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .notFound(.init(body: body))
+                case 200:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.BundleIdsProfilesGetToManyRelated.Output.Ok.Body
+                    let chosenContentType = try converter.bestContentType(
+                        received: contentType,
+                        options: [
+                            "application/json"
+                        ]
+                    )
+                    switch chosenContentType {
+                    case "application/json":
+                        body = try await converter.getResponseBodyAsJSON(
+                            Components.Schemas.ProfilesWithoutIncludesResponse.self,
+                            from: responseBody,
+                            transforming: { value in
+                                .json(value)
+                            }
+                        )
+                    default:
+                        preconditionFailure("bestContentType chose an invalid content type.")
+                    }
+                    return .ok(.init(body: body))
+                case 429:
+                    let contentType = converter.extractContentTypeIfPresent(in: response.headerFields)
+                    let body: Operations.BundleIdsProfilesGetToManyRelated.Output.TooManyRequests.Body
                     let chosenContentType = try converter.bestContentType(
                         received: contentType,
                         options: [

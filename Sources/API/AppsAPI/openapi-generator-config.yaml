@@ -3,8 +3,10 @@ generate:
   - types
 filter:
   operations:
-    - apps_getCollection # /v1/apps
-    - apps_betaGroups_getToManyRelated # /v1/apps/{id}/betaGroups
+    - apps_getCollection # GET /v1/apps
+    - apps_betaGroups_getToManyRelated # GET /v1/apps/{id}/betaGroups
+    - bundleIds_profiles_getToManyRelated # GET /v1/bundleIds/{id}/profiles
+namingStrategy: idiomatic
 
 # Run from root when changed:
 # ./Scripts/update_api.sh AppsAPI

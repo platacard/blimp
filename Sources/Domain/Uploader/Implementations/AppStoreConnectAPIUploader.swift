@@ -7,8 +7,7 @@ import Crypto
 
 public actor AppStoreConnectAPIUploader: AppStoreConnectUploader {
 
-    nonisolated(unsafe)
-    private let logger = Cronista(module: "blimp", category: "ASCTransporter", isFileLoggingEnabled: true)
+    private let logger: Cronista
     private let testflightAPI: TestflightAPI
     private let appsAPI: AppsAPI
     private let urlSession: URLSession
@@ -26,6 +25,7 @@ public actor AppStoreConnectAPIUploader: AppStoreConnectUploader {
         uploadStatusMaxAttempts: Int = 60,
         pollInterval: Int? = 30
     ) {
+        self.logger = Cronista(module: "blimp", category: "ASCTransporter", isFileLoggingEnabled: true)
         self.testflightAPI = TestflightAPI(jwtProvider: jwtProvider)
         self.appsAPI = AppsAPI(jwtProvider: jwtProvider)
         self.urlSession = urlSession

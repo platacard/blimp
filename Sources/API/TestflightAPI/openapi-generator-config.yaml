@@ -37,6 +37,7 @@ filter:
     - betaTesterInvitations_createInstance # POST /v1/betaTesterInvitations
     - betaTesters_betaGroups_createToManyRelationship # POST /v1/betaTesters/{id}/relationships/betaGroups
     - betaTesters_betaGroups_deleteToManyRelationship # DELETE /v1/betaTesters/{id}/relationships/betaGroups
+namingStrategy: idiomatic
 
 # Run from root when changed:
 # ./Scripts/update_api.sh TestflightAPI
