@@ -2,7 +2,7 @@
 
 ALWAYS check this manual first before acting.
 
-This repo is a modern Swift CLI alternative to Fastlane. Your task is to improve the repo when the user asks you to. Always start your feature implementation in TDD manner, i.e. start with a unit test. Ensure the system is fully intact on every step, i.e. run unit tests frequently. 
+This repo is a modern Swift CLI alternative to Fastlane. Your task is to improve the repo when the user asks you to. Always start your feature implementation in TDD manner, i.e. start with a unit test. Ensure the system is fully intact on every step, i.e. run unit tests frequently.
 
 ## Modern Swift 6 CLI Development Guide
 
@@ -27,9 +27,9 @@ struct ModernTool: AsyncParsableCommand {
     // GOOD: Native async entry point ensures the tool waits for all tasks
     func run() async throws {
         print("🚀 Starting modern Swift 6 process...")
-        
+
         let tracker = ProgressTracker()
-        
+
         // GOOD: Structured Concurrency (TaskGroup)
         // Automatically manages child task lifetimes
         try await withThrowingTaskGroup(of: Void.self) { group in
@@ -39,7 +39,7 @@ struct ModernTool: AsyncParsableCommand {
                 }
             }
         }
-        
+
         let finalCount = await tracker.total
         print("✅ Finished. Total items processed: \(finalCount)")
     }
@@ -54,7 +54,7 @@ Use actors to manage shared mutable state. This replaces the manual DispatchQueu
 // GOOD: Protects shared state with compile-time safety
 actor ProgressTracker {
     private(set) var total = 0
-    
+
     func increment() {
         total += 1
     }
@@ -68,10 +68,10 @@ swift
 func performWork(id: Int, tracker: ProgressTracker) async throws {
     // GOOD: Periodically check if the user or system cancelled the task
     try Task.checkCancellation()
-    
+
     // Simulate non-blocking work
     try await Task.sleep(for: .seconds(Double.random(in: 0.5...1.5)))
-    
+
     await tracker.increment()
     print("  [Task \(id)] Work complete.")
 }
@@ -105,7 +105,7 @@ func processData() async {
 Modern Swift emphasizes safety. Using ! leads to fragile CLI tools that provide no helpful error messages before crashing.
 ```swift
 // BAD: Crash without explanation if the URL is malformed
-let url = URL(string: userInput)! 
+let url = URL(string: userInput)!
 
 // GOOD: Throw a descriptive error
 guard let url = URL(string: userInput) else {
@@ -123,16 +123,16 @@ try? data.write(to: path)
 try data.write(to: path)
 ```
 
-❌ Anti-Pattern: Editing Generated Code
-NEVER edit files in `Generated/` directories. These files are auto-generated from OpenAPI specs and will be overwritten. If the generated code is missing functionality:
-1. Update the OpenAPI spec (e.g., `openapi.json`)
-2. Regenerate the code using the OpenAPI generator
-3. If the spec is correct but code is wrong, check the generator config
+❌ Anti-Pattern: Editing Generated Code or OpenAPI Specs
+NEVER edit:
+- Files in `Generated/` directories - auto-generated and will be overwritten
+- OpenAPI spec files (`openapi.json`) - these are 3rd party specs from Apple that must remain unchanged
 
 ```swift
-// BAD: Editing Sources/API/*/Generated/Types.swift directly
+// BAD: Editing Sources/API/*/Generated/Types.swift
+// BAD: Editing Sources/API/*/openapi.json
 
-// GOOD: Update openapi.json, then regenerate
+// GOOD: Handle at domain layer (TestflightAPI wrapper for example)
 ```
 
 ❌ Anti-Pattern: Excessive verbose comments
@@ -140,7 +140,6 @@ NEVER edit files in `Generated/` directories. These files are auto-generated fro
 ```swift
 // BAD: excessive comments
 
-        
 // Should have created a certificate
 XCTAssertEqual(mockAPI.certificates.count, 1)
 let cert = mockAPI.certificates.first
@@ -152,7 +151,7 @@ guard let createdCert = cert else { return }
 let certPath = "certs/ios/DEVELOPMENT/\(createdCert.id).cer"
 let p12Path = "certs/ios/DEVELOPMENT/\(createdCert.id).p12"
 
-// GOOD: Be concise and don't pour water with your comments 
+// GOOD: Be concise and don't pour water with your comments
 
 XCTAssertEqual(mockAPI.certificates.count, 1)
 let cert = mockAPI.certificates.first
