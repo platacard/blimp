@@ -6,7 +6,7 @@ import ProvisioningAPI
 struct SyncProfiles: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "sync-profiles",
-        abstract: "Sync provisioning profiles with storage (does NOT create certificates)"
+        abstract: "Sync provisioning profiles with storage (auto-detects certificate)"
     )
 
     @Option(
@@ -15,9 +15,6 @@ struct SyncProfiles: AsyncParsableCommand {
         help: "Bundle IDs to sync"
     )
     var bundleIds: [String]
-
-    @Option(help: "Certificate ID to use for profiles")
-    var certificateId: String
 
     @Option(help: "Platform: ios, macos, tvos, catalyst")
     var platform: ProvisioningAPI.Platform = .ios
@@ -41,7 +38,6 @@ struct SyncProfiles: AsyncParsableCommand {
             platform: platform,
             type: type.asAPI(platform: platform),
             bundleIds: bundleIds,
-            certificateId: certificateId,
             force: force,
             storagePath: resolvedPath,
             push: push

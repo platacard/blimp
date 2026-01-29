@@ -71,25 +71,29 @@ public extension Blimp {
         }
 
         /// Finds a valid certificate ID from storage that matches Apple Developer Portal.
+        /// Does NOT require passphrase - only checks file existence.
         public func findCertificate(
             type: ProvisioningAPI.CertificateType,
             platform: ProvisioningAPI.Platform,
-            storagePath: String,
-            passphrase: String
+            storagePath: String
         ) async throws -> String? {
             let git = GitStorage(localPath: storagePath)
-            let encrypter = FileEncrypter()
-            let certGenerator = OpenSSLCertificateGenerator()
+            try await git.cloneOrPull()
 
-            let manager = CertificateManager(
-                certificateService: api,
-                git: git,
-                encrypter: encrypter,
-                certGenerator: certGenerator,
-                passphrase: passphrase
-            )
+            let certDir = "certificates/\(platform.rawValue)/\(type.rawValue)"
+            let appleCerts = try await api.listCertificates(filterType: type)
 
-            return try await manager.findValidCertificate(type: type, platform: platform)
+            logger.info("Found \(appleCerts.count) \(type.rawValue) certificates on Developer Portal")
+
+            for cert in appleCerts {
+                let p12Path = "\(certDir)/\(cert.id).p12"
+                if await git.fileExists(path: p12Path) {
+                    logger.info("Found valid certificate \(cert.id) in storage")
+                    return cert.id
+                }
+            }
+
+            return nil
         }
 
         // MARK: - Profile Management
@@ -106,16 +110,34 @@ public extension Blimp {
         }
 
         /// Syncs provisioning profiles for the given bundle IDs.
-        /// Only updates profiles, does NOT create certificates.
+        /// Automatically finds the appropriate certificate from storage based on profile type.
+        /// Does NOT create certificates - use `generateCertificate` first if needed.
         public func syncProfiles(
             platform: ProvisioningAPI.Platform,
             type: ProvisioningAPI.ProfileType,
             bundleIds: [String],
-            certificateId: String,
             force: Bool,
             storagePath: String,
             push: Bool = false
         ) async throws {
+            let certType = certificateType(for: type)
+            logger.info("Profile type \(type.rawValue) requires \(certType.rawValue) certificate")
+
+            guard let certificateId = try await findCertificate(
+                type: certType,
+                platform: platform,
+                storagePath: storagePath
+            ) else {
+                throw MaintenanceError.certificateNotFound(
+                    """
+                    No valid \(certType.rawValue) certificate found in storage for \(platform.rawValue).
+
+                    Run this command first:
+                      blimp maintenance generate-cert --type \(certType.rawValue) --platform \(platform.rawValue) --storage-path \(storagePath) --passphrase <passphrase>
+                    """
+                )
+            }
+
             let git = GitStorage(localPath: storagePath)
 
             let coordinator = ProfileSyncCoordinator(
@@ -146,6 +168,20 @@ public extension Blimp {
             let repo = GitStorage(localPath: path)
             try await repo.setRemote(url: remoteURL)
             logger.info("Remote set to \(remoteURL)")
+        }
+
+        // MARK: - Helpers
+
+        /// Maps profile type to required certificate type.
+        private func certificateType(for profileType: ProvisioningAPI.ProfileType) -> ProvisioningAPI.CertificateType {
+            switch profileType {
+            case .iosAppDevelopment, .tvosAppDevelopment, .macAppDevelopment, .macCatalystAppDevelopment:
+                return .development
+            case .iosAppStore, .iosAppAdhoc, .tvosAppStore, .tvosAppAdhoc, .macAppStore, .macCatalystAppStore:
+                return .distribution
+            default:
+                return .distribution
+            }
         }
 
         public enum MaintenanceError: Error, LocalizedError {
