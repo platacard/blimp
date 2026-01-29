@@ -36,7 +36,6 @@ dependencies: [
 
 ### What's yet to be implemented
 
-- Managing provisioning profiles and certificates. For now, we use an isolated [match](https://docs.fastlane.tools/actions/match/) part of fastlane.
 - Testing support for watchOS, macOS, and other less-used platforms
 
 ----
