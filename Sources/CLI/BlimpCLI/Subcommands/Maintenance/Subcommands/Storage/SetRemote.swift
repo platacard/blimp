@@ -1,5 +1,6 @@
 import ArgumentParser
 import BlimpKit
+import Cronista
 
 struct SetRemote: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
@@ -14,8 +15,9 @@ struct SetRemote: AsyncParsableCommand {
     var gitUrl: String
 
     func run() async throws {
+        let logger = Cronista(module: "blimp", category: "Maintenance")
         try await Blimp.Maintenance.default.setStorageRemote(path: path, remoteURL: gitUrl)
-        print("Remote set to: \(gitUrl)")
-        print("To push: blimp maintenance push --path \(path)")
+        logger.success("Remote set to: \(gitUrl)")
+        logger.info("To push: blimp maintenance push --path \(path)")
     }
 }

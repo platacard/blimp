@@ -23,7 +23,7 @@ struct GenerateCertificate: AsyncParsableCommand {
     var passphrase: String?
 
     func run() async throws {
-        let logger = Cronista(module: "blimp", category: "TakeOff")
+        let logger = Cronista(module: "blimp", category: "Maintenance")
         let passphrase = try resolvePassphrase(passphrase)
         let resolvedPath = storagePath == "." ? FileManager.default.currentDirectoryPath : storagePath
 
@@ -40,9 +40,9 @@ struct GenerateCertificate: AsyncParsableCommand {
     }
 }
 
-// MARK: - Passphrase
+// MARK: - Passphrase interactive input
 
-func resolvePassphrase(_ cliValue: String?) throws -> String {
+private func resolvePassphrase(_ cliValue: String?) throws -> String {
     // Environment variable first (CI-friendly)
     if let value = ProcessInfo.processInfo.environment["BLIMP_PASSPHRASE"] { return value }
     if let value = cliValue { return value }

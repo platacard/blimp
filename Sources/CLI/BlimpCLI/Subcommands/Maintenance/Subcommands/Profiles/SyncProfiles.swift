@@ -1,6 +1,7 @@
 import ArgumentParser
 import BlimpKit
 import Foundation
+import Cronista
 import ProvisioningAPI
 
 struct SyncProfiles: AsyncParsableCommand {
@@ -32,6 +33,7 @@ struct SyncProfiles: AsyncParsableCommand {
     var push: Bool = false
 
     func run() async throws {
+        let logger = Cronista(module: "blimp", category: "Maintenance")
         let resolvedPath = storagePath == "." ? FileManager.default.currentDirectoryPath : storagePath
 
         try await Blimp.Maintenance.default.syncProfiles(
@@ -42,6 +44,7 @@ struct SyncProfiles: AsyncParsableCommand {
             storagePath: resolvedPath,
             push: push
         )
-        print("Profile sync completed successfully")
+
+        logger.success("Profile sync completed successfully")
     }
 }

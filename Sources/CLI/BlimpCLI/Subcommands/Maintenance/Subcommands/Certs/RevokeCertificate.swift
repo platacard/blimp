@@ -1,5 +1,6 @@
 import ArgumentParser
 import BlimpKit
+import Cronista
 
 struct RevokeCertificate: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
@@ -11,12 +12,13 @@ struct RevokeCertificate: AsyncParsableCommand {
     var name: String
 
     func run() async throws {
+        let logger = Cronista(module: "blimp", category: "Maintenance")
         let certs = try await Blimp.Maintenance.default.listCertificates(type: nil)
         guard let cert = certs.first(where: { $0.name == name }) else {
             throw ValidationError("Certificate '\(name)' not found")
         }
 
         try await Blimp.Maintenance.default.revokeCertificate(id: cert.id)
-        print("Certificate '\(name)' revoked successfully")
+        logger.success("Certificate '\(name)' revoked successfully")
     }
 }

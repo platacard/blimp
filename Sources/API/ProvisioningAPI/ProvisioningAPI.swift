@@ -5,7 +5,7 @@ import Cronista
 import Auth
 import Foundation
 
-public struct ProvisioningAPI: ProvisioningService, Sendable {
+public struct ProvisioningAPI: Sendable {
 
     private let jwtProvider: any JWTProviding
     private let client: any APIProtocol
@@ -452,3 +452,7 @@ extension Components.Schemas.ErrorResponse {
         return errors?.compactMap { $0.detail }.joined(separator: ", ")
     }
 }
+
+extension ProvisioningAPI: DeviceService {}
+extension ProvisioningAPI: ProfileService {}
+extension ProvisioningAPI: CertificateService {}

@@ -111,7 +111,7 @@ public struct ProfileSyncCoordinator: Sendable {
             return nil
         }
 
-        // Fetch only ENABLED devices to avoid PROCESSING status decoding issues
+        // Fetch only ENABLED devices
         let devices = try await deviceService.listDevices(platform: platform, status: .enabled)
 
         if devices.isEmpty {

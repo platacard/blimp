@@ -34,9 +34,3 @@ public protocol DeviceService: Sendable {
     func registerDevice(name: String, udid: String, platform: ProvisioningAPI.Platform) async throws -> ProvisioningAPI.Device
     func listDevices(platform: ProvisioningAPI.Platform?, status: ProvisioningAPI.Device.Status?) async throws -> [ProvisioningAPI.Device]
 }
-
-// MARK: - Combined Protocol (for backward compatibility during transition)
-
-/// Combined service for interacting with Apple Developer Portal provisioning APIs.
-/// @available(*, deprecated, message: "Use CertificateService, ProfileService, or DeviceService instead")
-public protocol ProvisioningService: CertificateService, ProfileService, DeviceService {}
