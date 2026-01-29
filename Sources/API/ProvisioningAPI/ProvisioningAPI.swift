@@ -5,7 +5,7 @@ import Cronista
 import Auth
 import Foundation
 
-public struct ProvisioningAPI: ProvisioningService, Sendable {
+public struct ProvisioningAPI: Sendable {
 
     private let jwtProvider: any JWTProviding
     private let client: any APIProtocol
@@ -126,13 +126,21 @@ public struct ProvisioningAPI: ProvisioningService, Sendable {
         }
     }
     
-    public func listDevices(platform: Platform? = nil) async throws -> [Device] {
+    public func listDevices(platform: Platform? = nil, status: Device.Status? = .enabled) async throws -> [Device] {
         var allDevices: [Device] = []
         var nextURL: String? = nil
 
         // First request via typed client
+        // Filter by ENABLED status by default to avoid decoding issues with PROCESSING devices
+        let statusFilter: [Operations.DevicesGetCollection.Input.Query.FilterLbrackStatusRbrackPayloadPayload]? = status.map {
+            switch $0 {
+            case .enabled: return [.enabled]
+            case .disabled: return [.disabled]
+            }
+        }
         let query = Operations.DevicesGetCollection.Input.Query(
-            filter_lbrack_platform_rbrack_: platform.map { [$0.asDeviceFilterPlatform] }
+            filter_lbrack_platform_rbrack_: platform.map { [$0.asDeviceFilterPlatform] },
+            filter_lbrack_status_rbrack_: statusFilter
         )
         let input = Operations.DevicesGetCollection.Input(query: query)
         let response = try await client.devicesGetCollection(input)
@@ -444,3 +452,7 @@ extension Components.Schemas.ErrorResponse {
         return errors?.compactMap { $0.detail }.joined(separator: ", ")
     }
 }
+
+extension ProvisioningAPI: DeviceService {}
+extension ProvisioningAPI: ProfileService {}
+extension ProvisioningAPI: CertificateService {}

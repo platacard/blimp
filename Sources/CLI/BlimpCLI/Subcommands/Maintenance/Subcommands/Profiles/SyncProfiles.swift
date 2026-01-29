@@ -1,12 +1,13 @@
 import ArgumentParser
 import BlimpKit
 import Foundation
+import Cronista
 import ProvisioningAPI
 
-struct Sync: AsyncParsableCommand {
+struct SyncProfiles: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "sync",
-        abstract: "Sync provisioning profiles with storage"
+        commandName: "sync-profiles",
+        abstract: "Sync provisioning profiles with storage (auto-detects certificate)"
     )
 
     @Option(
@@ -19,7 +20,7 @@ struct Sync: AsyncParsableCommand {
     @Option(help: "Platform: ios, macos, tvos, catalyst")
     var platform: ProvisioningAPI.Platform = .ios
 
-    @Option(help: "Profile type: development, appstore, adhoc, inhouse, direct")
+    @Option(help: "Profile type: development, appstore, adhoc")
     var type: CLIProfileType = .development
 
     @Flag(help: "Force regeneration of profiles")
@@ -28,25 +29,22 @@ struct Sync: AsyncParsableCommand {
     @Option(help: "Storage path")
     var storagePath: String = "."
 
-    @Option(help: "Passphrase (or set BLIMP_PASSPHRASE, or enter interactively)")
-    var passphrase: String?
-
     @Flag(help: "Push to remote after committing")
     var push: Bool = false
 
     func run() async throws {
-        let passphrase = try resolvePassphrase(passphrase)
+        let logger = Cronista(module: "blimp", category: "Maintenance")
         let resolvedPath = storagePath == "." ? FileManager.default.currentDirectoryPath : storagePath
 
-        try await Blimp.Maintenance.default.sync(
+        try await Blimp.Maintenance.default.syncProfiles(
             platform: platform,
             type: type.asAPI(platform: platform),
             bundleIds: bundleIds,
             force: force,
             storagePath: resolvedPath,
-            passphrase: passphrase,
             push: push
         )
-        print("Sync completed successfully")
+
+        logger.success("Profile sync completed successfully")
     }
 }

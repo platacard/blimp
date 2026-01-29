@@ -1,5 +1,6 @@
 import ArgumentParser
 import BlimpKit
+import Cronista
 import Foundation
 
 struct ListProfiles: AsyncParsableCommand {
@@ -12,20 +13,21 @@ struct ListProfiles: AsyncParsableCommand {
     var name: String?
 
     func run() async throws {
+        let logger = Cronista(module: "blimp", category: "Maintenance")
         let profiles = try await Blimp.Maintenance.default.listProfiles(name: name)
 
         if profiles.isEmpty {
-            print("No profiles found")
+            logger.info("No profiles found")
         } else {
-            print("Profiles:")
+            logger.info("Profiles:")
             for profile in profiles {
                 let typeStr = profile.type?.rawValue ?? "unknown"
-                print("  \(profile.name) (\(typeStr))")
-                print("    ID: \(profile.id)")
+                logger.info("  \(profile.name) (\(typeStr))")
+                logger.info("    ID: \(profile.id)")
                 if let expDate = profile.expirationDate {
                     let formatter = DateFormatter()
                     formatter.dateStyle = .medium
-                    print("    Expires: \(formatter.string(from: expDate))")
+                    logger.info("    Expires: \(formatter.string(from: expDate))")
                 }
             }
         }

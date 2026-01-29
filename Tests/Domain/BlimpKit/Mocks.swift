@@ -3,6 +3,8 @@ import ProvisioningAPI
 import Gito
 @testable import BlimpKit
 
+// MARK: - Git Mock
+
 actor MockGitRepo: GitManaging {
     var fileStore: [String: Data] = [:]
     var pushedCommits: [String] = []
@@ -45,15 +47,19 @@ actor MockGitRepo: GitManaging {
     }
 }
 
+// MARK: - Encryption Mock
+
 class MockEncrypter: EncryptionService, @unchecked Sendable {
     func encrypt(data: Data, password: String) throws -> Data {
-        return data // Pass through
+        return data
     }
-    
+
     func decrypt(data: Data, password: String) throws -> Data {
-        return data // Pass through
+        return data
     }
 }
+
+// MARK: - Certificate Generator Mock
 
 class MockCertificateGenerator: CertificateGenerating, @unchecked Sendable {
     func generateCSR() throws -> (String, Data) {
@@ -65,30 +71,11 @@ class MockCertificateGenerator: CertificateGenerating, @unchecked Sendable {
     }
 }
 
-class MockProvisioningService: ProvisioningService, @unchecked Sendable {
-    var bundleIds: [String: String] = [:] // identifier: id
-    var devices: [ProvisioningAPI.Device] = []
+// MARK: - Certificate Service Mock
+
+class MockCertificateService: CertificateService, @unchecked Sendable {
     var certificates: [ProvisioningAPI.Certificate] = []
-    var profiles: [ProvisioningAPI.Profile] = []
-    var deletedProfileIds: [String] = []
     var deletedCertificateIds: [String] = []
-
-    func getBundleId(identifier: String) async throws -> String? {
-        return bundleIds[identifier]
-    }
-
-    func registerDevice(name: String, udid: String, platform: ProvisioningAPI.Platform) async throws -> ProvisioningAPI.Device {
-        let device = ProvisioningAPI.Device(id: UUID().uuidString, name: name, udid: udid, platform: platform, status: .enabled)
-        devices.append(device)
-        return device
-    }
-
-    func listDevices(platform: ProvisioningAPI.Platform?) async throws -> [ProvisioningAPI.Device] {
-        if let platform = platform {
-            return devices.filter { $0.platform == platform }
-        }
-        return devices
-    }
 
     func listCertificates(filterType: ProvisioningAPI.CertificateType?) async throws -> [ProvisioningAPI.Certificate] {
         if let filter = filterType {
@@ -112,6 +99,18 @@ class MockProvisioningService: ProvisioningService, @unchecked Sendable {
     func deleteCertificate(id: String) async throws {
         deletedCertificateIds.append(id)
         certificates.removeAll { $0.id == id }
+    }
+}
+
+// MARK: - Profile Service Mock
+
+class MockProfileService: ProfileService, @unchecked Sendable {
+    var bundleIds: [String: String] = [:]
+    var profiles: [ProvisioningAPI.Profile] = []
+    var deletedProfileIds: [String] = []
+
+    func getBundleId(identifier: String) async throws -> String? {
+        return bundleIds[identifier]
     }
 
     func createProfile(name: String, type: ProvisioningAPI.ProfileType, bundleId: String, certificateIds: [String], deviceIds: [String]?) async throws -> ProvisioningAPI.Profile {
@@ -138,3 +137,32 @@ class MockProvisioningService: ProvisioningService, @unchecked Sendable {
         profiles.removeAll { $0.id == id }
     }
 }
+
+// MARK: - Device Service Mock
+
+class MockDeviceService: DeviceService, @unchecked Sendable {
+    var devices: [ProvisioningAPI.Device] = []
+
+    func registerDevice(name: String, udid: String, platform: ProvisioningAPI.Platform) async throws -> ProvisioningAPI.Device {
+        let device = ProvisioningAPI.Device(id: UUID().uuidString, name: name, udid: udid, platform: platform, status: .enabled)
+        devices.append(device)
+        return device
+    }
+
+    func addDevice(name: String, udid: String, platform: ProvisioningAPI.Platform, status: ProvisioningAPI.Device.Status) {
+        let device = ProvisioningAPI.Device(id: UUID().uuidString, name: name, udid: udid, platform: platform, status: status)
+        devices.append(device)
+    }
+
+    func listDevices(platform: ProvisioningAPI.Platform?, status: ProvisioningAPI.Device.Status?) async throws -> [ProvisioningAPI.Device] {
+        var filtered = devices
+        if let platform = platform {
+            filtered = filtered.filter { $0.platform == platform }
+        }
+        if let status = status {
+            filtered = filtered.filter { $0.status == status }
+        }
+        return filtered
+    }
+}
+

@@ -1,5 +1,6 @@
 import ArgumentParser
 import BlimpKit
+import Cronista
 import ProvisioningAPI
 
 struct ListDevices: AsyncParsableCommand {
@@ -12,18 +13,19 @@ struct ListDevices: AsyncParsableCommand {
     var platform: ProvisioningAPI.Platform?
 
     func run() async throws {
+        let logger = Cronista(module: "blimp", category: "Maintenance")
         let devices = try await Blimp.Maintenance.default.listDevices(platform: platform)
 
         if devices.isEmpty {
-            print("No devices found")
+            logger.info("No devices found")
         } else {
-            print("Devices:")
+            logger.info("Devices:")
             for device in devices {
                 let status = device.status == .enabled ? "✓" : "✗"
                 let platformStr = device.platform?.rawValue ?? "unknown"
-                print("  \(status) \(device.name) (\(platformStr))")
-                print("    ID: \(device.id)")
-                print("    UDID: \(device.udid)")
+                logger.info("  \(status) \(device.name) (\(platformStr))")
+                logger.info("    ID: \(device.id)")
+                logger.info("    UDID: \(device.udid)")
             }
         }
     }

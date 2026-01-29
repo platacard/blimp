@@ -1,5 +1,6 @@
 import ArgumentParser
 import BlimpKit
+import Cronista
 import ProvisioningAPI
 
 struct ListCertificates: AsyncParsableCommand {
@@ -12,18 +13,19 @@ struct ListCertificates: AsyncParsableCommand {
     var type: ProvisioningAPI.CertificateType?
 
     func run() async throws {
+        let logger = Cronista(module: "blimp", category: "Maintenance")
         let certs = try await Blimp.Maintenance.default.listCertificates(type: type)
 
         if certs.isEmpty {
-            print("No certificates found")
+            logger.info("No certificates found")
         } else {
-            print("Certificates:")
+            logger.info("Certificates:")
             for cert in certs {
                 let typeStr = cert.type?.rawValue ?? "unknown"
-                print("  \(cert.name) (\(typeStr))")
-                print("    ID: \(cert.id)")
+                logger.info("  \(cert.name) (\(typeStr))")
+                logger.info("    ID: \(cert.id)")
                 if let serial = cert.serialNumber {
-                    print("    Serial: \(serial)")
+                    logger.info("    Serial: \(serial)")
                 }
             }
         }

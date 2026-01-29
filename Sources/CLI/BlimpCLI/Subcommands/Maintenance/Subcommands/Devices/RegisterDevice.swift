@@ -1,5 +1,6 @@
 import ArgumentParser
 import BlimpKit
+import Cronista
 import ProvisioningAPI
 
 struct RegisterDevice: AsyncParsableCommand {
@@ -18,7 +19,8 @@ struct RegisterDevice: AsyncParsableCommand {
     var platform: ProvisioningAPI.Platform = .ios
 
     func run() async throws {
+        let logger = Cronista(module: "blimp", category: "Maintenance")
         try await Blimp.Maintenance.default.registerDevice(name: name, udid: udid, platform: platform)
-        print("Device '\(name)' registered successfully")
+        logger.success("Device '\(name)' registered successfully")
     }
 }
