@@ -6,15 +6,19 @@ struct Maintenance: AsyncParsableCommand {
         commandName: "maintenance",
         abstract: "Manage provisioning profiles, certificates, and devices",
         subcommands: [
+            // Storage
             Init.self,
             SetRemote.self,
+            // Devices
             RegisterDevice.self,
             ListDevices.self,
+            // Certificates
             ListCertificates.self,
             GenerateCertificate.self,
             RevokeCertificate.self,
+            // Profiles
             ListProfiles.self,
-            Sync.self,
+            SyncProfiles.self,
             RemoveProfile.self
         ]
     )

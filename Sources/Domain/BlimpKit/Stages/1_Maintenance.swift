@@ -8,7 +8,7 @@ public extension Blimp {
     /// Maintenance stage
     ///
     /// Provides:
-    /// - Device registration
+    /// - Device registration and listing
     /// - Certificate generation, revocation and encrypted storage
     /// - Provisioning profile synchronization, listing, and removal
     struct Maintenance: Sendable {
@@ -20,91 +20,17 @@ public extension Blimp {
             self.api = ProvisioningAPI(jwtProvider: jwtProvider)
             self.logger = Cronista(module: "blimp", category: "Maintenance")
         }
-        
+
+        // MARK: - Device Management
+
         public func registerDevice(name: String, udid: String, platform: ProvisioningAPI.Platform) async throws {
             let device = try await api.registerDevice(name: name, udid: udid, platform: platform)
             logger.info("Registered device: \(device.name) (\(device.id))")
         }
-        
-        public func sync(
-            platform: ProvisioningAPI.Platform,
-            type: ProvisioningAPI.ProfileType,
-            bundleIds: [String],
-            force: Bool,
-            storagePath: String,
-            passphrase: String,
-            push: Bool = false
-        ) async throws {
-            let git = GitStorage(localPath: storagePath)
-            let encrypter = FileEncrypter()
-            let certGenerator = OpenSSLCertificateGenerator()
-
-            let coordinator = ProvisioningCoordinator(
-                api: api,
-                git: git,
-                encrypter: encrypter,
-                certGenerator: certGenerator,
-                passphrase: passphrase,
-                push: push
-            )
-            try await coordinator.sync(platform: platform, type: type, bundleIds: bundleIds, force: force)
-        }
-
-        public func generateCertificate(
-            type: ProvisioningAPI.CertificateType,
-            platform: ProvisioningAPI.Platform,
-            storagePath: String,
-            passphrase: String
-        ) async throws -> ProvisioningAPI.Certificate {
-            let git = GitStorage(localPath: storagePath)
-            let encrypter = FileEncrypter()
-            let certGenerator = OpenSSLCertificateGenerator()
-
-            try await git.cloneOrPull()
-
-            // Generate CSR and private key
-            let (csr, privateKey) = try certGenerator.generateCSR()
-
-            // Create certificate in Apple Developer Portal
-            let cert = try await api.createCertificate(csrContent: csr, type: type)
-            guard let certContent = cert.content else {
-                throw MaintenanceError.missingData("Certificate created but no content returned")
-            }
-
-            // Generate P12 from certificate and private key (includes passphrase protection)
-            let p12 = try certGenerator.generateP12(certContent: certContent, privateKey: privateKey, passphrase: passphrase)
-
-            // Store encrypted P12 in git
-            let certDir = "certificates/\(platform.rawValue)/\(type.rawValue)"
-            let p12Path = "\(certDir)/\(cert.id).p12"
-
-            let encryptedP12 = try encrypter.encrypt(data: p12, password: passphrase)
-
-            try await git.writeFile(path: p12Path, content: encryptedP12)
-
-            logger.info("Created and stored certificate: \(cert.id)")
-            return cert
-        }
-
-        /// Initialize local-only storage (can add remote later)
-        public func initializeLocalStorage(path: String, branch: String = "main") async throws {
-            let repo = GitStorage(localPath: path, branch: branch)
-            try await repo.cloneOrPull()
-            logger.info("Local hangar initialized at \(path)")
-        }
-
-        /// Add or update remote for existing local storage
-        public func setStorageRemote(path: String, remoteURL: String) async throws {
-            let repo = GitStorage(localPath: path)
-            try await repo.setRemote(url: remoteURL)
-            logger.info("Remote set to \(remoteURL)")
-        }
-
-        // MARK: - Device Management
 
         public func listDevices(platform: ProvisioningAPI.Platform?) async throws -> [ProvisioningAPI.Device] {
             let devices = try await api.listDevices(platform: platform)
-            logger.info("Found \(devices.count) devices in the hangar")
+            logger.info("Found \(devices.count) devices")
             return devices
         }
 
@@ -121,6 +47,51 @@ public extension Blimp {
             logger.info("Revoked certificate: \(id)")
         }
 
+        public func generateCertificate(
+            type: ProvisioningAPI.CertificateType,
+            platform: ProvisioningAPI.Platform,
+            storagePath: String,
+            passphrase: String,
+            push: Bool = false
+        ) async throws -> ProvisioningAPI.Certificate {
+            let git = GitStorage(localPath: storagePath)
+            let encrypter = FileEncrypter()
+            let certGenerator = OpenSSLCertificateGenerator()
+
+            let manager = CertificateManager(
+                certificateService: api,
+                git: git,
+                encrypter: encrypter,
+                certGenerator: certGenerator,
+                passphrase: passphrase,
+                push: push
+            )
+
+            return try await manager.createAndStoreCertificate(type: type, platform: platform)
+        }
+
+        /// Finds a valid certificate ID from storage that matches Apple Developer Portal.
+        public func findCertificate(
+            type: ProvisioningAPI.CertificateType,
+            platform: ProvisioningAPI.Platform,
+            storagePath: String,
+            passphrase: String
+        ) async throws -> String? {
+            let git = GitStorage(localPath: storagePath)
+            let encrypter = FileEncrypter()
+            let certGenerator = OpenSSLCertificateGenerator()
+
+            let manager = CertificateManager(
+                certificateService: api,
+                git: git,
+                encrypter: encrypter,
+                certGenerator: certGenerator,
+                passphrase: passphrase
+            )
+
+            return try await manager.findValidCertificate(type: type, platform: platform)
+        }
+
         // MARK: - Profile Management
 
         public func listProfiles(name: String?) async throws -> [ProvisioningAPI.Profile] {
@@ -134,12 +105,57 @@ public extension Blimp {
             logger.info("Removed profile: \(id)")
         }
 
+        /// Syncs provisioning profiles for the given bundle IDs.
+        /// Only updates profiles, does NOT create certificates.
+        public func syncProfiles(
+            platform: ProvisioningAPI.Platform,
+            type: ProvisioningAPI.ProfileType,
+            bundleIds: [String],
+            certificateId: String,
+            force: Bool,
+            storagePath: String,
+            push: Bool = false
+        ) async throws {
+            let git = GitStorage(localPath: storagePath)
+
+            let coordinator = ProfileSyncCoordinator(
+                profileService: api,
+                deviceService: api,
+                git: git,
+                push: push
+            )
+
+            try await coordinator.sync(
+                platform: platform,
+                type: type,
+                bundleIds: bundleIds,
+                certificateId: certificateId,
+                force: force
+            )
+        }
+
+        // MARK: - Storage Management
+
+        public func initializeLocalStorage(path: String, branch: String = "main") async throws {
+            let repo = GitStorage(localPath: path, branch: branch)
+            try await repo.cloneOrPull()
+            logger.info("Local storage initialized at \(path)")
+        }
+
+        public func setStorageRemote(path: String, remoteURL: String) async throws {
+            let repo = GitStorage(localPath: path)
+            try await repo.setRemote(url: remoteURL)
+            logger.info("Remote set to \(remoteURL)")
+        }
+
         public enum MaintenanceError: Error, LocalizedError {
             case missingData(String)
+            case certificateNotFound(String)
 
             public var errorDescription: String? {
                 switch self {
                 case .missingData(let msg): return msg
+                case .certificateNotFound(let msg): return msg
                 }
             }
         }
