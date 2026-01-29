@@ -168,7 +168,7 @@ class MockDeviceService: DeviceService, @unchecked Sendable {
 
 // MARK: - Combined Mock (for backward compatibility)
 
-class MockProvisioningService: ProvisioningService, @unchecked Sendable {
+class MockProvisioningService: CertificateService, ProfileService, DeviceService, @unchecked Sendable {
     var bundleIds: [String: String] = [:]
     var devices: [ProvisioningAPI.Device] = []
     var certificates: [ProvisioningAPI.Certificate] = []
