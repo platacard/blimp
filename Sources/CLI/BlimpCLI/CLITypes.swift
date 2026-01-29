@@ -21,34 +21,24 @@ enum CLIProfileType: String, ExpressibleByArgument, CaseIterable {
     case development
     case appstore
     case adhoc
-    case inhouse
-    case direct
 
     func asAPI(platform: ProvisioningAPI.Platform) -> ProvisioningAPI.ProfileType {
         switch (platform, self) {
         case (.ios, .development): return .iosAppDevelopment
         case (.ios, .appstore): return .iosAppStore
         case (.ios, .adhoc): return .iosAppAdhoc
-        case (.ios, .inhouse): return .iosAppInhouse
-        case (.ios, .direct): return .iosAppAdhoc
 
         case (.macos, .development): return .macAppDevelopment
         case (.macos, .appstore): return .macAppStore
         case (.macos, .adhoc): return .macAppDirect
-        case (.macos, .inhouse): return .macAppDirect
-        case (.macos, .direct): return .macAppDirect
 
         case (.tvos, .development): return .tvosAppDevelopment
         case (.tvos, .appstore): return .tvosAppStore
         case (.tvos, .adhoc): return .tvosAppAdhoc
-        case (.tvos, .inhouse): return .tvosAppInhouse
-        case (.tvos, .direct): return .tvosAppAdhoc
 
         case (.catalyst, .development): return .macCatalystAppDevelopment
         case (.catalyst, .appstore): return .macCatalystAppStore
         case (.catalyst, .adhoc): return .macCatalystAppDirect
-        case (.catalyst, .inhouse): return .macCatalystAppDirect
-        case (.catalyst, .direct): return .macCatalystAppDirect
         }
     }
 }
