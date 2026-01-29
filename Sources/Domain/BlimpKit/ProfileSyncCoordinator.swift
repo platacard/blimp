@@ -111,16 +111,16 @@ public struct ProfileSyncCoordinator: Sendable {
             return nil
         }
 
-        let devices = try await deviceService.listDevices(platform: platform)
-        let enabledDevices = devices.filter { $0.status == .enabled }
+        // Fetch only ENABLED devices to avoid PROCESSING status decoding issues
+        let devices = try await deviceService.listDevices(platform: platform, status: .enabled)
 
-        if enabledDevices.isEmpty {
+        if devices.isEmpty {
             logger.warning("No enabled devices found for \(platform.rawValue). Profile creation may fail.")
         } else {
-            logger.info("Found \(enabledDevices.count) enabled devices")
+            logger.info("Found \(devices.count) enabled devices")
         }
 
-        return enabledDevices.map { $0.id }
+        return devices.map { $0.id }
     }
 
     private func requiresDevices(type: ProvisioningAPI.ProfileType) -> Bool {

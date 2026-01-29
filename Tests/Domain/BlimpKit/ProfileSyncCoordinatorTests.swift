@@ -176,6 +176,66 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
         XCTAssertEqual(profile?.type, .iosAppStore)
     }
 
+    // MARK: - Device Status Filtering Tests
+
+    func testSyncExcludesDisabledDevices() async throws {
+        let bundleId = "com.example.app"
+        let certificateId = "cert-123"
+        mockProfileService.bundleIds[bundleId] = "bundle-resource-id"
+
+        _ = try await mockDeviceService.registerDevice(name: "iPhone 15", udid: "UDID-1", platform: .ios)
+        mockDeviceService.addDevice(name: "Old iPhone", udid: "UDID-2", platform: .ios, status: .disabled)
+
+        try await coordinator.sync(
+            platform: .ios,
+            type: .iosAppDevelopment,
+            bundleIds: [bundleId],
+            certificateId: certificateId
+        )
+
+        XCTAssertEqual(mockProfileService.profiles.count, 1)
+        XCTAssertEqual(mockDeviceService.devices.count, 2)
+
+        let enabledDevices = try await mockDeviceService.listDevices(platform: .ios, status: .enabled)
+        XCTAssertEqual(enabledDevices.count, 1)
+    }
+
+    func testSyncOnlyUsesEnabledDevices() async throws {
+        let bundleId = "com.example.app"
+        let certificateId = "cert-123"
+        mockProfileService.bundleIds[bundleId] = "bundle-resource-id"
+
+        mockDeviceService.addDevice(name: "Disabled Device 1", udid: "UDID-1", platform: .ios, status: .disabled)
+        mockDeviceService.addDevice(name: "Disabled Device 2", udid: "UDID-2", platform: .ios, status: .disabled)
+
+        try await coordinator.sync(
+            platform: .ios,
+            type: .iosAppDevelopment,
+            bundleIds: [bundleId],
+            certificateId: certificateId
+        )
+
+        XCTAssertEqual(mockProfileService.profiles.count, 1)
+
+        let enabledDevices = try await mockDeviceService.listDevices(platform: .ios, status: .enabled)
+        XCTAssertEqual(enabledDevices.count, 0, "No enabled devices should be found")
+    }
+
+    func testListDevicesFiltersByStatus() async throws {
+        mockDeviceService.addDevice(name: "Enabled 1", udid: "UDID-1", platform: .ios, status: .enabled)
+        mockDeviceService.addDevice(name: "Enabled 2", udid: "UDID-2", platform: .ios, status: .enabled)
+        mockDeviceService.addDevice(name: "Disabled 1", udid: "UDID-3", platform: .ios, status: .disabled)
+
+        let all = try await mockDeviceService.listDevices(platform: nil, status: nil)
+        XCTAssertEqual(all.count, 3)
+
+        let enabled = try await mockDeviceService.listDevices(platform: nil, status: .enabled)
+        XCTAssertEqual(enabled.count, 2)
+
+        let disabled = try await mockDeviceService.listDevices(platform: nil, status: .disabled)
+        XCTAssertEqual(disabled.count, 1)
+    }
+
     // MARK: - Error Handling Tests
 
     func testSyncFailsForMissingBundleId() async {

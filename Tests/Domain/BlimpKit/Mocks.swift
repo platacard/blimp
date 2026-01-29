@@ -149,11 +149,20 @@ class MockDeviceService: DeviceService, @unchecked Sendable {
         return device
     }
 
-    func listDevices(platform: ProvisioningAPI.Platform?) async throws -> [ProvisioningAPI.Device] {
+    func addDevice(name: String, udid: String, platform: ProvisioningAPI.Platform, status: ProvisioningAPI.Device.Status) {
+        let device = ProvisioningAPI.Device(id: UUID().uuidString, name: name, udid: udid, platform: platform, status: status)
+        devices.append(device)
+    }
+
+    func listDevices(platform: ProvisioningAPI.Platform?, status: ProvisioningAPI.Device.Status?) async throws -> [ProvisioningAPI.Device] {
+        var filtered = devices
         if let platform = platform {
-            return devices.filter { $0.platform == platform }
+            filtered = filtered.filter { $0.platform == platform }
         }
-        return devices
+        if let status = status {
+            filtered = filtered.filter { $0.status == status }
+        }
+        return filtered
     }
 }
 
@@ -177,11 +186,15 @@ class MockProvisioningService: ProvisioningService, @unchecked Sendable {
         return device
     }
 
-    func listDevices(platform: ProvisioningAPI.Platform?) async throws -> [ProvisioningAPI.Device] {
+    func listDevices(platform: ProvisioningAPI.Platform?, status: ProvisioningAPI.Device.Status?) async throws -> [ProvisioningAPI.Device] {
+        var filtered = devices
         if let platform = platform {
-            return devices.filter { $0.platform == platform }
+            filtered = filtered.filter { $0.platform == platform }
         }
-        return devices
+        if let status = status {
+            filtered = filtered.filter { $0.status == status }
+        }
+        return filtered
     }
 
     func listCertificates(filterType: ProvisioningAPI.CertificateType?) async throws -> [ProvisioningAPI.Certificate] {

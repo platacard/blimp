@@ -28,8 +28,8 @@ public extension Blimp {
             logger.info("Registered device: \(device.name) (\(device.id))")
         }
 
-        public func listDevices(platform: ProvisioningAPI.Platform?) async throws -> [ProvisioningAPI.Device] {
-            let devices = try await api.listDevices(platform: platform)
+        public func listDevices(platform: ProvisioningAPI.Platform?, status: ProvisioningAPI.Device.Status? = nil) async throws -> [ProvisioningAPI.Device] {
+            let devices = try await api.listDevices(platform: platform, status: status)
             logger.info("Found \(devices.count) devices")
             return devices
         }
