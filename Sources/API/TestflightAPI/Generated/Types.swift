@@ -59,9 +59,15 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /v1/builds/{id}`.
     /// - Remark: Generated from `#/paths//v1/builds/{id}/get(builds_getInstance)`.
     func buildsGetInstance(_ input: Operations.BuildsGetInstance.Input) async throws -> Operations.BuildsGetInstance.Output
+    /// - Remark: HTTP `GET /v1/userInvitations`.
+    /// - Remark: Generated from `#/paths//v1/userInvitations/get(userInvitations_getCollection)`.
+    func userInvitationsGetCollection(_ input: Operations.UserInvitationsGetCollection.Input) async throws -> Operations.UserInvitationsGetCollection.Output
     /// - Remark: HTTP `POST /v1/userInvitations`.
     /// - Remark: Generated from `#/paths//v1/userInvitations/post(userInvitations_createInstance)`.
     func userInvitationsCreateInstance(_ input: Operations.UserInvitationsCreateInstance.Input) async throws -> Operations.UserInvitationsCreateInstance.Output
+    /// - Remark: HTTP `DELETE /v1/userInvitations/{id}`.
+    /// - Remark: Generated from `#/paths//v1/userInvitations/{id}/delete(userInvitations_deleteInstance)`.
+    func userInvitationsDeleteInstance(_ input: Operations.UserInvitationsDeleteInstance.Input) async throws -> Operations.UserInvitationsDeleteInstance.Output
     /// - Remark: HTTP `GET /v1/betaGroups/{id}/relationships/builds`.
     /// - Remark: Generated from `#/paths//v1/betaGroups/{id}/relationships/builds/get(betaGroups_builds_getToManyRelationship)`.
     func betaGroupsBuildsGetToManyRelationship(_ input: Operations.BetaGroupsBuildsGetToManyRelationship.Input) async throws -> Operations.BetaGroupsBuildsGetToManyRelationship.Output
@@ -287,6 +293,17 @@ extension APIProtocol {
             headers: headers
         ))
     }
+    /// - Remark: HTTP `GET /v1/userInvitations`.
+    /// - Remark: Generated from `#/paths//v1/userInvitations/get(userInvitations_getCollection)`.
+    internal func userInvitationsGetCollection(
+        query: Operations.UserInvitationsGetCollection.Input.Query = .init(),
+        headers: Operations.UserInvitationsGetCollection.Input.Headers = .init()
+    ) async throws -> Operations.UserInvitationsGetCollection.Output {
+        try await userInvitationsGetCollection(Operations.UserInvitationsGetCollection.Input(
+            query: query,
+            headers: headers
+        ))
+    }
     /// - Remark: HTTP `POST /v1/userInvitations`.
     /// - Remark: Generated from `#/paths//v1/userInvitations/post(userInvitations_createInstance)`.
     internal func userInvitationsCreateInstance(
@@ -296,6 +313,17 @@ extension APIProtocol {
         try await userInvitationsCreateInstance(Operations.UserInvitationsCreateInstance.Input(
             headers: headers,
             body: body
+        ))
+    }
+    /// - Remark: HTTP `DELETE /v1/userInvitations/{id}`.
+    /// - Remark: Generated from `#/paths//v1/userInvitations/{id}/delete(userInvitations_deleteInstance)`.
+    internal func userInvitationsDeleteInstance(
+        path: Operations.UserInvitationsDeleteInstance.Input.Path,
+        headers: Operations.UserInvitationsDeleteInstance.Input.Headers = .init()
+    ) async throws -> Operations.UserInvitationsDeleteInstance.Output {
+        try await userInvitationsDeleteInstance(Operations.UserInvitationsDeleteInstance.Input(
+            path: path,
+            headers: headers
         ))
     }
     /// - Remark: HTTP `GET /v1/betaGroups/{id}/relationships/builds`.
@@ -1891,6 +1919,50 @@ internal enum Components {
                 }
                 /// - Remark: Generated from `#/components/schemas/App/relationships/appEncryptionDeclarations`.
                 internal var appEncryptionDeclarations: Components.Schemas.App.RelationshipsPayload.AppEncryptionDeclarationsPayload?
+                /// - Remark: Generated from `#/components/schemas/App/relationships/appStoreIcon`.
+                internal struct AppStoreIconPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/components/schemas/App/relationships/appStoreIcon/data`.
+                    internal struct DataPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/components/schemas/App/relationships/appStoreIcon/data/type`.
+                        internal enum _TypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case buildIcons = "buildIcons"
+                        }
+                        /// - Remark: Generated from `#/components/schemas/App/relationships/appStoreIcon/data/type`.
+                        internal var _type: Components.Schemas.App.RelationshipsPayload.AppStoreIconPayload.DataPayload._TypePayload
+                        /// - Remark: Generated from `#/components/schemas/App/relationships/appStoreIcon/data/id`.
+                        internal var id: Swift.String
+                        /// Creates a new `DataPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - _type:
+                        ///   - id:
+                        internal init(
+                            _type: Components.Schemas.App.RelationshipsPayload.AppStoreIconPayload.DataPayload._TypePayload,
+                            id: Swift.String
+                        ) {
+                            self._type = _type
+                            self.id = id
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case _type = "type"
+                            case id
+                        }
+                    }
+                    /// - Remark: Generated from `#/components/schemas/App/relationships/appStoreIcon/data`.
+                    internal var data: Components.Schemas.App.RelationshipsPayload.AppStoreIconPayload.DataPayload?
+                    /// Creates a new `AppStoreIconPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - data:
+                    internal init(data: Components.Schemas.App.RelationshipsPayload.AppStoreIconPayload.DataPayload? = nil) {
+                        self.data = data
+                    }
+                    internal enum CodingKeys: String, CodingKey {
+                        case data
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/App/relationships/appStoreIcon`.
+                internal var appStoreIcon: Components.Schemas.App.RelationshipsPayload.AppStoreIconPayload?
                 /// - Remark: Generated from `#/components/schemas/App/relationships/ciProduct`.
                 internal struct CiProductPayload: Codable, Hashable, Sendable {
                     /// - Remark: Generated from `#/components/schemas/App/relationships/ciProduct/links`.
@@ -3454,11 +3526,72 @@ internal enum Components {
                 }
                 /// - Remark: Generated from `#/components/schemas/App/relationships/webhooks`.
                 internal var webhooks: Components.Schemas.App.RelationshipsPayload.WebhooksPayload?
+                /// - Remark: Generated from `#/components/schemas/App/relationships/androidToIosAppMappingDetails`.
+                internal struct AndroidToIosAppMappingDetailsPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/components/schemas/App/relationships/androidToIosAppMappingDetails/links`.
+                    internal var links: Components.Schemas.RelationshipLinks?
+                    /// - Remark: Generated from `#/components/schemas/App/relationships/androidToIosAppMappingDetails/meta`.
+                    internal var meta: Components.Schemas.PagingInformation?
+                    /// - Remark: Generated from `#/components/schemas/App/relationships/androidToIosAppMappingDetails/DataPayload`.
+                    internal struct DataPayloadPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/components/schemas/App/relationships/androidToIosAppMappingDetails/DataPayload/type`.
+                        internal enum _TypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case androidToIosAppMappingDetails = "androidToIosAppMappingDetails"
+                        }
+                        /// - Remark: Generated from `#/components/schemas/App/relationships/androidToIosAppMappingDetails/DataPayload/type`.
+                        internal var _type: Components.Schemas.App.RelationshipsPayload.AndroidToIosAppMappingDetailsPayload.DataPayloadPayload._TypePayload
+                        /// - Remark: Generated from `#/components/schemas/App/relationships/androidToIosAppMappingDetails/DataPayload/id`.
+                        internal var id: Swift.String
+                        /// Creates a new `DataPayloadPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - _type:
+                        ///   - id:
+                        internal init(
+                            _type: Components.Schemas.App.RelationshipsPayload.AndroidToIosAppMappingDetailsPayload.DataPayloadPayload._TypePayload,
+                            id: Swift.String
+                        ) {
+                            self._type = _type
+                            self.id = id
+                        }
+                        internal enum CodingKeys: String, CodingKey {
+                            case _type = "type"
+                            case id
+                        }
+                    }
+                    /// - Remark: Generated from `#/components/schemas/App/relationships/androidToIosAppMappingDetails/data`.
+                    internal typealias DataPayload = [Components.Schemas.App.RelationshipsPayload.AndroidToIosAppMappingDetailsPayload.DataPayloadPayload]
+                    /// - Remark: Generated from `#/components/schemas/App/relationships/androidToIosAppMappingDetails/data`.
+                    internal var data: Components.Schemas.App.RelationshipsPayload.AndroidToIosAppMappingDetailsPayload.DataPayload?
+                    /// Creates a new `AndroidToIosAppMappingDetailsPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - links:
+                    ///   - meta:
+                    ///   - data:
+                    internal init(
+                        links: Components.Schemas.RelationshipLinks? = nil,
+                        meta: Components.Schemas.PagingInformation? = nil,
+                        data: Components.Schemas.App.RelationshipsPayload.AndroidToIosAppMappingDetailsPayload.DataPayload? = nil
+                    ) {
+                        self.links = links
+                        self.meta = meta
+                        self.data = data
+                    }
+                    internal enum CodingKeys: String, CodingKey {
+                        case links
+                        case meta
+                        case data
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/App/relationships/androidToIosAppMappingDetails`.
+                internal var androidToIosAppMappingDetails: Components.Schemas.App.RelationshipsPayload.AndroidToIosAppMappingDetailsPayload?
                 /// Creates a new `RelationshipsPayload`.
                 ///
                 /// - Parameters:
                 ///   - accessibilityDeclarations:
                 ///   - appEncryptionDeclarations:
+                ///   - appStoreIcon:
                 ///   - ciProduct:
                 ///   - betaTesters:
                 ///   - betaGroups:
@@ -3498,9 +3631,11 @@ internal enum Components {
                 ///   - betaFeedbackCrashSubmissions:
                 ///   - searchKeywords:
                 ///   - webhooks:
+                ///   - androidToIosAppMappingDetails:
                 internal init(
                     accessibilityDeclarations: Components.Schemas.App.RelationshipsPayload.AccessibilityDeclarationsPayload? = nil,
                     appEncryptionDeclarations: Components.Schemas.App.RelationshipsPayload.AppEncryptionDeclarationsPayload? = nil,
+                    appStoreIcon: Components.Schemas.App.RelationshipsPayload.AppStoreIconPayload? = nil,
                     ciProduct: Components.Schemas.App.RelationshipsPayload.CiProductPayload? = nil,
                     betaTesters: Components.Schemas.App.RelationshipsPayload.BetaTestersPayload? = nil,
                     betaGroups: Components.Schemas.App.RelationshipsPayload.BetaGroupsPayload? = nil,
@@ -3539,10 +3674,12 @@ internal enum Components {
                     betaFeedbackScreenshotSubmissions: Components.Schemas.App.RelationshipsPayload.BetaFeedbackScreenshotSubmissionsPayload? = nil,
                     betaFeedbackCrashSubmissions: Components.Schemas.App.RelationshipsPayload.BetaFeedbackCrashSubmissionsPayload? = nil,
                     searchKeywords: Components.Schemas.App.RelationshipsPayload.SearchKeywordsPayload? = nil,
-                    webhooks: Components.Schemas.App.RelationshipsPayload.WebhooksPayload? = nil
+                    webhooks: Components.Schemas.App.RelationshipsPayload.WebhooksPayload? = nil,
+                    androidToIosAppMappingDetails: Components.Schemas.App.RelationshipsPayload.AndroidToIosAppMappingDetailsPayload? = nil
                 ) {
                     self.accessibilityDeclarations = accessibilityDeclarations
                     self.appEncryptionDeclarations = appEncryptionDeclarations
+                    self.appStoreIcon = appStoreIcon
                     self.ciProduct = ciProduct
                     self.betaTesters = betaTesters
                     self.betaGroups = betaGroups
@@ -3582,10 +3719,12 @@ internal enum Components {
                     self.betaFeedbackCrashSubmissions = betaFeedbackCrashSubmissions
                     self.searchKeywords = searchKeywords
                     self.webhooks = webhooks
+                    self.androidToIosAppMappingDetails = androidToIosAppMappingDetails
                 }
                 internal enum CodingKeys: String, CodingKey {
                     case accessibilityDeclarations
                     case appEncryptionDeclarations
+                    case appStoreIcon
                     case ciProduct
                     case betaTesters
                     case betaGroups
@@ -3625,6 +3764,7 @@ internal enum Components {
                     case betaFeedbackCrashSubmissions
                     case searchKeywords
                     case webhooks
+                    case androidToIosAppMappingDetails
                 }
             }
             /// - Remark: Generated from `#/components/schemas/App/relationships`.
@@ -5131,6 +5271,53 @@ internal enum Components {
                 internal var inviteType: Components.Schemas.BetaInviteType?
                 /// - Remark: Generated from `#/components/schemas/BetaTester/attributes/state`.
                 internal var state: Components.Schemas.BetaTesterState?
+                /// - Remark: Generated from `#/components/schemas/BetaTester/attributes/AppDevicesPayload`.
+                internal struct AppDevicesPayloadPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/components/schemas/BetaTester/attributes/AppDevicesPayload/model`.
+                    internal var model: Swift.String?
+                    /// - Remark: Generated from `#/components/schemas/BetaTester/attributes/AppDevicesPayload/platform`.
+                    internal enum PlatformPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case ios = "IOS"
+                        case macOs = "MAC_OS"
+                        case tvOs = "TV_OS"
+                        case watchOs = "WATCH_OS"
+                        case visionOs = "VISION_OS"
+                    }
+                    /// - Remark: Generated from `#/components/schemas/BetaTester/attributes/AppDevicesPayload/platform`.
+                    internal var platform: Components.Schemas.BetaTester.AttributesPayload.AppDevicesPayloadPayload.PlatformPayload?
+                    /// - Remark: Generated from `#/components/schemas/BetaTester/attributes/AppDevicesPayload/osVersion`.
+                    internal var osVersion: Swift.String?
+                    /// - Remark: Generated from `#/components/schemas/BetaTester/attributes/AppDevicesPayload/appBuildVersion`.
+                    internal var appBuildVersion: Swift.String?
+                    /// Creates a new `AppDevicesPayloadPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - model:
+                    ///   - platform:
+                    ///   - osVersion:
+                    ///   - appBuildVersion:
+                    internal init(
+                        model: Swift.String? = nil,
+                        platform: Components.Schemas.BetaTester.AttributesPayload.AppDevicesPayloadPayload.PlatformPayload? = nil,
+                        osVersion: Swift.String? = nil,
+                        appBuildVersion: Swift.String? = nil
+                    ) {
+                        self.model = model
+                        self.platform = platform
+                        self.osVersion = osVersion
+                        self.appBuildVersion = appBuildVersion
+                    }
+                    internal enum CodingKeys: String, CodingKey {
+                        case model
+                        case platform
+                        case osVersion
+                        case appBuildVersion
+                    }
+                }
+                /// - Remark: Generated from `#/components/schemas/BetaTester/attributes/appDevices`.
+                internal typealias AppDevicesPayload = [Components.Schemas.BetaTester.AttributesPayload.AppDevicesPayloadPayload]
+                /// - Remark: Generated from `#/components/schemas/BetaTester/attributes/appDevices`.
+                internal var appDevices: Components.Schemas.BetaTester.AttributesPayload.AppDevicesPayload?
                 /// Creates a new `AttributesPayload`.
                 ///
                 /// - Parameters:
@@ -5139,18 +5326,21 @@ internal enum Components {
                 ///   - email:
                 ///   - inviteType:
                 ///   - state:
+                ///   - appDevices:
                 internal init(
                     firstName: Swift.String? = nil,
                     lastName: Swift.String? = nil,
                     email: Swift.String? = nil,
                     inviteType: Components.Schemas.BetaInviteType? = nil,
-                    state: Components.Schemas.BetaTesterState? = nil
+                    state: Components.Schemas.BetaTesterState? = nil,
+                    appDevices: Components.Schemas.BetaTester.AttributesPayload.AppDevicesPayload? = nil
                 ) {
                     self.firstName = firstName
                     self.lastName = lastName
                     self.email = email
                     self.inviteType = inviteType
                     self.state = state
+                    self.appDevices = appDevices
                 }
                 internal enum CodingKeys: String, CodingKey {
                     case firstName
@@ -5158,6 +5348,7 @@ internal enum Components {
                     case email
                     case inviteType
                     case state
+                    case appDevices
                 }
             }
             /// - Remark: Generated from `#/components/schemas/BetaTester/attributes`.
@@ -9099,6 +9290,41 @@ internal enum Components {
                 case links
             }
         }
+        /// - Remark: Generated from `#/components/schemas/UserInvitationsResponse`.
+        internal struct UserInvitationsResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/UserInvitationsResponse/data`.
+            internal var data: [Components.Schemas.UserInvitation]
+            /// - Remark: Generated from `#/components/schemas/UserInvitationsResponse/included`.
+            internal var included: [Components.Schemas.App]?
+            /// - Remark: Generated from `#/components/schemas/UserInvitationsResponse/links`.
+            internal var links: Components.Schemas.PagedDocumentLinks
+            /// - Remark: Generated from `#/components/schemas/UserInvitationsResponse/meta`.
+            internal var meta: Components.Schemas.PagingInformation?
+            /// Creates a new `UserInvitationsResponse`.
+            ///
+            /// - Parameters:
+            ///   - data:
+            ///   - included:
+            ///   - links:
+            ///   - meta:
+            internal init(
+                data: [Components.Schemas.UserInvitation],
+                included: [Components.Schemas.App]? = nil,
+                links: Components.Schemas.PagedDocumentLinks,
+                meta: Components.Schemas.PagingInformation? = nil
+            ) {
+                self.data = data
+                self.included = included
+                self.links = links
+                self.meta = meta
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case data
+                case included
+                case links
+                case meta
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/UserInvitationResponse`.
         internal struct UserInvitationResponse: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/UserInvitationResponse/data`.
@@ -12350,6 +12576,7 @@ internal enum Operations {
                     case streamlinedPurchasingEnabled = "streamlinedPurchasingEnabled"
                     case accessibilityDeclarations = "accessibilityDeclarations"
                     case appEncryptionDeclarations = "appEncryptionDeclarations"
+                    case appStoreIcon = "appStoreIcon"
                     case ciProduct = "ciProduct"
                     case betaTesters = "betaTesters"
                     case betaGroups = "betaGroups"
@@ -12389,6 +12616,7 @@ internal enum Operations {
                     case betaFeedbackCrashSubmissions = "betaFeedbackCrashSubmissions"
                     case searchKeywords = "searchKeywords"
                     case webhooks = "webhooks"
+                    case androidToIosAppMappingDetails = "androidToIosAppMappingDetails"
                 }
                 /// - Remark: Generated from `#/paths/v1/betaGroups/GET/query/fields[apps]`.
                 internal typealias Fields_lbrack_apps_rbrack_Payload = [Operations.BetaGroupsGetCollection.Input.Query.FieldsLbrackAppsRbrackPayloadPayload]
@@ -12438,6 +12666,7 @@ internal enum Operations {
                     case email = "email"
                     case inviteType = "inviteType"
                     case state = "state"
+                    case appDevices = "appDevices"
                     case apps = "apps"
                     case betaGroups = "betaGroups"
                     case builds = "builds"
@@ -12922,6 +13151,7 @@ internal enum Operations {
                     case streamlinedPurchasingEnabled = "streamlinedPurchasingEnabled"
                     case accessibilityDeclarations = "accessibilityDeclarations"
                     case appEncryptionDeclarations = "appEncryptionDeclarations"
+                    case appStoreIcon = "appStoreIcon"
                     case ciProduct = "ciProduct"
                     case betaTesters = "betaTesters"
                     case betaGroups = "betaGroups"
@@ -12961,6 +13191,7 @@ internal enum Operations {
                     case betaFeedbackCrashSubmissions = "betaFeedbackCrashSubmissions"
                     case searchKeywords = "searchKeywords"
                     case webhooks = "webhooks"
+                    case androidToIosAppMappingDetails = "androidToIosAppMappingDetails"
                 }
                 /// - Remark: Generated from `#/paths/v1/betaGroups/{id}/GET/query/fields[apps]`.
                 internal typealias Fields_lbrack_apps_rbrack_Payload = [Operations.BetaGroupsGetInstance.Input.Query.FieldsLbrackAppsRbrackPayloadPayload]
@@ -13010,6 +13241,7 @@ internal enum Operations {
                     case email = "email"
                     case inviteType = "inviteType"
                     case state = "state"
+                    case appDevices = "appDevices"
                     case apps = "apps"
                     case betaGroups = "betaGroups"
                     case builds = "builds"
@@ -13947,6 +14179,7 @@ internal enum Operations {
                     case email = "email"
                     case inviteType = "inviteType"
                     case state = "state"
+                    case appDevices = "appDevices"
                     case apps = "apps"
                     case betaGroups = "betaGroups"
                     case builds = "builds"
@@ -13973,6 +14206,7 @@ internal enum Operations {
                     case streamlinedPurchasingEnabled = "streamlinedPurchasingEnabled"
                     case accessibilityDeclarations = "accessibilityDeclarations"
                     case appEncryptionDeclarations = "appEncryptionDeclarations"
+                    case appStoreIcon = "appStoreIcon"
                     case ciProduct = "ciProduct"
                     case betaTesters = "betaTesters"
                     case betaGroups = "betaGroups"
@@ -14012,6 +14246,7 @@ internal enum Operations {
                     case betaFeedbackCrashSubmissions = "betaFeedbackCrashSubmissions"
                     case searchKeywords = "searchKeywords"
                     case webhooks = "webhooks"
+                    case androidToIosAppMappingDetails = "androidToIosAppMappingDetails"
                 }
                 /// - Remark: Generated from `#/paths/v1/betaTesters/GET/query/fields[apps]`.
                 internal typealias Fields_lbrack_apps_rbrack_Payload = [Operations.BetaTestersGetCollection.Input.Query.FieldsLbrackAppsRbrackPayloadPayload]
@@ -17278,6 +17513,7 @@ internal enum Operations {
                     case email = "email"
                     case inviteType = "inviteType"
                     case state = "state"
+                    case appDevices = "appDevices"
                     case apps = "apps"
                     case betaGroups = "betaGroups"
                     case builds = "builds"
@@ -17354,6 +17590,7 @@ internal enum Operations {
                     case streamlinedPurchasingEnabled = "streamlinedPurchasingEnabled"
                     case accessibilityDeclarations = "accessibilityDeclarations"
                     case appEncryptionDeclarations = "appEncryptionDeclarations"
+                    case appStoreIcon = "appStoreIcon"
                     case ciProduct = "ciProduct"
                     case betaTesters = "betaTesters"
                     case betaGroups = "betaGroups"
@@ -17393,6 +17630,7 @@ internal enum Operations {
                     case betaFeedbackCrashSubmissions = "betaFeedbackCrashSubmissions"
                     case searchKeywords = "searchKeywords"
                     case webhooks = "webhooks"
+                    case androidToIosAppMappingDetails = "androidToIosAppMappingDetails"
                 }
                 /// - Remark: Generated from `#/paths/v1/builds/GET/query/fields[apps]`.
                 internal typealias Fields_lbrack_apps_rbrack_Payload = [Operations.BuildsGetCollection.Input.Query.FieldsLbrackAppsRbrackPayloadPayload]
@@ -17998,6 +18236,7 @@ internal enum Operations {
                     case email = "email"
                     case inviteType = "inviteType"
                     case state = "state"
+                    case appDevices = "appDevices"
                     case apps = "apps"
                     case betaGroups = "betaGroups"
                     case builds = "builds"
@@ -18074,6 +18313,7 @@ internal enum Operations {
                     case streamlinedPurchasingEnabled = "streamlinedPurchasingEnabled"
                     case accessibilityDeclarations = "accessibilityDeclarations"
                     case appEncryptionDeclarations = "appEncryptionDeclarations"
+                    case appStoreIcon = "appStoreIcon"
                     case ciProduct = "ciProduct"
                     case betaTesters = "betaTesters"
                     case betaGroups = "betaGroups"
@@ -18113,6 +18353,7 @@ internal enum Operations {
                     case betaFeedbackCrashSubmissions = "betaFeedbackCrashSubmissions"
                     case searchKeywords = "searchKeywords"
                     case webhooks = "webhooks"
+                    case androidToIosAppMappingDetails = "androidToIosAppMappingDetails"
                 }
                 /// - Remark: Generated from `#/paths/v1/builds/{id}/GET/query/fields[apps]`.
                 internal typealias Fields_lbrack_apps_rbrack_Payload = [Operations.BuildsGetInstance.Input.Query.FieldsLbrackAppsRbrackPayloadPayload]
@@ -18643,6 +18884,502 @@ internal enum Operations {
             }
         }
     }
+    /// - Remark: HTTP `GET /v1/userInvitations`.
+    /// - Remark: Generated from `#/paths//v1/userInvitations/get(userInvitations_getCollection)`.
+    internal enum UserInvitationsGetCollection {
+        internal static let id: Swift.String = "userInvitations_getCollection"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query`.
+            internal struct Query: Sendable, Hashable {
+                /// filter by attribute 'email'
+                ///
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/filter[email]`.
+                internal var filter_lbrack_email_rbrack_: [Swift.String]?
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/Filter_lbrack_roles_rbrack_Payload`.
+                internal enum FilterLbrackRolesRbrackPayloadPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case admin = "ADMIN"
+                    case finance = "FINANCE"
+                    case accountHolder = "ACCOUNT_HOLDER"
+                    case sales = "SALES"
+                    case marketing = "MARKETING"
+                    case appManager = "APP_MANAGER"
+                    case developer = "DEVELOPER"
+                    case accessToReports = "ACCESS_TO_REPORTS"
+                    case customerSupport = "CUSTOMER_SUPPORT"
+                    case createApps = "CREATE_APPS"
+                    case cloudManagedDeveloperId = "CLOUD_MANAGED_DEVELOPER_ID"
+                    case cloudManagedAppDistribution = "CLOUD_MANAGED_APP_DISTRIBUTION"
+                    case generateIndividualKeys = "GENERATE_INDIVIDUAL_KEYS"
+                }
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/filter[roles]`.
+                internal typealias Filter_lbrack_roles_rbrack_Payload = [Operations.UserInvitationsGetCollection.Input.Query.FilterLbrackRolesRbrackPayloadPayload]
+                /// filter by attribute 'roles'
+                ///
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/filter[roles]`.
+                internal var filter_lbrack_roles_rbrack_: Operations.UserInvitationsGetCollection.Input.Query.Filter_lbrack_roles_rbrack_Payload?
+                /// filter by id(s) of related 'visibleApps'
+                ///
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/filter[visibleApps]`.
+                internal var filter_lbrack_visibleApps_rbrack_: [Swift.String]?
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/SortPayload`.
+                internal enum SortPayloadPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case email = "email"
+                    case _hyphen_email = "-email"
+                    case lastName = "lastName"
+                    case _hyphen_lastName = "-lastName"
+                }
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/sort`.
+                internal typealias SortPayload = [Operations.UserInvitationsGetCollection.Input.Query.SortPayloadPayload]
+                /// comma-separated list of sort expressions; resources will be sorted as specified
+                ///
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/sort`.
+                internal var sort: Operations.UserInvitationsGetCollection.Input.Query.SortPayload?
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/Fields_lbrack_userInvitations_rbrack_Payload`.
+                internal enum FieldsLbrackUserInvitationsRbrackPayloadPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case email = "email"
+                    case firstName = "firstName"
+                    case lastName = "lastName"
+                    case expirationDate = "expirationDate"
+                    case roles = "roles"
+                    case allAppsVisible = "allAppsVisible"
+                    case provisioningAllowed = "provisioningAllowed"
+                    case visibleApps = "visibleApps"
+                }
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/fields[userInvitations]`.
+                internal typealias Fields_lbrack_userInvitations_rbrack_Payload = [Operations.UserInvitationsGetCollection.Input.Query.FieldsLbrackUserInvitationsRbrackPayloadPayload]
+                /// the fields to include for returned resources of type userInvitations
+                ///
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/fields[userInvitations]`.
+                internal var fields_lbrack_userInvitations_rbrack_: Operations.UserInvitationsGetCollection.Input.Query.Fields_lbrack_userInvitations_rbrack_Payload?
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/Fields_lbrack_apps_rbrack_Payload`.
+                internal enum FieldsLbrackAppsRbrackPayloadPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case accessibilityUrl = "accessibilityUrl"
+                    case name = "name"
+                    case bundleId = "bundleId"
+                    case sku = "sku"
+                    case primaryLocale = "primaryLocale"
+                    case isOrEverWasMadeForKids = "isOrEverWasMadeForKids"
+                    case subscriptionStatusUrl = "subscriptionStatusUrl"
+                    case subscriptionStatusUrlVersion = "subscriptionStatusUrlVersion"
+                    case subscriptionStatusUrlForSandbox = "subscriptionStatusUrlForSandbox"
+                    case subscriptionStatusUrlVersionForSandbox = "subscriptionStatusUrlVersionForSandbox"
+                    case contentRightsDeclaration = "contentRightsDeclaration"
+                    case streamlinedPurchasingEnabled = "streamlinedPurchasingEnabled"
+                    case accessibilityDeclarations = "accessibilityDeclarations"
+                    case appEncryptionDeclarations = "appEncryptionDeclarations"
+                    case appStoreIcon = "appStoreIcon"
+                    case ciProduct = "ciProduct"
+                    case betaTesters = "betaTesters"
+                    case betaGroups = "betaGroups"
+                    case appStoreVersions = "appStoreVersions"
+                    case appTags = "appTags"
+                    case preReleaseVersions = "preReleaseVersions"
+                    case betaAppLocalizations = "betaAppLocalizations"
+                    case builds = "builds"
+                    case betaLicenseAgreement = "betaLicenseAgreement"
+                    case betaAppReviewDetail = "betaAppReviewDetail"
+                    case appInfos = "appInfos"
+                    case appClips = "appClips"
+                    case appPricePoints = "appPricePoints"
+                    case endUserLicenseAgreement = "endUserLicenseAgreement"
+                    case appPriceSchedule = "appPriceSchedule"
+                    case appAvailabilityV2 = "appAvailabilityV2"
+                    case inAppPurchases = "inAppPurchases"
+                    case subscriptionGroups = "subscriptionGroups"
+                    case gameCenterEnabledVersions = "gameCenterEnabledVersions"
+                    case perfPowerMetrics = "perfPowerMetrics"
+                    case appCustomProductPages = "appCustomProductPages"
+                    case inAppPurchasesV2 = "inAppPurchasesV2"
+                    case promotedPurchases = "promotedPurchases"
+                    case appEvents = "appEvents"
+                    case reviewSubmissions = "reviewSubmissions"
+                    case subscriptionGracePeriod = "subscriptionGracePeriod"
+                    case customerReviews = "customerReviews"
+                    case customerReviewSummarizations = "customerReviewSummarizations"
+                    case gameCenterDetail = "gameCenterDetail"
+                    case appStoreVersionExperimentsV2 = "appStoreVersionExperimentsV2"
+                    case alternativeDistributionKey = "alternativeDistributionKey"
+                    case analyticsReportRequests = "analyticsReportRequests"
+                    case marketplaceSearchDetail = "marketplaceSearchDetail"
+                    case buildUploads = "buildUploads"
+                    case backgroundAssets = "backgroundAssets"
+                    case betaFeedbackScreenshotSubmissions = "betaFeedbackScreenshotSubmissions"
+                    case betaFeedbackCrashSubmissions = "betaFeedbackCrashSubmissions"
+                    case searchKeywords = "searchKeywords"
+                    case webhooks = "webhooks"
+                    case androidToIosAppMappingDetails = "androidToIosAppMappingDetails"
+                }
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/fields[apps]`.
+                internal typealias Fields_lbrack_apps_rbrack_Payload = [Operations.UserInvitationsGetCollection.Input.Query.FieldsLbrackAppsRbrackPayloadPayload]
+                /// the fields to include for returned resources of type apps
+                ///
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/fields[apps]`.
+                internal var fields_lbrack_apps_rbrack_: Operations.UserInvitationsGetCollection.Input.Query.Fields_lbrack_apps_rbrack_Payload?
+                /// maximum resources per page
+                ///
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/limit`.
+                internal var limit: Swift.Int?
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/IncludePayload`.
+                internal enum IncludePayloadPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case visibleApps = "visibleApps"
+                }
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/include`.
+                internal typealias IncludePayload = [Operations.UserInvitationsGetCollection.Input.Query.IncludePayloadPayload]
+                /// comma-separated list of relationships to include
+                ///
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/include`.
+                internal var include: Operations.UserInvitationsGetCollection.Input.Query.IncludePayload?
+                /// maximum number of related visibleApps returned (when they are included)
+                ///
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/query/limit[visibleApps]`.
+                internal var limit_lbrack_visibleApps_rbrack_: Swift.Int?
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - filter_lbrack_email_rbrack_: filter by attribute 'email'
+                ///   - filter_lbrack_roles_rbrack_: filter by attribute 'roles'
+                ///   - filter_lbrack_visibleApps_rbrack_: filter by id(s) of related 'visibleApps'
+                ///   - sort: comma-separated list of sort expressions; resources will be sorted as specified
+                ///   - fields_lbrack_userInvitations_rbrack_: the fields to include for returned resources of type userInvitations
+                ///   - fields_lbrack_apps_rbrack_: the fields to include for returned resources of type apps
+                ///   - limit: maximum resources per page
+                ///   - include: comma-separated list of relationships to include
+                ///   - limit_lbrack_visibleApps_rbrack_: maximum number of related visibleApps returned (when they are included)
+                internal init(
+                    filter_lbrack_email_rbrack_: [Swift.String]? = nil,
+                    filter_lbrack_roles_rbrack_: Operations.UserInvitationsGetCollection.Input.Query.Filter_lbrack_roles_rbrack_Payload? = nil,
+                    filter_lbrack_visibleApps_rbrack_: [Swift.String]? = nil,
+                    sort: Operations.UserInvitationsGetCollection.Input.Query.SortPayload? = nil,
+                    fields_lbrack_userInvitations_rbrack_: Operations.UserInvitationsGetCollection.Input.Query.Fields_lbrack_userInvitations_rbrack_Payload? = nil,
+                    fields_lbrack_apps_rbrack_: Operations.UserInvitationsGetCollection.Input.Query.Fields_lbrack_apps_rbrack_Payload? = nil,
+                    limit: Swift.Int? = nil,
+                    include: Operations.UserInvitationsGetCollection.Input.Query.IncludePayload? = nil,
+                    limit_lbrack_visibleApps_rbrack_: Swift.Int? = nil
+                ) {
+                    self.filter_lbrack_email_rbrack_ = filter_lbrack_email_rbrack_
+                    self.filter_lbrack_roles_rbrack_ = filter_lbrack_roles_rbrack_
+                    self.filter_lbrack_visibleApps_rbrack_ = filter_lbrack_visibleApps_rbrack_
+                    self.sort = sort
+                    self.fields_lbrack_userInvitations_rbrack_ = fields_lbrack_userInvitations_rbrack_
+                    self.fields_lbrack_apps_rbrack_ = fields_lbrack_apps_rbrack_
+                    self.limit = limit
+                    self.include = include
+                    self.limit_lbrack_visibleApps_rbrack_ = limit_lbrack_visibleApps_rbrack_
+                }
+            }
+            internal var query: Operations.UserInvitationsGetCollection.Input.Query
+            /// - Remark: Generated from `#/paths/v1/userInvitations/GET/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.UserInvitationsGetCollection.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.UserInvitationsGetCollection.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.UserInvitationsGetCollection.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - query:
+            ///   - headers:
+            internal init(
+                query: Operations.UserInvitationsGetCollection.Input.Query = .init(),
+                headers: Operations.UserInvitationsGetCollection.Input.Headers = .init()
+            ) {
+                self.query = query
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/userInvitations/GET/responses/400/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.UserInvitationsGetCollection.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.UserInvitationsGetCollection.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// Parameter error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/userInvitations/get(userInvitations_getCollection)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.UserInvitationsGetCollection.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.UserInvitationsGetCollection.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/userInvitations/GET/responses/401/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.UserInvitationsGetCollection.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.UserInvitationsGetCollection.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// Unauthorized error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/userInvitations/get(userInvitations_getCollection)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.UserInvitationsGetCollection.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.UserInvitationsGetCollection.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/userInvitations/GET/responses/403/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.UserInvitationsGetCollection.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.UserInvitationsGetCollection.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// Forbidden error
+            ///
+            /// - Remark: Generated from `#/paths//v1/userInvitations/get(userInvitations_getCollection)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.UserInvitationsGetCollection.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.UserInvitationsGetCollection.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/responses/200/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/userInvitations/GET/responses/200/content/application\/json`.
+                    case json(Components.Schemas.UserInvitationsResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.UserInvitationsResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.UserInvitationsGetCollection.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.UserInvitationsGetCollection.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// List of UserInvitations
+            ///
+            /// - Remark: Generated from `#/paths//v1/userInvitations/get(userInvitations_getCollection)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.UserInvitationsGetCollection.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            internal var ok: Operations.UserInvitationsGetCollection.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/userInvitations/GET/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/userInvitations/GET/responses/429/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.UserInvitationsGetCollection.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.UserInvitationsGetCollection.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// Rate limit exceeded error
+            ///
+            /// - Remark: Generated from `#/paths//v1/userInvitations/get(userInvitations_getCollection)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.UserInvitationsGetCollection.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.UserInvitationsGetCollection.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
     /// - Remark: HTTP `POST /v1/userInvitations`.
     /// - Remark: Generated from `#/paths//v1/userInvitations/post(userInvitations_createInstance)`.
     internal enum UserInvitationsCreateInstance {
@@ -19025,6 +19762,424 @@ internal enum Operations {
             /// - Throws: An error if `self` is not `.tooManyRequests`.
             /// - SeeAlso: `.tooManyRequests`.
             internal var tooManyRequests: Operations.UserInvitationsCreateInstance.Output.TooManyRequests {
+                get throws {
+                    switch self {
+                    case let .tooManyRequests(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "tooManyRequests",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        internal enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            internal init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            internal var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            internal static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// - Remark: HTTP `DELETE /v1/userInvitations/{id}`.
+    /// - Remark: Generated from `#/paths//v1/userInvitations/{id}/delete(userInvitations_deleteInstance)`.
+    internal enum UserInvitationsDeleteInstance {
+        internal static let id: Swift.String = "userInvitations_deleteInstance"
+        internal struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/v1/userInvitations/{id}/DELETE/path`.
+            internal struct Path: Sendable, Hashable {
+                /// the id of the requested resource
+                ///
+                /// - Remark: Generated from `#/paths/v1/userInvitations/{id}/DELETE/path/id`.
+                internal var id: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - id: the id of the requested resource
+                internal init(id: Swift.String) {
+                    self.id = id
+                }
+            }
+            internal var path: Operations.UserInvitationsDeleteInstance.Input.Path
+            /// - Remark: Generated from `#/paths/v1/userInvitations/{id}/DELETE/header`.
+            internal struct Headers: Sendable, Hashable {
+                internal var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.UserInvitationsDeleteInstance.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                internal init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.UserInvitationsDeleteInstance.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            internal var headers: Operations.UserInvitationsDeleteInstance.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - headers:
+            internal init(
+                path: Operations.UserInvitationsDeleteInstance.Input.Path,
+                headers: Operations.UserInvitationsDeleteInstance.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.headers = headers
+            }
+        }
+        internal enum Output: Sendable, Hashable {
+            internal struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/userInvitations/{id}/DELETE/responses/400/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/userInvitations/{id}/DELETE/responses/400/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.UserInvitationsDeleteInstance.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.UserInvitationsDeleteInstance.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// Parameter error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/userInvitations/{id}/delete(userInvitations_deleteInstance)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.UserInvitationsDeleteInstance.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            internal var badRequest: Operations.UserInvitationsDeleteInstance.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/userInvitations/{id}/DELETE/responses/401/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/userInvitations/{id}/DELETE/responses/401/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.UserInvitationsDeleteInstance.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.UserInvitationsDeleteInstance.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// Unauthorized error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/userInvitations/{id}/delete(userInvitations_deleteInstance)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.UserInvitationsDeleteInstance.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            internal var unauthorized: Operations.UserInvitationsDeleteInstance.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/userInvitations/{id}/DELETE/responses/403/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/userInvitations/{id}/DELETE/responses/403/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.UserInvitationsDeleteInstance.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.UserInvitationsDeleteInstance.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// Forbidden error
+            ///
+            /// - Remark: Generated from `#/paths//v1/userInvitations/{id}/delete(userInvitations_deleteInstance)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.UserInvitationsDeleteInstance.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            internal var forbidden: Operations.UserInvitationsDeleteInstance.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct NotFound: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/userInvitations/{id}/DELETE/responses/404/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/userInvitations/{id}/DELETE/responses/404/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.UserInvitationsDeleteInstance.Output.NotFound.Body
+                /// Creates a new `NotFound`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.UserInvitationsDeleteInstance.Output.NotFound.Body) {
+                    self.body = body
+                }
+            }
+            /// Not found error
+            ///
+            /// - Remark: Generated from `#/paths//v1/userInvitations/{id}/delete(userInvitations_deleteInstance)/responses/404`.
+            ///
+            /// HTTP response code: `404 notFound`.
+            case notFound(Operations.UserInvitationsDeleteInstance.Output.NotFound)
+            /// The associated value of the enum case if `self` is `.notFound`.
+            ///
+            /// - Throws: An error if `self` is not `.notFound`.
+            /// - SeeAlso: `.notFound`.
+            internal var notFound: Operations.UserInvitationsDeleteInstance.Output.NotFound {
+                get throws {
+                    switch self {
+                    case let .notFound(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct Conflict: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/userInvitations/{id}/DELETE/responses/409/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/userInvitations/{id}/DELETE/responses/409/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.UserInvitationsDeleteInstance.Output.Conflict.Body
+                /// Creates a new `Conflict`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.UserInvitationsDeleteInstance.Output.Conflict.Body) {
+                    self.body = body
+                }
+            }
+            /// Request entity error(s)
+            ///
+            /// - Remark: Generated from `#/paths//v1/userInvitations/{id}/delete(userInvitations_deleteInstance)/responses/409`.
+            ///
+            /// HTTP response code: `409 conflict`.
+            case conflict(Operations.UserInvitationsDeleteInstance.Output.Conflict)
+            /// The associated value of the enum case if `self` is `.conflict`.
+            ///
+            /// - Throws: An error if `self` is not `.conflict`.
+            /// - SeeAlso: `.conflict`.
+            internal var conflict: Operations.UserInvitationsDeleteInstance.Output.Conflict {
+                get throws {
+                    switch self {
+                    case let .conflict(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "conflict",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct NoContent: Sendable, Hashable {
+                /// Creates a new `NoContent`.
+                internal init() {}
+            }
+            /// Success (no content)
+            ///
+            /// - Remark: Generated from `#/paths//v1/userInvitations/{id}/delete(userInvitations_deleteInstance)/responses/204`.
+            ///
+            /// HTTP response code: `204 noContent`.
+            case noContent(Operations.UserInvitationsDeleteInstance.Output.NoContent)
+            /// Success (no content)
+            ///
+            /// - Remark: Generated from `#/paths//v1/userInvitations/{id}/delete(userInvitations_deleteInstance)/responses/204`.
+            ///
+            /// HTTP response code: `204 noContent`.
+            internal static var noContent: Self {
+                .noContent(.init())
+            }
+            /// The associated value of the enum case if `self` is `.noContent`.
+            ///
+            /// - Throws: An error if `self` is not `.noContent`.
+            /// - SeeAlso: `.noContent`.
+            internal var noContent: Operations.UserInvitationsDeleteInstance.Output.NoContent {
+                get throws {
+                    switch self {
+                    case let .noContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "noContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            internal struct TooManyRequests: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/v1/userInvitations/{id}/DELETE/responses/429/content`.
+                internal enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/v1/userInvitations/{id}/DELETE/responses/429/content/application\/json`.
+                    case json(Components.Schemas.ErrorResponse)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    internal var json: Components.Schemas.ErrorResponse {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                internal var body: Operations.UserInvitationsDeleteInstance.Output.TooManyRequests.Body
+                /// Creates a new `TooManyRequests`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                internal init(body: Operations.UserInvitationsDeleteInstance.Output.TooManyRequests.Body) {
+                    self.body = body
+                }
+            }
+            /// Rate limit exceeded error
+            ///
+            /// - Remark: Generated from `#/paths//v1/userInvitations/{id}/delete(userInvitations_deleteInstance)/responses/429`.
+            ///
+            /// HTTP response code: `429 tooManyRequests`.
+            case tooManyRequests(Operations.UserInvitationsDeleteInstance.Output.TooManyRequests)
+            /// The associated value of the enum case if `self` is `.tooManyRequests`.
+            ///
+            /// - Throws: An error if `self` is not `.tooManyRequests`.
+            /// - SeeAlso: `.tooManyRequests`.
+            internal var tooManyRequests: Operations.UserInvitationsDeleteInstance.Output.TooManyRequests {
                 get throws {
                     switch self {
                     case let .tooManyRequests(response):
@@ -21254,6 +22409,7 @@ internal enum Operations {
                     case email = "email"
                     case inviteType = "inviteType"
                     case state = "state"
+                    case appDevices = "appDevices"
                     case apps = "apps"
                     case betaGroups = "betaGroups"
                     case builds = "builds"
@@ -21356,6 +22512,7 @@ internal enum Operations {
                     case streamlinedPurchasingEnabled = "streamlinedPurchasingEnabled"
                     case accessibilityDeclarations = "accessibilityDeclarations"
                     case appEncryptionDeclarations = "appEncryptionDeclarations"
+                    case appStoreIcon = "appStoreIcon"
                     case ciProduct = "ciProduct"
                     case betaTesters = "betaTesters"
                     case betaGroups = "betaGroups"
@@ -21395,6 +22552,7 @@ internal enum Operations {
                     case betaFeedbackCrashSubmissions = "betaFeedbackCrashSubmissions"
                     case searchKeywords = "searchKeywords"
                     case webhooks = "webhooks"
+                    case androidToIosAppMappingDetails = "androidToIosAppMappingDetails"
                 }
                 /// - Remark: Generated from `#/paths/v1/buildBetaDetails/{id}/build/GET/query/fields[apps]`.
                 internal typealias Fields_lbrack_apps_rbrack_Payload = [Operations.BuildBetaDetailsBuildGetToOneRelated.Input.Query.FieldsLbrackAppsRbrackPayloadPayload]
