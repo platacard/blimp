@@ -31,9 +31,6 @@ public extension TestflightAPI {
         public static let allBasicStates: [ProcessingState] = [.processing, .failed, .invalid, .valid]
     }
 
-    @available(*, deprecated, renamed: "ProcessingState")
-    typealias BetaProcessingState = ProcessingState
-
     enum BetaBuildState: Sendable {
         case waitingForReview
         case inReview
