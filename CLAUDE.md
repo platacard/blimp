@@ -200,7 +200,7 @@ Sources/
 
 ### Flight Stages
 
-1. **Maintenance** (Hangar) - Full cert/profile/device management via App Store Connect API with encrypted Git storage (AES-256-GCM). Handles development, distribution, and ad-hoc profiles with automatic device fetching.
+1. **Maintenance** (Hangar) - Full cert/profile/device management via App Store Connect API with Git storage. Certificates are encrypted (AES-256-GCM), profiles are stored unencrypted. Handles development, distribution, and ad-hoc profiles with automatic device fetching.
 2. **TakeOff** - `xcodebuild archive/export`
 3. **Approach** - Upload IPA, poll processing
 4. **Land** - Set beta groups, submit review
@@ -218,10 +218,13 @@ blimp maintenance init --git-url git@github.com:org/certs.git
 blimp maintenance list-devices --platform ios
 blimp maintenance register-device UDID-123 "iPhone 15" --platform ios
 blimp maintenance list-certs --type DEVELOPMENT
-blimp maintenance generate-cert --type DEVELOPMENT --platform ios --git-url repo.git --passphrase pass
+blimp maintenance generate-cert --type DEVELOPMENT --platform ios --storage-path ./certs --passphrase pass
 blimp maintenance remove-cert CERT-ID
 blimp maintenance list-profiles --name "Blimp*"
-blimp maintenance sync com.app --platform ios --type IOS_APP_DEVELOPMENT --git-url repo.git --passphrase pass
+blimp maintenance sync-profiles --bundle-ids com.app --platform ios --type development --storage-path ./certs
+blimp maintenance install-profiles
+blimp maintenance install-profiles --bundle-id "com.app.*"
+blimp maintenance install-profiles --platform macos --type appstore
 blimp maintenance remove-profile PROFILE-ID
 ```
 
@@ -240,11 +243,23 @@ swift build
 swift test
 ```
 
+## Storage Structure
+
+Git storage follows this structure:
+```
+certificates/{platform}/{type}/{cert-id}.p12  # Encrypted with passphrase
+profiles/{platform}/{type}/{bundle-id}.mobileprovision  # Unencrypted
+```
+
+Profile installation (`install-profiles`) extracts UUID via `security cms -D` and copies to:
+`~/Library/MobileDevice/Provisioning Profiles/{uuid}.mobileprovision`
+
 ## Key Protocols
 
 - `JWTProviding` - Token generation
 - `ProvisioningService` - API abstraction
 - `GitManaging` - Profile storage
+- `ShellExecuting` - Shell command abstraction (for testability)
 - `AppStoreConnectUploader` - Upload abstraction
 
 ## Concurrency

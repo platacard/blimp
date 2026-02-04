@@ -19,6 +19,7 @@ struct Maintenance: AsyncParsableCommand {
             // Profiles
             ListProfiles.self,
             SyncProfiles.self,
+            InstallProfiles.self,
             RemoveProfile.self
         ]
     )
