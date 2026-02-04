@@ -45,7 +45,8 @@ jobs:
       - name: Create release archive
         id: archive
         run: |
-          ARCHIVE_NAME="${{ env.PRODUCT_NAME }}-${{ steps.version.outputs.version }}-macos-arm64"
+          ARCH=$(uname -m)
+          ARCHIVE_NAME="${{ env.PRODUCT_NAME }}-${{ steps.version.outputs.version }}-macos-${ARCH}"
 
           cd dist
           tar -czvf "${ARCHIVE_NAME}.tar.gz" "${{ env.PRODUCT_NAME }}"
