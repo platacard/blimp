@@ -28,6 +28,12 @@ public extension TestflightAPI {
         public let processingState: BetaProcessingState
         public let buildBundleID: String
         public let buildLocalizationIDs: [String]
+
+        public init(processingState: BetaProcessingState, buildBundleID: String, buildLocalizationIDs: [String]) {
+            self.processingState = processingState
+            self.buildBundleID = buildBundleID
+            self.buildLocalizationIDs = buildLocalizationIDs
+        }
     }
 
     enum Platform: Sendable {

@@ -11,22 +11,38 @@ public extension Blimp {
     struct Approach: FlightStage, Sendable {
         package var type: FlightStage.Type { Self.self }
         private let uploader: AppStoreConnectUploader
-        private let testflightAPI: TestflightAPI
-        private let appsAPI: AppsAPI
+        private let buildQueryService: BuildQueryService
+        private let appQueryService: AppQueryService
         private let ignoreUploaderFailure: Bool
 
         nonisolated(unsafe) private let logger: Cronista
 
+        /// Initialize with protocol dependencies for testability
+        public init(
+            uploader: AppStoreConnectUploader,
+            buildQueryService: BuildQueryService,
+            appQueryService: AppQueryService,
+            ignoreUploaderFailure: Bool = false
+        ) {
+            self.logger = Cronista(module: "blimp", category: "Approach")
+            self.uploader = uploader
+            self.buildQueryService = buildQueryService
+            self.appQueryService = appQueryService
+            self.ignoreUploaderFailure = ignoreUploaderFailure
+        }
+
+        /// Convenience initializer for production use
         public init(
             uploader: AppStoreConnectUploader,
             jwtProvider: JWTProviding = DefaultJWTProvider(),
             ignoreUploaderFailure: Bool = false
         ) {
-            self.logger = Cronista(module: "blimp", category: "Approach")
-            self.uploader = uploader
-            self.testflightAPI = TestflightAPI(jwtProvider: jwtProvider)
-            self.appsAPI = AppsAPI(jwtProvider: jwtProvider)
-            self.ignoreUploaderFailure = ignoreUploaderFailure
+            self.init(
+                uploader: uploader,
+                buildQueryService: TestflightAPI(jwtProvider: jwtProvider),
+                appQueryService: AppsAPI(jwtProvider: jwtProvider),
+                ignoreUploaderFailure: ignoreUploaderFailure
+            )
         }
     }
 }
@@ -72,21 +88,21 @@ extension Blimp.Approach {
     func process(bundleId: String, appVersion: String, buildNumber: String) async throws -> ProcessResult {
         var didAppearInList = false
         var isProcessed = false
-        
-        let appId = try await appsAPI.getAppId(bundleId: bundleId)
+
+        let appId = try await appQueryService.getAppId(bundleId: bundleId)
         logger.info("App id for \(bundleId): \(appId)")
-        
+
         var matchedBuildId: String?
         var buildBundleId: String?
         var buildLocalizationIds: [String] = []
-        
+
         while !didAppearInList {
-            let buildId = try await testflightAPI.getBuildID(
+            let buildId = try await buildQueryService.getBuildID(
                 appId: appId,
                 appVersion: appVersion,
                 buildNumber: buildNumber
             )
-            
+
             if let buildId {
                 didAppearInList = true
                 matchedBuildId = buildId
@@ -95,12 +111,12 @@ extension Blimp.Approach {
                 try await Task.sleep(for: .seconds(30))
             }
         }
-        
+
         while !isProcessed {
             guard let matchedBuildId else { throw Error.noBuildId }
-            
-            let processingResult = try await testflightAPI.getBuildProcessingResult(id: matchedBuildId)
-            
+
+            let processingResult = try await buildQueryService.getBuildProcessingResult(id: matchedBuildId)
+
             switch processingResult.processingState {
             case .processing:
                 logger.info("Waiting for the build to finish processing...")
@@ -118,23 +134,23 @@ extension Blimp.Approach {
                 isProcessed = true
             }
         }
-        
+
         guard let matchedBuildId, let buildBundleId else { throw Error.failedProcessing }
-        
+
         return .init(buildId: matchedBuildId, buildBundleId: buildBundleId, buildLocalizationIds: buildLocalizationIds)
     }
     
     func getBundleBuildSizes(buildBundleId: String, devices: [String]) async throws -> [AppSize] {
         guard
-            let result = try? await testflightAPI.getBundleBuildSizes(buildBundleID: buildBundleId, devices: devices)
+            let result = try? await buildQueryService.getBundleBuildSizes(buildBundleID: buildBundleId, devices: devices)
         else {
             logger.error("Could not get build sizes for buildBundleId: \(buildBundleId)")
             throw Error.failedToGetAppSizes
         }
-        
+
         return result.compactMap { sizeInfo in
             let deviceName = Self.deviceModelToNameMappings[sizeInfo.deviceModel] ?? sizeInfo.deviceModel
-            
+
             return .init(
                 deviceName: deviceName,
                 downloadSize: sizeInfo.downloadBytes,

@@ -9,15 +9,27 @@ public extension Blimp {
     /// - TestFlight / App Store delivery operations
     struct Land: FlightStage, Sendable {
         package var type: FlightStage.Type { Self.self }
-        private let testflightAPI: TestflightAPI
-        private let appsAPI: AppsAPI
+        private let betaManagementService: BetaManagementService
+        private let appQueryService: AppQueryService
 
         nonisolated(unsafe) private let logger: Cronista
 
-        public init(jwtProvider: JWTProviding = DefaultJWTProvider()) {
+        /// Initialize with protocol dependencies for testability
+        public init(
+            betaManagementService: BetaManagementService,
+            appQueryService: AppQueryService
+        ) {
             self.logger = Cronista(module: "blimp", category: "Land")
-            self.testflightAPI = TestflightAPI(jwtProvider: jwtProvider)
-            self.appsAPI = AppsAPI(jwtProvider: jwtProvider)
+            self.betaManagementService = betaManagementService
+            self.appQueryService = appQueryService
+        }
+
+        /// Convenience initializer for production use
+        public init(jwtProvider: JWTProviding = DefaultJWTProvider()) {
+            self.init(
+                betaManagementService: TestflightAPI(jwtProvider: jwtProvider),
+                appQueryService: AppsAPI(jwtProvider: jwtProvider)
+            )
         }
     }
 }
@@ -27,21 +39,21 @@ extension Blimp.Land {
     ///
     /// Beta groups are queried by name and filtered by the app's bundle id
     public func engage(bundleId: String, buildId: String, betaGroups: [String]) async throws {
-        let appId = try await appsAPI.getAppId(bundleId: bundleId)
-        try await testflightAPI.setBetaGroups(appId: appId, buildId: buildId, betaGroups: betaGroups)
+        let appId = try await appQueryService.getAppId(bundleId: bundleId)
+        try await betaManagementService.setBetaGroups(appId: appId, buildId: buildId, betaGroups: betaGroups)
     }
-    
+
     /// Create a "What's New" section for the TestFlight build
     /// - Parameters:
     ///   - buildId: Identifier of the build resource
     ///   - changelog: Changes description
     public func report(localizationIds: [String], changelog: String) async throws {
-        try await testflightAPI.setChangelog(localizationIds: localizationIds, changelog: changelog)
+        try await betaManagementService.setChangelog(localizationIds: localizationIds, changelog: changelog)
     }
-    
+
     /// Send a build to a testflight external review
     /// - Parameter buildId: processed build id
     public func confirm(buildId: String) async throws {
-        try await testflightAPI.sendToTestflightReview(buildId: buildId)
+        try await betaManagementService.sendToTestflightReview(buildId: buildId)
     }
 }
