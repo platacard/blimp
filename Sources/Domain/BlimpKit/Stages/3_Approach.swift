@@ -116,31 +116,26 @@ extension Blimp.Approach {
             guard let matchedBuildId else { throw Error.noBuildId }
 
 let processingResult = try await buildQueryService.getBuildProcessingResult(id: matchedBuildId)
-            let state = processingResult.processingState
 
-            // Terminal errors fail fast - no more polling needed
-            if let terminalError = state.asTerminalError {
-                logger.error("Build processing failed: \(state)")
-                throw mapToError(terminalError)
-            }
-
-            switch state {
+            switch processingResult.processingState {
             case .processing:
                 logger.info("Waiting for the build to finish processing...")
                 try await Task.sleep(for: .seconds(30))
-            case .failed:
-                logger.error("Build processing failed")
-                throw Error.failedProcessing
-            case .invalid:
-                logger.error("Invalid binary")
-                throw Error.invalidBinary
             case .valid:
                 logger.info("Build has been successfully processed! BuildId: \(matchedBuildId)")
                 buildBundleId = processingResult.buildBundleID
                 buildLocalizationIds = processingResult.buildLocalizationIDs
                 isProcessed = true
-            case .processingException, .missingExportCompliance, .betaRejected, .invalidBinary:
-                break // Handled by asTerminalError check above
+            case .failed:
+                throw Error.failedProcessing
+            case .invalid, .invalidBinary:
+                throw Error.invalidBinary
+            case .processingException:
+                throw Error.processingException
+            case .missingExportCompliance:
+                throw Error.missingExportCompliance
+            case .betaRejected:
+                throw Error.betaRejected
             }
         }
 
@@ -285,16 +280,3 @@ extension Blimp.Approach {
     ]
 }
 
-// MARK: - Private
-
-private extension Blimp.Approach {
-
-    func mapToError(_ terminalError: TestflightAPI.ProcessingState.TerminalError) -> Error {
-        switch terminalError {
-        case .processingException: .processingException
-        case .missingExportCompliance: .missingExportCompliance
-        case .betaRejected: .betaRejected
-        case .invalidBinary: .invalidBinary
-        }
-    }
-}

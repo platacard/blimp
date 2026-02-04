@@ -210,6 +210,25 @@ private extension MyType {
 }
 ```
 
+❌ Anti-Pattern: Redundant Control Flow
+Don't check a condition before a switch and then handle the same cases inside the switch. Use one control structure.
+```swift
+// BAD: Non-linear, reader must jump between if-check, switch, and helper function
+if let terminalError = state.asTerminalError {
+    throw mapToError(terminalError)
+}
+switch state {
+case .processing: ...
+case .terminalCase: break // "handled above"
+}
+
+// GOOD: Linear, all cases handled in one place
+switch state {
+case .processing: ...
+case .terminalCase: throw Error.terminalCase
+}
+```
+
 ## System Overview
 
 Swift 6.2+ CLI tool for iOS/macOS app deployment to TestFlight/App Store. Alternative to Fastlane.
