@@ -98,22 +98,28 @@ jobs:
         if: ${{ !contains(steps.version.outputs.tag, '-') }}
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
+          set -e
+
           VERSION="${{ steps.version.outputs.version }}"
           ARCHIVE="${{ steps.archive.outputs.archive_name }}.tar.gz"
           SHA256=$(cat "dist/${ARCHIVE}.sha256" | awk '{print $1}')
 
+          echo "Updating Homebrew formula to version ${VERSION}"
+          echo "SHA256 is ${SHA256}"
 
-          FORMULA=$(cat <<EOF
+          # Create formula using heredoc (avoids YAML escaping issues)
+          cat > /tmp/blimp.rb << FORMULA_EOF
           class Blimp < Formula
             desc "Modern Swift CLI for iOS/macOS app deployment to TestFlight/App Store"
-            homepage "https://github.com/${{ github.repository }}"
+            homepage "https://github.com/${REPO}"
             version "${VERSION}"
             license "MIT"
 
             on_macos do
               on_arm do
-                url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/blimp-${VERSION}-macos-arm64.tar.gz"
+                url "https://github.com/${REPO}/releases/download/${VERSION}/blimp-${VERSION}-macos-arm64.tar.gz"
                 sha256 "${SHA256}"
               end
             end
@@ -126,29 +132,53 @@ jobs:
               system "#{bin}/blimp", "--help"
             end
           end
-          EOF
-          )
+          FORMULA_EOF
 
-          # Update formula via GitHub API
-          FORMULA_BASE64=$(echo "$FORMULA" | base64)
+          # Remove leading spaces from heredoc
+          sed -i '' 's/^          //' /tmp/blimp.rb
 
-          # Get current file SHA (needed for update, optional for create)
-          FILE_SHA=$(curl -s -H "Authorization: token ${HOMEBREW_TAP_TOKEN}" \
-            "https://api.github.com/repos/havebeenfitz/homebrew-blimp-tap/contents/Formula/blimp.rb" \
-            | jq -r '.sha // empty')
+          # Base64 encode without newlines
+          FORMULA_BASE64=$(base64 < /tmp/blimp.rb | tr -d '\n')
 
-          # Build request body - include SHA only if file exists (update), omit for create
-          if [ -n "$FILE_SHA" ]; then
-            echo "Updating existing formula (SHA: ${FILE_SHA})"
-            REQUEST_BODY="{\"message\":\"Update blimp to ${VERSION}\",\"content\":\"${FORMULA_BASE64}\",\"sha\":\"${FILE_SHA}\"}"
+          # Get current file SHA (required for updates)
+          echo "Checking current formula..."
+          HTTP_CODE=$(curl -s -w "%{http_code}" -o /tmp/response.json \
+            -H "Authorization: token ${HOMEBREW_TAP_TOKEN}" \
+            "https://api.github.com/repos/havebeenfitz/homebrew-blimp-tap/contents/Formula/blimp.rb")
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            FILE_SHA=$(jq -r '.sha' /tmp/response.json)
+            echo "Updating existing formula (SHA ${FILE_SHA})"
+            REQUEST_BODY=$(jq -n \
+              --arg msg "Update blimp to ${VERSION}" \
+              --arg content "$FORMULA_BASE64" \
+              --arg sha "$FILE_SHA" \
+              '{message: $msg, content: $content, sha: $sha}')
+          elif [ "$HTTP_CODE" = "404" ]; then
+            echo "Creating new formula"
+            REQUEST_BODY=$(jq -n \
+              --arg msg "Add blimp ${VERSION}" \
+              --arg content "$FORMULA_BASE64" \
+              '{message: $msg, content: $content}')
           else
-            echo "Creating new formula (file does not exist yet)"
-            REQUEST_BODY="{\"message\":\"Add blimp ${VERSION}\",\"content\":\"${FORMULA_BASE64}\"}"
+            echo "Failed to check formula status (HTTP ${HTTP_CODE})"
+            cat /tmp/response.json
+            exit 1
           fi
 
-          # Create or update the formula file
-          curl -X PUT \
+          # Push to tap repository
+          echo "Pushing to homebrew-blimp-tap..."
+          HTTP_CODE=$(curl -s -w "%{http_code}" -o /tmp/result.json -X PUT \
             -H "Authorization: token ${HOMEBREW_TAP_TOKEN}" \
             -H "Content-Type: application/json" \
             "https://api.github.com/repos/havebeenfitz/homebrew-blimp-tap/contents/Formula/blimp.rb" \
-            -d "${REQUEST_BODY}"
+            -d "$REQUEST_BODY")
+
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+            COMMIT=$(jq -r '.commit.sha' /tmp/result.json)
+            echo "Formula updated successfully (commit ${COMMIT})"
+          else
+            echo "Failed to update formula (HTTP ${HTTP_CODE})"
+            cat /tmp/result.json
+            exit 1
+          fi
