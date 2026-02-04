@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+permissions:
+  contents: write
+
+env:
+  PRODUCT_NAME: blimp
+
+jobs:
+  build-and-release:
+    name: Build and Create Release
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Get version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build
+        run: swift build -c release
+
+      - name: Prepare binary
+        run: |
+          mkdir -p dist
+          cp ".build/release/${{ env.PRODUCT_NAME }}" "dist/${{ env.PRODUCT_NAME }}"
+          chmod +x "dist/${{ env.PRODUCT_NAME }}"
+
+      - name: Code sign binary (ad-hoc)
+        run: |
+          codesign --force --sign - "dist/${{ env.PRODUCT_NAME }}"
+
+      - name: Create release archive
+        id: archive
+        run: |
+          ARCHIVE_NAME="${{ env.PRODUCT_NAME }}-${{ steps.version.outputs.version }}-macos-arm64"
+
+          cd dist
+          tar -czvf "${ARCHIVE_NAME}.tar.gz" "${{ env.PRODUCT_NAME }}"
+          shasum -a 256 "${ARCHIVE_NAME}.tar.gz" > "${ARCHIVE_NAME}.tar.gz.sha256"
+
+          echo "archive_name=${ARCHIVE_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Generate release notes
+        run: |
+          echo "## Installation" > release_notes.md
+          echo "" >> release_notes.md
+          echo '```bash' >> release_notes.md
+          echo "# Download and extract" >> release_notes.md
+          echo "curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/${{ steps.archive.outputs.archive_name }}.tar.gz | tar xz" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "# Move to PATH" >> release_notes.md
+          echo "sudo mv blimp /usr/local/bin/" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "# Verify installation" >> release_notes.md
+          echo "blimp --help" >> release_notes.md
+          echo '```' >> release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Blimp ${{ steps.version.outputs.tag }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
+          files: |
+            dist/${{ steps.archive.outputs.archive_name }}.tar.gz
+            dist/${{ steps.archive.outputs.archive_name }}.tar.gz.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
