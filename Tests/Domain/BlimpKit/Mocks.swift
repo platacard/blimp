@@ -1,5 +1,8 @@
 import Foundation
 import ProvisioningAPI
+import TestflightAPI
+import AppsAPI
+import Uploader
 import Gito
 @testable import BlimpKit
 
@@ -156,13 +159,101 @@ class MockDeviceService: DeviceService, @unchecked Sendable {
 
     func listDevices(platform: ProvisioningAPI.Platform?, status: ProvisioningAPI.Device.Status?) async throws -> [ProvisioningAPI.Device] {
         var filtered = devices
-        if let platform = platform {
+        if let platform {
             filtered = filtered.filter { $0.platform == platform }
         }
-        if let status = status {
+        if let status {
             filtered = filtered.filter { $0.status == status }
         }
         return filtered
+    }
+}
+
+// MARK: - Build Query Service Mock
+
+class MockBuildQueryService: BuildQueryService, @unchecked Sendable {
+    var buildIdResponses: [String?] = []
+    var processingResults: [TestflightAPI.BuildProcessingResult] = []
+    var bundleSizes: [BundleBuildFileSize] = []
+    var getBuildIDCallCount = 0
+    var getProcessingResultCallCount = 0
+    var errorToThrow: Error?
+
+    func getBuildID(
+        appId: String,
+        appVersion: String,
+        buildNumber: String,
+        states: [TestflightAPI.BetaProcessingState],
+        limit: Int,
+        sorted: [TestflightAPI.BetaBuildSort]
+    ) async throws -> String? {
+        if let error = errorToThrow { throw error }
+        let index = min(getBuildIDCallCount, buildIdResponses.count - 1)
+        getBuildIDCallCount += 1
+        return buildIdResponses.isEmpty ? nil : buildIdResponses[max(0, index)]
+    }
+
+    func getBuildProcessingResult(id: String) async throws -> TestflightAPI.BuildProcessingResult {
+        if let error = errorToThrow { throw error }
+        let index = min(getProcessingResultCallCount, processingResults.count - 1)
+        getProcessingResultCallCount += 1
+        return processingResults[max(0, index)]
+    }
+
+    func getBundleBuildSizes(buildBundleID: String, devices: [String]) async throws -> [BundleBuildFileSize] {
+        if let error = errorToThrow { throw error }
+        return bundleSizes
+    }
+}
+
+// MARK: - Beta Management Service Mock
+
+class MockBetaManagementService: BetaManagementService, @unchecked Sendable {
+    var setBetaGroupsCalls: [(appId: String, buildId: String, betaGroups: [String])] = []
+    var setChangelogCalls: [(localizationIds: [String], changelog: String)] = []
+    var sendToReviewCalls: [String] = []
+    var errorToThrow: Error?
+
+    func setBetaGroups(appId: String, buildId: String, betaGroups: [String], isInternal: Bool) async throws {
+        if let error = errorToThrow { throw error }
+        setBetaGroupsCalls.append((appId, buildId, betaGroups))
+    }
+
+    func setChangelog(localizationIds: [String], changelog: String) async throws {
+        if let error = errorToThrow { throw error }
+        setChangelogCalls.append((localizationIds, changelog))
+    }
+
+    func sendToTestflightReview(buildId: String) async throws {
+        if let error = errorToThrow { throw error }
+        sendToReviewCalls.append(buildId)
+    }
+}
+
+// MARK: - App Query Service Mock
+
+class MockAppQueryService: AppQueryService, @unchecked Sendable {
+    var appIds: [String: String] = [:]
+    var errorToThrow: Error?
+
+    func getAppId(bundleId: String) async throws -> String {
+        if let error = errorToThrow { throw error }
+        guard let appId = appIds[bundleId] else {
+            throw NSError(domain: "MockAppQueryService", code: 404, userInfo: [NSLocalizedDescriptionKey: "App not found for bundle ID: \(bundleId)"])
+        }
+        return appId
+    }
+}
+
+// MARK: - Uploader Mock
+
+class MockUploader: AppStoreConnectUploader, @unchecked Sendable {
+    var uploadCalls: [UploadConfig] = []
+    var errorToThrow: Error?
+
+    func upload(config: UploadConfig, verbose: Bool) async throws {
+        if let error = errorToThrow { throw error }
+        uploadCalls.append(config)
     }
 }
 
