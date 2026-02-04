@@ -63,10 +63,10 @@ jobs:
           echo "curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/${{ steps.archive.outputs.archive_name }}.tar.gz | tar xz" >> release_notes.md
           echo "" >> release_notes.md
           echo "# Move to PATH" >> release_notes.md
-          echo "sudo mv blimp /usr/local/bin/" >> release_notes.md
+          echo "sudo mv ${{ env.PRODUCT_NAME }} /usr/local/bin/" >> release_notes.md
           echo "" >> release_notes.md
           echo "# Verify installation" >> release_notes.md
-          echo "blimp --help" >> release_notes.md
+          echo "${{ env.PRODUCT_NAME }} --help" >> release_notes.md
           echo '```' >> release_notes.md
 
       - name: Create GitHub Release
