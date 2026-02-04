@@ -77,6 +77,22 @@ public extension Blimp {
             platform: ProvisioningAPI.Platform,
             storagePath: String
         ) async throws -> String? {
+            let certs = try await findAllCertificates(type: type, platform: platform, storagePath: storagePath)
+            return certs.first
+        }
+
+        /// Finds ALL valid certificate IDs from storage that match Apple Developer Portal.
+        /// - Parameters:
+        ///   - type: Certificate type
+        ///   - platform: Target platform
+        ///   - storagePath: Path to git storage
+        ///   - filterNames: Optional list of certificate names to match (substring match). If nil, returns all.
+        public func findAllCertificates(
+            type: ProvisioningAPI.CertificateType,
+            platform: ProvisioningAPI.Platform,
+            storagePath: String,
+            filterNames: [String]? = nil
+        ) async throws -> [String] {
             let git = GitStorage(localPath: storagePath)
             try await git.cloneOrPull()
 
@@ -85,15 +101,24 @@ public extension Blimp {
 
             logger.info("Found \(appleCerts.count) \(type.rawValue) certificates on Developer Portal")
 
+            var validCertIds: [String] = []
             for cert in appleCerts {
                 let p12Path = "\(certDir)/\(cert.id).p12"
                 if await git.fileExists(path: p12Path) {
-                    logger.info("Found valid certificate \(cert.id) in storage")
-                    return cert.id
+                    if let filterNames = filterNames {
+                        let matches = filterNames.contains { cert.name.localizedCaseInsensitiveContains($0) }
+                        if matches {
+                            logger.info("Found matching certificate \(cert.name) (\(cert.id))")
+                            validCertIds.append(cert.id)
+                        }
+                    } else {
+                        logger.info("Found valid certificate \(cert.name) (\(cert.id))")
+                        validCertIds.append(cert.id)
+                    }
                 }
             }
 
-            return nil
+            return validCertIds
         }
 
         // MARK: - Profile Management
@@ -110,24 +135,30 @@ public extension Blimp {
         }
 
         /// Syncs provisioning profiles for the given bundle IDs.
-        /// Automatically finds the appropriate certificate from storage based on profile type.
+        /// Automatically finds the appropriate certificate(s) from storage based on profile type.
         /// Does NOT create certificates - use `generateCertificate` first if needed.
+        /// - Parameters:
+        ///   - certificateNames: Optional filter for certificate names. If nil, uses all valid certificates.
         public func syncProfiles(
             platform: ProvisioningAPI.Platform,
             type: ProvisioningAPI.ProfileType,
             bundleIds: [String],
             force: Bool,
             storagePath: String,
-            push: Bool = false
+            push: Bool = false,
+            certificateNames: [String]? = nil
         ) async throws {
             let certType = certificateType(for: type)
             logger.info("Profile type \(type.rawValue) requires \(certType.rawValue) certificate")
 
-            guard let certificateId = try await findCertificate(
+            let certificateIds = try await findAllCertificates(
                 type: certType,
                 platform: platform,
-                storagePath: storagePath
-            ) else {
+                storagePath: storagePath,
+                filterNames: certificateNames
+            )
+
+            guard !certificateIds.isEmpty else {
                 throw MaintenanceError.certificateNotFound(
                     """
                     No valid \(certType.rawValue) certificate found in storage for \(platform.rawValue).
@@ -137,6 +168,8 @@ public extension Blimp {
                     """
                 )
             }
+
+            logger.info("Using \(certificateIds.count) certificate(s) for profile sync")
 
             let git = GitStorage(localPath: storagePath)
 
@@ -151,7 +184,7 @@ public extension Blimp {
                 platform: platform,
                 type: type,
                 bundleIds: bundleIds,
-                certificateId: certificateId,
+                certificateIds: certificateIds,
                 force: force
             )
         }

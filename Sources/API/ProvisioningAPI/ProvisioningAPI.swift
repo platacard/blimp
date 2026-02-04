@@ -74,10 +74,12 @@ public struct ProvisioningAPI: Sendable {
         )
         let input = Operations.BundleIdsGetCollection.Input(query: query)
         let response = try await client.bundleIdsGetCollection(input)
-        
+
         switch response {
         case .ok(let ok):
-             return try ok.body.json.data.first?.id
+            // Filter for EXACT match (API returns substring/prefix matches)
+            let exactMatch = try ok.body.json.data.first { $0.attributes?.identifier == identifier }
+            return exactMatch?.id
         case .forbidden(let forbidden):
              let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
              throw Error.badResponse(message)
@@ -353,6 +355,9 @@ public struct ProvisioningAPI: Sendable {
         case .badRequest(let error):
              let message = (try? error.body.json.errorDescription) ?? "Bad request"
              throw Error.badRequest(message)
+        case .conflict(let conflict):
+            let message = (try? conflict.body.json.errorDescription) ?? "Profile already exists"
+            throw Error.conflict(message)
         case .forbidden(let forbidden):
              let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
              throw Error.badResponse(message)
@@ -360,7 +365,7 @@ public struct ProvisioningAPI: Sendable {
             throw Error.badResponse("Failed to create profile")
         }
     }
-    
+
     public func listProfiles(name: String? = nil) async throws -> [Profile] {
         var allProfiles: [Profile] = []
         var nextURL: String? = nil
@@ -389,6 +394,10 @@ public struct ProvisioningAPI: Sendable {
             nextURL = nextLink
         }
 
+        // Filter for EXACT name match (API returns substring/prefix matches)
+        if let name = name {
+            return allProfiles.filter { $0.name == name }
+        }
         return allProfiles
     }
 

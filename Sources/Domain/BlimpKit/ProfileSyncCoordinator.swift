@@ -30,18 +30,18 @@ public struct ProfileSyncCoordinator: Sendable {
     ///   - platform: Target platform
     ///   - type: Profile type
     ///   - bundleIds: Bundle identifiers to sync
-    ///   - certificateId: ID of the certificate to use (must exist in Apple Developer Portal)
+    ///   - certificateIds: IDs of certificates to include (must exist in Apple Developer Portal)
     ///   - force: If true, regenerates profiles even if they exist
     public func sync(
         platform: ProvisioningAPI.Platform,
         type: ProvisioningAPI.ProfileType,
         bundleIds: [String],
-        certificateId: String,
+        certificateIds: [String],
         force: Bool = false
     ) async throws {
         logger.info("Starting profile sync for \(platform.rawValue) \(type.rawValue)")
         logger.info("Bundle IDs: \(bundleIds.joined(separator: ", "))")
-        logger.info("Using certificate: \(certificateId)")
+        logger.info("Using \(certificateIds.count) certificate(s): \(certificateIds.joined(separator: ", "))")
 
         try await git.cloneOrPull()
 
@@ -50,7 +50,7 @@ public struct ProfileSyncCoordinator: Sendable {
                 bundleId: bundleId,
                 type: type,
                 platform: platform,
-                certificateId: certificateId,
+                certificateIds: certificateIds,
                 force: force
             )
         }
@@ -62,7 +62,7 @@ public struct ProfileSyncCoordinator: Sendable {
         bundleId: String,
         type: ProvisioningAPI.ProfileType,
         platform: ProvisioningAPI.Platform,
-        certificateId: String,
+        certificateIds: [String],
         force: Bool
     ) async throws {
         let profileDir = "profiles/\(platform.rawValue)/\(type.rawValue)"
@@ -76,10 +76,14 @@ public struct ProfileSyncCoordinator: Sendable {
             return
         }
 
-        let existingProfiles = try await profileService.listProfiles(name: bundleId)
-        if let existing = existingProfiles.first {
-            logger.info("Deleting existing profile \(bundleId) for regeneration")
-            try await profileService.deleteProfile(id: existing.id)
+        if force {
+            let existingProfiles = try await profileService.listProfiles(name: bundleId)
+            if !existingProfiles.isEmpty {
+                logger.info("Deleting \(existingProfiles.count) existing profile(s) for \(bundleId)")
+                for profile in existingProfiles {
+                    try await profileService.deleteProfile(id: profile.id)
+                }
+            }
         }
 
         let deviceIds = try await resolveDeviceIds(type: type, platform: platform)
@@ -92,7 +96,7 @@ public struct ProfileSyncCoordinator: Sendable {
             name: bundleId,
             type: type,
             bundleId: bundleResourceId,
-            certificateIds: [certificateId],
+            certificateIds: certificateIds,
             deviceIds: deviceIds
         )
 

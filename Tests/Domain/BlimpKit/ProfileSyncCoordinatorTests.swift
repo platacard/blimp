@@ -32,7 +32,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
             platform: .ios,
             type: .iosAppDevelopment,
             bundleIds: [bundleId],
-            certificateId: certificateId
+            certificateIds: [certificateId]
         )
 
         let cloneOrPullCalled = await mockGit.cloneOrPullCalled
@@ -60,7 +60,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
             platform: .ios,
             type: .iosAppDevelopment,
             bundleIds: [bundleId],
-            certificateId: certificateId
+            certificateIds: [certificateId]
         )
 
         XCTAssertEqual(mockProfileService.profiles.count, 0, "Should not create profile when it already exists")
@@ -86,7 +86,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
             platform: .ios,
             type: .iosAppDevelopment,
             bundleIds: [bundleId],
-            certificateId: certificateId,
+            certificateIds: [certificateId],
             force: true
         )
 
@@ -107,7 +107,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
             platform: .ios,
             type: .iosAppStore,
             bundleIds: bundleIds,
-            certificateId: certificateId
+            certificateIds: [certificateId]
         )
 
         XCTAssertEqual(mockProfileService.profiles.count, 3)
@@ -133,7 +133,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
             platform: .ios,
             type: .iosAppDevelopment,
             bundleIds: [bundleId],
-            certificateId: certificateId
+            certificateIds: [certificateId]
         )
 
         XCTAssertEqual(mockProfileService.profiles.count, 1)
@@ -151,7 +151,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
             platform: .ios,
             type: .iosAppAdhoc,
             bundleIds: [bundleId],
-            certificateId: certificateId
+            certificateIds: [certificateId]
         )
 
         XCTAssertEqual(mockProfileService.profiles.count, 1)
@@ -168,7 +168,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
             platform: .ios,
             type: .iosAppStore,
             bundleIds: [bundleId],
-            certificateId: certificateId
+            certificateIds: [certificateId]
         )
 
         XCTAssertEqual(mockProfileService.profiles.count, 1)
@@ -190,7 +190,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
             platform: .ios,
             type: .iosAppDevelopment,
             bundleIds: [bundleId],
-            certificateId: certificateId
+            certificateIds: [certificateId]
         )
 
         XCTAssertEqual(mockProfileService.profiles.count, 1)
@@ -212,7 +212,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
             platform: .ios,
             type: .iosAppDevelopment,
             bundleIds: [bundleId],
-            certificateId: certificateId
+            certificateIds: [certificateId]
         )
 
         XCTAssertEqual(mockProfileService.profiles.count, 1)
@@ -247,7 +247,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
                 platform: .ios,
                 type: .iosAppDevelopment,
                 bundleIds: [bundleId],
-                certificateId: certificateId
+                certificateIds: [certificateId]
             )
             XCTFail("Should throw error for missing bundle ID")
         } catch {
