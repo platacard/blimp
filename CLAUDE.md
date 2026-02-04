@@ -177,6 +177,39 @@ if let name {
 }
 ```
 
+❌ Anti-Pattern: Premature Deprecation
+This is a pre-1.0 project. Don't use `@available(*, deprecated)` - just delete or rename directly.
+```swift
+// BAD: Adding deprecation annotations in a pre-1.0 project
+@available(*, deprecated, renamed: "ProcessingState")
+typealias BetaProcessingState = ProcessingState
+
+// GOOD: Just delete or rename directly - no backward compatibility needed yet
+```
+
+❌ Anti-Pattern: Private Functions at the Top
+Put private methods in a separate `private extension` at the bottom of the file. Public methods should appear first.
+Exception: allowed if the entire type is private.
+```swift
+// BAD: Private function mixed with public API
+extension MyType {
+    private func helperFunction() { }  // ← Don't put this here
+
+    public func publicAPI() { }
+}
+
+// GOOD: Private extension at bottom of file
+public extension MyType {
+    func publicAPI() { }
+}
+
+// ... other extensions ...
+
+private extension MyType {
+    func helperFunction() { }
+}
+```
+
 ## System Overview
 
 Swift 6.2+ CLI tool for iOS/macOS app deployment to TestFlight/App Store. Alternative to Fastlane.

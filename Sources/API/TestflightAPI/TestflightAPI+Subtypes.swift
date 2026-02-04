@@ -19,12 +19,27 @@ public extension TestflightAPI {
 
         /// Terminal errors should cause immediate failure without further polling
         public var isTerminalError: Bool {
+            asTerminalError != nil
+        }
+
+        /// Type-safe conversion to terminal error (nil if not a terminal state)
+        public var asTerminalError: TerminalError? {
             switch self {
-            case .processingException, .missingExportCompliance, .betaRejected, .invalidBinary:
-                return true
-            default:
-                return false
+            case .processingException: .processingException
+            case .missingExportCompliance: .missingExportCompliance
+            case .betaRejected: .betaRejected
+            case .invalidBinary: .invalidBinary
+            case .processing, .valid, .failed, .invalid: nil
             }
+        }
+
+        /// Terminal error states that require immediate failure without polling.
+        /// Use this type when you need compile-time guarantee that only terminal states are handled.
+        public enum TerminalError: Sendable, Equatable {
+            case processingException
+            case missingExportCompliance
+            case betaRejected
+            case invalidBinary
         }
 
         /// Basic states that can be used for API filtering (matches the 4 basic Build.processingState values)

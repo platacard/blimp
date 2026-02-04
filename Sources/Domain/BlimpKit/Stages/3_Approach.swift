@@ -85,17 +85,6 @@ public extension Blimp.Approach {
 
 extension Blimp.Approach {
 
-    private func mapToError(_ state: TestflightAPI.ProcessingState) -> Error {
-        switch state {
-        case .processingException: .processingException
-        case .missingExportCompliance: .missingExportCompliance
-        case .betaRejected: .betaRejected
-        case .invalidBinary, .invalid: .invalidBinary
-        case .failed: .failedProcessing
-        case .processing, .valid: .failedProcessing // Shouldn't happen
-        }
-    }
-
     func process(bundleId: String, appVersion: String, buildNumber: String) async throws -> ProcessResult {
         var didAppearInList = false
         var isProcessed = false
@@ -130,9 +119,9 @@ let processingResult = try await buildQueryService.getBuildProcessingResult(id: 
             let state = processingResult.processingState
 
             // Terminal errors fail fast - no more polling needed
-            if state.isTerminalError {
+            if let terminalError = state.asTerminalError {
                 logger.error("Build processing failed: \(state)")
-                throw mapToError(state)
+                throw mapToError(terminalError)
             }
 
             switch state {
@@ -151,7 +140,7 @@ let processingResult = try await buildQueryService.getBuildProcessingResult(id: 
                 buildLocalizationIds = processingResult.buildLocalizationIDs
                 isProcessed = true
             case .processingException, .missingExportCompliance, .betaRejected, .invalidBinary:
-                break // Handled by isTerminalError check above
+                break // Handled by asTerminalError check above
             }
         }
 
@@ -294,4 +283,18 @@ extension Blimp.Approach {
         "iPod7,1" : "6th Gen iPod",
         "iPod9,1" : "7th Gen iPod",
     ]
+}
+
+// MARK: - Private
+
+private extension Blimp.Approach {
+
+    func mapToError(_ terminalError: TestflightAPI.ProcessingState.TerminalError) -> Error {
+        switch terminalError {
+        case .processingException: .processingException
+        case .missingExportCompliance: .missingExportCompliance
+        case .betaRejected: .betaRejected
+        case .invalidBinary: .invalidBinary
+        }
+    }
 }
