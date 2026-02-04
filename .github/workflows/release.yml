@@ -135,8 +135,12 @@ jobs:
           # Get current file SHA (needed for update)
           FILE_SHA=$(curl -s -H "Authorization: token ${HOMEBREW_TAP_TOKEN}" \
             "https://api.github.com/repos/havebeenfitz/homebrew-blimp-tap/contents/Formula/blimp.rb" \
-            | jq -r '.sha')
+            | jq -r '.sha') || { echo "Error: Failed to retrieve file SHA from GitHub API."; exit 1; }
 
+          if [ -z "$FILE_SHA" ] || [ "$FILE_SHA" = "null" ]; then
+            echo "Error: GitHub API did not return a valid file SHA for Formula/blimp.rb."
+            exit 1
+          fi
           # Update the formula file
           curl -X PUT \
             -H "Authorization: token ${HOMEBREW_TAP_TOKEN}" \
