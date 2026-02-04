@@ -13,9 +13,20 @@ actor MockGitRepo: GitManaging {
     var pushedCommits: [String] = []
     var cloneOrPullCalled = false
     private var remoteURL: String? = nil
+    private let _localURL: URL
 
     nonisolated var localURL: URL {
-        FileManager.default.temporaryDirectory.appendingPathComponent("mock_git")
+        _localURL
+    }
+
+    init() {
+        _localURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("mock_git_\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: _localURL, withIntermediateDirectories: true)
+    }
+
+    func cleanup() {
+        try? FileManager.default.removeItem(at: _localURL)
     }
 
     func cloneOrPull() throws {
@@ -47,6 +58,13 @@ actor MockGitRepo: GitManaging {
 
     func writeFile(path: String, content: Data) throws {
         fileStore[path] = content
+        // Also write to disk for file listing
+        let fileURL = _localURL.appendingPathComponent(path)
+        try FileManager.default.createDirectory(
+            at: fileURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try content.write(to: fileURL)
     }
 }
 

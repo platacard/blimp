@@ -134,6 +134,23 @@ public extension Blimp {
             logger.info("Removed profile: \(id)")
         }
 
+        /// Installs provisioning profiles from Git storage to the system.
+        public func installProfiles(
+            platform: ProvisioningAPI.Platform,
+            type: ProvisioningAPI.ProfileType,
+            bundleIdPattern: String?,
+            storagePath: String
+        ) async throws -> [InstalledProfile] {
+            let git = GitStorage(localPath: storagePath)
+            let installer = ProfileInstaller(git: git)
+
+            return try await installer.installProfiles(
+                platform: platform,
+                type: type,
+                bundleIdPattern: bundleIdPattern
+            )
+        }
+
         /// Syncs provisioning profiles for the given bundle IDs.
         /// Automatically finds the appropriate certificate(s) from storage based on profile type.
         /// Does NOT create certificates - use `generateCertificate` first if needed.
