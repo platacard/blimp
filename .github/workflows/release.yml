@@ -132,18 +132,23 @@ jobs:
           # Update formula via GitHub API
           FORMULA_BASE64=$(echo "$FORMULA" | base64)
 
-          # Get current file SHA (needed for update)
+          # Get current file SHA (needed for update, optional for create)
           FILE_SHA=$(curl -s -H "Authorization: token ${HOMEBREW_TAP_TOKEN}" \
             "https://api.github.com/repos/havebeenfitz/homebrew-blimp-tap/contents/Formula/blimp.rb" \
-            | jq -r '.sha') || { echo "Error: Failed to retrieve file SHA from GitHub API."; exit 1; }
+            | jq -r '.sha // empty')
 
-          if [ -z "$FILE_SHA" ] || [ "$FILE_SHA" = "null" ]; then
-            echo "Error: GitHub API did not return a valid file SHA for Formula/blimp.rb."
-            exit 1
+          # Build request body - include SHA only if file exists (update), omit for create
+          if [ -n "$FILE_SHA" ]; then
+            echo "Updating existing formula (SHA: ${FILE_SHA})"
+            REQUEST_BODY="{\"message\":\"Update blimp to ${VERSION}\",\"content\":\"${FORMULA_BASE64}\",\"sha\":\"${FILE_SHA}\"}"
+          else
+            echo "Creating new formula (file does not exist yet)"
+            REQUEST_BODY="{\"message\":\"Add blimp ${VERSION}\",\"content\":\"${FORMULA_BASE64}\"}"
           fi
-          # Update the formula file
+
+          # Create or update the formula file
           curl -X PUT \
             -H "Authorization: token ${HOMEBREW_TAP_TOKEN}" \
             -H "Content-Type: application/json" \
             "https://api.github.com/repos/havebeenfitz/homebrew-blimp-tap/contents/Formula/blimp.rb" \
-            -d "{\"message\":\"Update blimp to ${VERSION}\",\"content\":\"${FORMULA_BASE64}\",\"sha\":\"${FILE_SHA}\"}"
+            -d "${REQUEST_BODY}"
