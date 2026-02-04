@@ -177,6 +177,70 @@ if let name {
 }
 ```
 
+❌ Anti-Pattern: Premature Deprecation
+This is a pre-1.0 project. Don't use `@available(*, deprecated)` - just delete or rename directly.
+```swift
+// BAD: Adding deprecation annotations in a pre-1.0 project
+@available(*, deprecated, renamed: "ProcessingState")
+typealias BetaProcessingState = ProcessingState
+
+// GOOD: Just delete or rename directly - no backward compatibility needed yet
+```
+
+❌ Anti-Pattern: Private Functions at the Top
+Put private methods in a separate `private extension` at the bottom of the file. Public methods should appear first.
+Exception: allowed if the entire type is private.
+```swift
+// BAD: Private function mixed with public API
+extension MyType {
+    private func helperFunction() { }  // ← Don't put this here
+
+    public func publicAPI() { }
+}
+
+// GOOD: Private extension at bottom of file
+public extension MyType {
+    func publicAPI() { }
+}
+
+// ... other extensions ...
+
+private extension MyType {
+    func helperFunction() { }
+}
+```
+
+❌ Anti-Pattern: Redundant Control Flow
+Don't check a condition before a switch and then handle the same cases inside the switch. Use one control structure.
+```swift
+// BAD: Non-linear, reader must jump between if-check, switch, and helper function
+if let terminalError = state.asTerminalError {
+    throw mapToError(terminalError)
+}
+switch state {
+case .processing: ...
+case .terminalCase: break // "handled above"
+}
+
+// GOOD: Linear, all cases handled in one place
+switch state {
+case .processing: ...
+case .terminalCase: throw Error.terminalCase
+}
+```
+
+❌ Anti-Pattern: Explicit Closure Instead of KeyPath
+When accessing a single property in `map`, `compactMap`, `filter`, etc., use keypath syntax for cleaner code.
+```swift
+// BAD: Verbose closure syntax
+let ids = items.compactMap { $0.id }
+let names = users.map { $0.name }
+
+// GOOD: KeyPath syntax
+let ids = items.compactMap(\.id)
+let names = users.map(\.name)
+```
+
 ## System Overview
 
 Swift 6.2+ CLI tool for iOS/macOS app deployment to TestFlight/App Store. Alternative to Fastlane.

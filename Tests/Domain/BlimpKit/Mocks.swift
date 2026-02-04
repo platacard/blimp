@@ -201,7 +201,7 @@ class MockBuildQueryService: BuildQueryService, @unchecked Sendable {
         appId: String,
         appVersion: String,
         buildNumber: String,
-        states: [TestflightAPI.BetaProcessingState],
+        states: [TestflightAPI.ProcessingState],
         limit: Int,
         sorted: [TestflightAPI.BetaBuildSort]
     ) async throws -> String? {

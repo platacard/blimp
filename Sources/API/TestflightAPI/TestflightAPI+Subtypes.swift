@@ -3,13 +3,34 @@ import OpenAPIURLSession
 import Foundation
 
 public extension TestflightAPI {
-    enum BetaProcessingState: CaseIterable, Sendable {
+    /// Unified processing state for domain layer consumption.
+    /// Maps from multiple internal API types: Build.processingState, InternalBetaState, ExternalBetaState, AppVersionState
+    enum ProcessingState: Sendable, Equatable {
+        // Basic states (from Build.processingState)
         case processing
+        case valid
         case failed
         case invalid
-        case valid
+        // Terminal error states - fail fast, no polling needed
+        case processingException      // From InternalBetaState/ExternalBetaState
+        case missingExportCompliance  // From InternalBetaState/ExternalBetaState
+        case betaRejected             // From ExternalBetaState
+        case invalidBinary            // From AppVersionState
+
+        /// Terminal errors should cause immediate failure without further polling
+        public var isTerminalError: Bool {
+            switch self {
+            case .processingException, .missingExportCompliance, .betaRejected, .invalidBinary:
+                true
+            case .processing, .valid, .failed, .invalid:
+                false
+            }
+        }
+
+        /// Basic states that can be used for API filtering (matches the 4 basic Build.processingState values)
+        public static let allBasicStates: [ProcessingState] = [.processing, .failed, .invalid, .valid]
     }
-    
+
     enum BetaBuildState: Sendable {
         case waitingForReview
         case inReview
@@ -25,11 +46,11 @@ public extension TestflightAPI {
     }
     
     struct BuildProcessingResult: Sendable {
-        public let processingState: BetaProcessingState
+        public let processingState: ProcessingState
         public let buildBundleID: String
         public let buildLocalizationIDs: [String]
 
-        public init(processingState: BetaProcessingState, buildBundleID: String, buildLocalizationIDs: [String]) {
+public init(processingState: ProcessingState, buildBundleID: String, buildLocalizationIDs: [String]) {
             self.processingState = processingState
             self.buildBundleID = buildBundleID
             self.buildLocalizationIDs = buildLocalizationIDs
@@ -160,15 +181,19 @@ public extension TestflightAPI {
 
 typealias BuildCollectionQuery = Operations.BuildsGetCollection.Input.Query
 
-extension TestflightAPI.BetaProcessingState {
+extension TestflightAPI.ProcessingState {
     typealias FilterProcessingState = BuildCollectionQuery.FilterLbrackProcessingStateRbrackPayloadPayload
 
+    /// Convert to API filter state (only basic states are valid for filtering)
     var asGeneratedApiState: FilterProcessingState {
         switch self {
         case .processing: .processing
         case .failed: .failed
         case .invalid: .invalid
         case .valid: .valid
+        // Terminal errors map to failed for filtering purposes
+        case .processingException, .missingExportCompliance, .betaRejected, .invalidBinary:
+            .failed
         }
     }
 }
@@ -178,12 +203,44 @@ extension TestflightAPI.BetaProcessingState {
 typealias AttributeProcessingState = Components.Schemas.Build.AttributesPayload.ProcessingStatePayload
 
 extension AttributeProcessingState {
-    var asProcessingState: TestflightAPI.BetaProcessingState {
+    var asProcessingState: TestflightAPI.ProcessingState {
         switch self {
         case .processing: .processing
         case .failed: .failed
         case .invalid: .invalid
         case .valid: .valid
+        }
+    }
+}
+
+// MARK: - Internal API type mappings to unified ProcessingState
+
+extension Components.Schemas.InternalBetaState {
+    var asTerminalProcessingState: TestflightAPI.ProcessingState? {
+        switch self {
+        case .processingException: .processingException
+        case .missingExportCompliance: .missingExportCompliance
+        default: nil
+        }
+    }
+}
+
+extension Components.Schemas.ExternalBetaState {
+    var asTerminalProcessingState: TestflightAPI.ProcessingState? {
+        switch self {
+        case .processingException: .processingException
+        case .missingExportCompliance: .missingExportCompliance
+        case .betaRejected: .betaRejected
+        default: nil
+        }
+    }
+}
+
+extension Components.Schemas.AppVersionState {
+    var asTerminalProcessingState: TestflightAPI.ProcessingState? {
+        switch self {
+        case .invalidBinary: .invalidBinary
+        default: nil
         }
     }
 }
@@ -376,3 +433,21 @@ extension TestflightAPI {
         case badResponse(String? = nil)
     }
 }
+
+// MARK: - Testability Protocol
+
+/// Protocol for build processing operations - enables testing of Approach stage
+public protocol BuildProcessingService: Sendable {
+    func getBuildID(
+        appId: String,
+        appVersion: String,
+        buildNumber: String,
+        states: [TestflightAPI.ProcessingState],
+        limit: Int,
+        sorted: [TestflightAPI.BetaBuildSort]
+    ) async throws -> String?
+
+    func getBuildProcessingResult(id: String) async throws -> TestflightAPI.BuildProcessingResult
+}
+
+extension TestflightAPI: BuildProcessingService {}

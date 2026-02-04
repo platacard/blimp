@@ -84,7 +84,7 @@ public extension Blimp.Approach {
 // MARK: - Build processing
 
 extension Blimp.Approach {
-    
+
     func process(bundleId: String, appVersion: String, buildNumber: String) async throws -> ProcessResult {
         var didAppearInList = false
         var isProcessed = false
@@ -115,23 +115,27 @@ extension Blimp.Approach {
         while !isProcessed {
             guard let matchedBuildId else { throw Error.noBuildId }
 
-            let processingResult = try await buildQueryService.getBuildProcessingResult(id: matchedBuildId)
+let processingResult = try await buildQueryService.getBuildProcessingResult(id: matchedBuildId)
 
             switch processingResult.processingState {
             case .processing:
                 logger.info("Waiting for the build to finish processing...")
                 try await Task.sleep(for: .seconds(30))
-            case .failed:
-                logger.error("Processing failed, something odd happened, who knows")
-                throw Error.failedProcessing
-            case .invalid:
-                logger.error("Processing failed, invalid binary")
-                throw Error.invalidBinary
             case .valid:
                 logger.info("Build has been successfully processed! BuildId: \(matchedBuildId)")
                 buildBundleId = processingResult.buildBundleID
                 buildLocalizationIds = processingResult.buildLocalizationIDs
                 isProcessed = true
+            case .failed:
+                throw Error.failedProcessing
+            case .invalid, .invalidBinary:
+                throw Error.invalidBinary
+            case .processingException:
+                throw Error.processingException
+            case .missingExportCompliance:
+                throw Error.missingExportCompliance
+            case .betaRejected:
+                throw Error.betaRejected
             }
         }
 
@@ -176,11 +180,33 @@ public extension Blimp.Approach {
         public let installSize: Int
     }
 
-    enum Error: Swift.Error, Sendable {
+    enum Error: Swift.Error, LocalizedError, Sendable {
         case noBuildId
         case failedProcessing
         case invalidBinary
+        case processingException
+        case missingExportCompliance
+        case betaRejected
         case failedToGetAppSizes
+
+        public var errorDescription: String? {
+            switch self {
+            case .noBuildId:
+                return "Failed to get build ID from App Store Connect"
+            case .failedProcessing:
+                return "Build processing failed"
+            case .invalidBinary:
+                return "Invalid binary. Check your build settings and Info.plist values (CFBundleShortVersionString, CFBundleVersion)"
+            case .processingException:
+                return "Build processing failed with an exception. Check App Store Connect for details"
+            case .missingExportCompliance:
+                return "Missing export compliance information. Go to App Store Connect to provide the required export compliance details for this build"
+            case .betaRejected:
+                return "Build was rejected from beta testing. Check App Store Connect for rejection details"
+            case .failedToGetAppSizes:
+                return "Failed to retrieve app size information"
+            }
+        }
     }
 }
 
@@ -253,3 +279,4 @@ extension Blimp.Approach {
         "iPod9,1" : "7th Gen iPod",
     ]
 }
+
