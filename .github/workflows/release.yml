@@ -102,7 +102,7 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           ARCHIVE="${{ steps.archive.outputs.archive_name }}.tar.gz"
           SHA256=$(cat "dist/${ARCHIVE}.sha256" | awk '{print $1}')
-          ARCH=$(uname -m)
+
 
           FORMULA=$(cat <<EOF
           class Blimp < Formula
