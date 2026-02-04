@@ -163,6 +163,20 @@ let certPath = "certs/ios/DEVELOPMENT/\(createdCert.id).cer"
 let p12Path = "certs/ios/DEVELOPMENT/\(createdCert.id).p12"
 ```
 
+❌ Anti-Pattern: Outdated Optional Unwrapping
+Since Swift 5.7, use shorthand `if let` / `guard let` when the unwrapped variable has the same name.
+```swift
+// BAD: Redundant variable name
+if let name = name {
+    print(name)
+}
+
+// GOOD: Shorthand syntax (Swift 5.7+)
+if let name {
+    print(name)
+}
+```
+
 ## System Overview
 
 Swift 6.2+ CLI tool for iOS/macOS app deployment to TestFlight/App Store. Alternative to Fastlane.

@@ -395,7 +395,7 @@ public struct ProvisioningAPI: Sendable {
         }
 
         // Filter for EXACT name match (API returns substring/prefix matches)
-        if let name = name {
+        if let name {
             return allProfiles.filter { $0.name == name }
         }
         return allProfiles

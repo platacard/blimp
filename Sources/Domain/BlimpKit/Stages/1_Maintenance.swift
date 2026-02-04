@@ -105,7 +105,7 @@ public extension Blimp {
             for cert in appleCerts {
                 let p12Path = "\(certDir)/\(cert.id).p12"
                 if await git.fileExists(path: p12Path) {
-                    if let filterNames = filterNames {
+                    if let filterNames {
                         let matches = filterNames.contains { cert.name.localizedCaseInsensitiveContains($0) }
                         if matches {
                             logger.info("Found matching certificate \(cert.name) (\(cert.id))")
