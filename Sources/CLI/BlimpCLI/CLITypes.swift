@@ -54,3 +54,15 @@ extension ProvisioningAPI.CertificateType: ExpressibleByArgument {
         }
     }
 }
+
+// MARK: - Certificate Selection
+
+/// Parses certificate selection from CLI argument
+/// - "all" → nil (use all certificates)
+/// - "Name1,Name2" → ["Name1", "Name2"] (filter by names)
+func parseCertificateSelection(_ argument: String) -> [String]? {
+    if argument.lowercased() == "all" {
+        return nil
+    }
+    return argument.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
+}
