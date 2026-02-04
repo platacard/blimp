@@ -209,7 +209,7 @@ public struct TestflightAPI: Sendable {
         appId: String,
         appVersion: String,
         buildNumber: String,
-        states: [BetaProcessingState] = BetaProcessingState.allCases,
+        states: [ProcessingState] = ProcessingState.allBasicStates,
         limit: Int = 10,
         sorted sort: [BetaBuildSort] = [.uploadDateDesc]
     ) async throws -> String? {
@@ -261,25 +261,84 @@ public struct TestflightAPI: Sendable {
             .init(
                 path: .init(id: id),
                 query: .init(
-                    fields_lbrack_builds_rbrack_: [.buildBetaDetail, .preReleaseVersion, .processingState, .betaBuildLocalizations, .buildBundles],
+                    fields_lbrack_builds_rbrack_: [.buildBetaDetail, .preReleaseVersion, .processingState, .betaBuildLocalizations, .buildBundles, .appStoreVersion],
                     fields_lbrack_preReleaseVersions_rbrack_: [.version],
-                    include: [.buildBetaDetail, .preReleaseVersion, .buildBundles, .betaBuildLocalizations]
+                    fields_lbrack_buildBetaDetails_rbrack_: [.internalBuildState, .externalBuildState],
+                    fields_lbrack_appStoreVersions_rbrack_: [.appVersionState],
+                    include: [.buildBetaDetail, .preReleaseVersion, .buildBundles, .betaBuildLocalizations, .appStoreVersion]
                 )
             )
         )
+
+        let payload = try response.ok.body.json
+
         guard
-            let processingState = try response.ok.body.json.data.attributes?.processingState,
-            let buildBundleID = try? response.ok.body.json.data.relationships?.buildBundles?.data?.first?.id,
-            let buildLocalizationIDs = try? (response.ok.body.json.data.relationships?.betaBuildLocalizations?.data?.compactMap { $0.id })
+            let basicState = payload.data.attributes?.processingState,
+            let buildBundleID = payload.data.relationships?.buildBundles?.data?.first?.id,
+            let buildLocalizationIDs = payload.data.relationships?.betaBuildLocalizations?.data?.compactMap({ $0.id })
         else {
             throw Error.badResponse()
         }
 
+        // Extract detailed states from included array
+        var internalBuildState: Components.Schemas.InternalBetaState?
+        var externalBuildState: Components.Schemas.ExternalBetaState?
+        var appVersionState: Components.Schemas.AppVersionState?
+
+        if let included = payload.included {
+            for item in included {
+                switch item {
+                case .buildBetaDetails(let detail):
+                    internalBuildState = detail.attributes?.internalBuildState
+                    externalBuildState = detail.attributes?.externalBuildState
+                case .appStoreVersions(let version):
+                    appVersionState = version.attributes?.appVersionState
+                default:
+                    break
+                }
+            }
+        }
+
+        // Map to unified ProcessingState with priority for terminal errors
+        let processingState = resolveProcessingState(
+            basicState: basicState,
+            internalBuildState: internalBuildState,
+            externalBuildState: externalBuildState,
+            appVersionState: appVersionState
+        )
+
         return .init(
-            processingState: processingState.asProcessingState,
+            processingState: processingState,
             buildBundleID: buildBundleID,
             buildLocalizationIDs: buildLocalizationIDs
         )
+    }
+
+    /// Resolves the unified ProcessingState from multiple API state sources.
+    /// Terminal error states take priority over basic processing states.
+    private func resolveProcessingState(
+        basicState: Components.Schemas.Build.AttributesPayload.ProcessingStatePayload,
+        internalBuildState: Components.Schemas.InternalBetaState?,
+        externalBuildState: Components.Schemas.ExternalBetaState?,
+        appVersionState: Components.Schemas.AppVersionState?
+    ) -> ProcessingState {
+        // Priority 1: AppVersionState terminal errors (INVALID_BINARY)
+        if let terminalState = appVersionState?.asTerminalProcessingState {
+            return terminalState
+        }
+
+        // Priority 2: InternalBetaState terminal errors
+        if let terminalState = internalBuildState?.asTerminalProcessingState {
+            return terminalState
+        }
+
+        // Priority 3: ExternalBetaState terminal errors
+        if let terminalState = externalBuildState?.asTerminalProcessingState {
+            return terminalState
+        }
+
+        // Fallback: Basic processing state
+        return basicState.asProcessingState
     }
 
     public func inviteDeveloper(
