@@ -56,9 +56,21 @@ jobs:
 
       - name: Generate release notes
         run: |
-          echo "## Installation" > release_notes.md
-          echo "" >> release_notes.md
-          echo '```bash' >> release_notes.md
+          cat > release_notes.md << 'NOTES'
+          ## Installation
+
+          ### Homebrew (Recommended)
+
+          ```bash
+          brew tap havebeenfitz/blimp-tap
+          brew install blimp
+          ```
+
+          ### Manual Download
+
+          ```bash
+          NOTES
+          sed -i '' 's/^          //' release_notes.md
           echo "# Download and extract" >> release_notes.md
           echo "curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/${{ steps.archive.outputs.archive_name }}.tar.gz | tar xz" >> release_notes.md
           echo "" >> release_notes.md
@@ -81,3 +93,53 @@ jobs:
             dist/${{ steps.archive.outputs.archive_name }}.tar.gz.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Homebrew formula
+        if: ${{ !contains(steps.version.outputs.tag, '-') }}
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          ARCHIVE="${{ steps.archive.outputs.archive_name }}.tar.gz"
+          SHA256=$(cat "dist/${ARCHIVE}.sha256" | awk '{print $1}')
+          ARCH=$(uname -m)
+
+          FORMULA=$(cat <<EOF
+          class Blimp < Formula
+            desc "Modern Swift CLI for iOS/macOS app deployment to TestFlight/App Store"
+            homepage "https://github.com/${{ github.repository }}"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              on_arm do
+                url "https://github.com/${{ github.repository }}/releases/download/${VERSION}/blimp-${VERSION}-macos-arm64.tar.gz"
+                sha256 "${SHA256}"
+              end
+            end
+
+            def install
+              bin.install "blimp"
+            end
+
+            test do
+              system "#{bin}/blimp", "--help"
+            end
+          end
+          EOF
+          )
+
+          # Update formula via GitHub API
+          FORMULA_BASE64=$(echo "$FORMULA" | base64)
+
+          # Get current file SHA (needed for update)
+          FILE_SHA=$(curl -s -H "Authorization: token ${HOMEBREW_TAP_TOKEN}" \
+            "https://api.github.com/repos/havebeenfitz/homebrew-blimp-tap/contents/Formula/blimp.rb" \
+            | jq -r '.sha')
+
+          # Update the formula file
+          curl -X PUT \
+            -H "Authorization: token ${HOMEBREW_TAP_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/havebeenfitz/homebrew-blimp-tap/contents/Formula/blimp.rb" \
+            -d "{\"message\":\"Update blimp to ${VERSION}\",\"content\":\"${FORMULA_BASE64}\",\"sha\":\"${FILE_SHA}\"}"
