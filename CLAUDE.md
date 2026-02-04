@@ -243,12 +243,135 @@ swift test
 ## Key Protocols
 
 - `JWTProviding` - Token generation
-- `ProvisioningService` - API abstraction
+- `ProvisioningService` - API abstraction (`CertificateService`, `ProfileService`, `DeviceService`)
 - `GitManaging` - Profile storage
 - `AppStoreConnectUploader` - Upload abstraction
+- `BuildQueryService` - Build polling and status (TestflightAPI)
+- `BetaManagementService` - Beta groups and review (TestflightAPI)
+- `AppQueryService` - App lookup (AppsAPI)
 
 ## Concurrency
 
 - Actors: `GitRepo`, `AppStoreConnectAPIUploader`
 - Sendable structs with `nonisolated(unsafe)` for thread-safe external deps (Cronista logger)
 - No `@MainActor` on CLI commands (Swift 6.2 AsyncParsableCommand compatibility)
+
+---
+
+## Testing Guide
+
+### Philosophy: Tests as Snapshots
+Treat tests as **snapshots of working system state**. Each test captures correct behavior at a key decision point:
+- State transitions (e.g., `processing` → `valid`/`failed`/`invalid`)
+- Error handling paths
+- Data transformations (e.g., device model → human-readable name)
+
+### Protocol-Based Testability Pattern
+
+When a stage/component creates API clients internally, extract protocols for dependency injection:
+
+```swift
+// 1. Define protocol in API module (e.g., Sources/API/TestflightAPI/TestflightProtocols.swift)
+public protocol BuildQueryService: Sendable {
+    func getBuildID(appId: String, appVersion: String, buildNumber: String) async throws -> String?
+}
+
+// 2. Conform existing implementation
+extension TestflightAPI: BuildQueryService {}
+
+// 3. Update stage to accept protocol with convenience initializer
+public struct Approach {
+    private let buildQueryService: BuildQueryService
+
+    // Testable initializer
+    public init(buildQueryService: BuildQueryService) {
+        self.buildQueryService = buildQueryService
+    }
+
+    // Production convenience initializer
+    public init(jwtProvider: JWTProviding = DefaultJWTProvider()) {
+        self.init(buildQueryService: TestflightAPI(jwtProvider: jwtProvider))
+    }
+}
+```
+
+### Public Initializers for Testability
+
+Structs with public properties still have **internal** memberwise initializers. Add explicit public inits for types used in tests:
+
+```swift
+// BAD: Can't create in tests
+public struct BuildProcessingResult: Sendable {
+    public let processingState: BetaProcessingState
+    public let buildBundleID: String
+}
+
+// GOOD: Testable
+public struct BuildProcessingResult: Sendable {
+    public let processingState: BetaProcessingState
+    public let buildBundleID: String
+
+    public init(processingState: BetaProcessingState, buildBundleID: String) {
+        self.processingState = processingState
+        self.buildBundleID = buildBundleID
+    }
+}
+```
+
+### Mock Patterns
+
+Mocks live in `Tests/Domain/BlimpKit/Mocks.swift`. Follow this pattern:
+
+```swift
+class MockBuildQueryService: BuildQueryService, @unchecked Sendable {
+    // Configurable responses
+    var buildIdResponses: [String?] = []
+    var errorToThrow: Error?
+
+    // Call tracking
+    var getBuildIDCallCount = 0
+
+    func getBuildID(...) async throws -> String? {
+        if let error = errorToThrow { throw error }
+        let index = min(getBuildIDCallCount, buildIdResponses.count - 1)
+        getBuildIDCallCount += 1
+        return buildIdResponses.isEmpty ? nil : buildIdResponses[max(0, index)]
+    }
+}
+```
+
+Key patterns:
+- Use `@unchecked Sendable` for test doubles (tests are single-threaded)
+- Track calls for verification assertions
+- Support sequential responses for polling loops
+- Support error injection via `errorToThrow`
+
+### Test File Structure
+
+```
+Tests/Domain/BlimpKit/
+├── Mocks.swift                    # All mock implementations
+├── ApproachStageTests.swift       # Approach stage behavior tests
+├── LandStageTests.swift           # Land stage behavior tests
+├── TakeOffStageTests.swift        # Argument construction tests
+├── CertificateManagerTests.swift  # Certificate workflows
+├── ProfileSyncCoordinatorTests.swift  # Profile sync logic
+└── ...
+```
+
+### What to Test per Stage
+
+| Stage | Test Focus |
+|-------|------------|
+| **Approach** | Upload success/failure, build polling state transitions, device model mapping |
+| **Land** | Beta group assignment, changelog submission, review submission |
+| **TakeOff** | Argument construction (`bashArgument` values), Configuration parsing |
+| **Maintenance** | Tested via CertificateManager and ProfileSyncCoordinator |
+
+### Running Tests
+
+```bash
+swift test                           # Run all tests
+swift test --filter ApproachStage    # Run specific test suite
+swift test 2>&1 | grep "Executed"    # Check test count
+```
