@@ -6,7 +6,7 @@ public protocol BuildQueryService: Sendable {
         appId: String,
         appVersion: String,
         buildNumber: String,
-        states: [TestflightAPI.BetaProcessingState],
+        states: [TestflightAPI.ProcessingState],
         limit: Int,
         sorted: [TestflightAPI.BetaBuildSort]
     ) async throws -> String?
@@ -21,7 +21,7 @@ extension BuildQueryService {
             appId: appId,
             appVersion: appVersion,
             buildNumber: buildNumber,
-            states: TestflightAPI.BetaProcessingState.allCases,
+            states: TestflightAPI.ProcessingState.allBasicStates,
             limit: 10,
             sorted: [.uploadDateDesc]
         )
