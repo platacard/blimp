@@ -32,9 +32,13 @@ struct SyncProfiles: AsyncParsableCommand {
     @Flag(help: "Push to remote after committing")
     var push: Bool = false
 
+    @Option(help: "Certificate selection: 'all' (default) or comma-separated names to filter")
+    var certificates: String = "all"
+
     func run() async throws {
         let logger = Cronista(module: "blimp", category: "Maintenance")
         let resolvedPath = storagePath == "." ? FileManager.default.currentDirectoryPath : storagePath
+        let certificateNames = parseCertificateSelection(certificates)
 
         try await Blimp.Maintenance.default.syncProfiles(
             platform: platform,
@@ -42,7 +46,8 @@ struct SyncProfiles: AsyncParsableCommand {
             bundleIds: bundleIds,
             force: force,
             storagePath: resolvedPath,
-            push: push
+            push: push,
+            certificateNames: certificateNames
         )
 
         logger.success("Profile sync completed successfully")
