@@ -229,6 +229,18 @@ case .terminalCase: throw Error.terminalCase
 }
 ```
 
+❌ Anti-Pattern: Explicit Closure Instead of KeyPath
+When accessing a single property in `map`, `compactMap`, `filter`, etc., use keypath syntax for cleaner code.
+```swift
+// BAD: Verbose closure syntax
+let ids = items.compactMap { $0.id }
+let names = users.map { $0.name }
+
+// GOOD: KeyPath syntax
+let ids = items.compactMap(\.id)
+let names = users.map(\.name)
+```
+
 ## System Overview
 
 Swift 6.2+ CLI tool for iOS/macOS app deployment to TestFlight/App Store. Alternative to Fastlane.
