@@ -32,6 +32,8 @@ filter:
     - buildBundles_buildBundleFileSizes_getToManyRelated # GET /v1/buildBundles/{id}/buildBundleFileSizes
 
     - userInvitations_createInstance # POST /v1/userInvitations
+    - userInvitations_getCollection   # GET /v1/userInvitations (filter by email)
+    - userInvitations_deleteInstance  # DELETE /v1/userInvitations/{id}
     - betaTesters_createInstance # POST /v1/betaTesters
     - betaTesters_getCollection # GET /v1/betaTesters
     - betaTesterInvitations_createInstance # POST /v1/betaTesterInvitations

@@ -346,22 +346,19 @@ public struct TestflightAPI: Sendable {
         firstName: String,
         lastName: String
     ) async throws {
-        let response = try await client.userInvitationsCreateInstance(
-            body: .json(.init(data: .init(
-                _type: .userInvitations,
-                attributes: .init(
-                    email: email,
-                    firstName: firstName,
-                    lastName: lastName,
-                    roles: [.developer],
-                    allAppsVisible: true,
-                    provisioningAllowed: false
-                )
-            )))
+        let service = TestflightInvitationService(client: client)
+        let result = try await service.ensureDeveloperInvite(
+            email: email,
+            firstName: firstName,
+            lastName: lastName
         )
 
-        let email = try response.created.body.json.data.attributes?.email
-        logger.info("Invite sent to \(email?.redactedEmail ?? "unknown")")
+        switch result {
+        case .sent(let email):
+            logger.info("Developer invite sent to \(email.redactedEmail)")
+        case .alreadyAccepted(let email), .alreadyRegistered(let email):
+            logger.info("User \(email.redactedEmail) is already a team member")
+        }
     }
 
     public func inviteBetaTester(
@@ -371,23 +368,29 @@ public struct TestflightAPI: Sendable {
         firstName: String,
         lastName: String
     ) async throws {
+        let service = TestflightInvitationService(client: client)
+
         for appId in appIds {
             let betaGroupIds = try await getBetaGroupIds(appId: appId, betaGroups: betaGroups)
 
             logger.info("Beta groups names: \(betaGroups)")
-            logger.info("Got beta groups ids for \(appId): \(betaGroupIds))")
+            logger.info("Got beta groups ids for \(appId): \(betaGroupIds)")
 
-            if let betaTesterId = try await getBetaTesterId(appId: appId, email: email) {
-                try await assignExistingTesterToGroups(betaGroupIds, betaTesterId, appId: appId)
-                try? await resendBetaTesterInviteMail(appId: appId, betaTesterId: betaTesterId) // betaTester relationship deprecated WTF??
-            } else {
-                _ = try await createNewBetaTester(
-                    betaGroupIds,
-                    appId: appId,
-                    firstName: firstName,
-                    lastName: lastName,
-                    email: email
-                )
+            let result = try await service.ensureBetaTesterInvite(
+                appId: appId,
+                betaGroupIds: betaGroupIds,
+                email: email,
+                firstName: firstName,
+                lastName: lastName
+            )
+
+            switch result {
+            case .sent(let email):
+                logger.info("Invite sent to \(email.redactedEmail) for app \(appId)")
+            case .alreadyAccepted(let email):
+                logger.info("User \(email.redactedEmail) is already testing app \(appId)")
+            case .alreadyRegistered(let email):
+                logger.info("User \(email.redactedEmail) is a registered team member")
             }
         }
     }
@@ -616,80 +619,5 @@ private extension TestflightAPI {
         )
 
         return try betaGroupsResponse.ok.body.json.data.map(\.id)
-    }
-
-    func getBetaTesterId(appId: String, email: String) async throws -> String? {
-        let betaTestersResponse = try await client.betaTestersGetCollection(
-            .init(query: .init(
-                filter_lbrack_email_rbrack_: [email],
-                filter_lbrack_apps_rbrack_: [appId]
-            ))
-        )
-
-        let singleTesterData = try betaTestersResponse.ok.body.json.data.first(where: { $0.attributes?.email == email })
-        let singleTesterState = singleTesterData?.attributes?.state
-
-        if singleTesterState == .revoked {
-            logger.info("Tester \(email.redactedEmail) has been revoked, will invite again")
-            return nil
-        } else {
-            return singleTesterData.map(\.id)
-        }
-    }
-
-    func assignExistingTesterToGroups(_ betaGroupIds: [String], _ betaTesterId: String, appId: String) async throws {
-        for betaGroupId in betaGroupIds {
-            _ = try await client.betaTestersBetaGroupsCreateToManyRelationship(
-                path: .init(id: betaTesterId),
-                body: .json(.init(data: [.init(_type: .betaGroups, id: betaGroupId)]))
-            )
-
-            logger.info("Assigned tester to beta group \(betaGroupId): \(betaTesterId)")
-        }
-    }
-
-    func createNewBetaTester(_ betaGroupIds: [String], appId: String, firstName: String, lastName: String, email: String) async throws -> String? {
-        typealias Groups = Components.Schemas.BetaTesterCreateRequest.DataPayload.RelationshipsPayload.BetaGroupsPayload.DataPayloadPayload
-        let mappedGroups: [Groups] = betaGroupIds.map { .init(_type: .betaGroups, id: $0) }
-
-        let result = try await client.betaTestersCreateInstance(
-            .init(body: .json(.init(
-                data: .init(
-                    _type: .betaTesters,
-                    attributes: .init(firstName: firstName, lastName: lastName, email: email),
-                    relationships: .init(betaGroups: .init(data: mappedGroups))
-                )
-            )))
-        )
-
-        let isDeveloper = try? result.conflict
-
-        if isDeveloper != nil {
-            logger.info("\(email.redactedEmail) has the developer role. Resending the invite...")
-            try await inviteDeveloper(email: email, firstName: firstName, lastName: lastName)
-            return nil
-        } else {
-            let betaTesterId = try result.created.body.json.data.id
-            logger.info("Invited \(email.redactedEmail) with beta tester id: \(betaTesterId) to app id: \(appId)")
-            return betaTesterId
-        }
-    }
-
-    func resendBetaTesterInviteMail(appId: String, betaTesterId: String) async throws {
-        _ = try await client.betaTesterInvitationsCreateInstance(
-            .init(body: .json(.init(data: .init(
-                _type: .betaTesterInvitations,
-                relationships: .init(
-                    betaTester: .init(
-                        data: .init(_type: .betaTesters, id: betaTesterId)
-                    ),
-                    app: .init(
-                        data: .init( _type: .apps, id: appId)
-                    )
-                )
-            ))))
-        )
-
-        logger.info("Sent beta tester invitation email")
     }
 }
