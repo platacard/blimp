@@ -37,6 +37,8 @@ jobs:
           mkdir -p dist
           cp ".build/release/${{ env.PRODUCT_NAME }}" "dist/${{ env.PRODUCT_NAME }}"
           chmod +x "dist/${{ env.PRODUCT_NAME }}"
+          # Copy SPM resource bundles needed at runtime (e.g. Cronista_Cronista.bundle)
+          cp -R .build/release/*.bundle dist/ 2>/dev/null || true
 
       - name: Code sign binary (ad-hoc)
         run: |
@@ -49,7 +51,7 @@ jobs:
           ARCHIVE_NAME="${{ env.PRODUCT_NAME }}-${{ steps.version.outputs.version }}-macos-${ARCH}"
 
           cd dist
-          tar -czvf "${ARCHIVE_NAME}.tar.gz" "${{ env.PRODUCT_NAME }}"
+          tar -czvf "${ARCHIVE_NAME}.tar.gz" --exclude='*.tar.gz' --exclude='*.sha256' *
           shasum -a 256 "${ARCHIVE_NAME}.tar.gz" > "${ARCHIVE_NAME}.tar.gz.sha256"
 
           echo "archive_name=${ARCHIVE_NAME}" >> $GITHUB_OUTPUT
@@ -74,8 +76,11 @@ jobs:
           echo "# Download and extract" >> release_notes.md
           echo "curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/${{ steps.archive.outputs.archive_name }}.tar.gz | tar xz" >> release_notes.md
           echo "" >> release_notes.md
-          echo "# Move to PATH" >> release_notes.md
-          echo "sudo mv ${{ env.PRODUCT_NAME }} /usr/local/bin/" >> release_notes.md
+          echo "# Install binary and resource bundles" >> release_notes.md
+          echo "sudo mkdir -p /usr/local/libexec/${{ env.PRODUCT_NAME }}" >> release_notes.md
+          echo "sudo mv ${{ env.PRODUCT_NAME }} *.bundle /usr/local/libexec/${{ env.PRODUCT_NAME }}/" >> release_notes.md
+          echo 'printf '"'"'#!/bin/bash\nexec /usr/local/libexec/${{ env.PRODUCT_NAME }}/${{ env.PRODUCT_NAME }} "$@"\n'"'"' | sudo tee /usr/local/bin/${{ env.PRODUCT_NAME }} > /dev/null' >> release_notes.md
+          echo "sudo chmod +x /usr/local/bin/${{ env.PRODUCT_NAME }}" >> release_notes.md
           echo "" >> release_notes.md
           echo "# Verify installation" >> release_notes.md
           echo "${{ env.PRODUCT_NAME }} --help" >> release_notes.md
@@ -125,7 +130,9 @@ jobs:
             end
 
             def install
-              bin.install "blimp"
+              libexec.install "blimp"
+              Dir.glob("*.bundle").each { |b| libexec.install b }
+              bin.write_exec_script libexec/"blimp"
             end
 
             test do
