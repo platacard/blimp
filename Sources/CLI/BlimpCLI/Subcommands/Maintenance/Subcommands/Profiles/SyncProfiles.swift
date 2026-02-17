@@ -40,11 +40,29 @@ struct SyncProfiles: AsyncParsableCommand {
         let resolvedPath = storagePath == "." ? FileManager.default.currentDirectoryPath : storagePath
         let certificateNames = parseCertificateSelection(certificates)
 
-        let parsed = bundleIds.map { entry -> (bundleId: String, profileName: String) in
-            let parts = entry.split(separator: ":", maxSplits: 1)
+        var parsed: [(bundleId: String, profileName: String)] = []
+        for entry in bundleIds {
+            let parts = entry.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+            guard !parts.isEmpty else {
+                throw ValidationError("Invalid bundleId/profileName '\(entry)'. Expected format 'bundleId' or 'bundleId:profileName'.")
+            }
+
             let bundleId = String(parts[0])
-            let profileName = parts.count > 1 ? String(parts[1]) : bundleId
-            return (bundleId: bundleId, profileName: profileName)
+            guard !bundleId.isEmpty else {
+                throw ValidationError("Invalid bundleId/profileName '\(entry)'. Bundle ID must not be empty.")
+            }
+
+            let profileName: String
+            if parts.count > 1 {
+                profileName = String(parts[1])
+                guard !profileName.isEmpty else {
+                    throw ValidationError("Invalid bundleId/profileName '\(entry)'. Profile name must not be empty when ':' is used.")
+                }
+            } else {
+                profileName = bundleId
+            }
+
+            parsed.append((bundleId: bundleId, profileName: profileName))
         }
 
         try await Blimp.Maintenance.default.syncProfiles(
