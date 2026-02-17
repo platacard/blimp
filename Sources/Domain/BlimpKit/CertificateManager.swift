@@ -8,7 +8,6 @@ import Gito
 public struct CertificateManager: Sendable {
     private let certificateService: any CertificateService
     private let git: any GitManaging
-    private let encrypter: any EncryptionService
     private let certGenerator: any CertificateGenerating
     private let passphrase: String
     private let push: Bool
@@ -17,14 +16,12 @@ public struct CertificateManager: Sendable {
     public init(
         certificateService: any CertificateService,
         git: any GitManaging,
-        encrypter: any EncryptionService,
         certGenerator: any CertificateGenerating,
         passphrase: String,
         push: Bool = false
     ) {
         self.certificateService = certificateService
         self.git = git
-        self.encrypter = encrypter
         self.certGenerator = certGenerator
         self.passphrase = passphrase
         self.push = push
@@ -79,10 +76,9 @@ public struct CertificateManager: Sendable {
         }
 
         let p12 = try certGenerator.generateP12(certContent: certContent, privateKey: privateKey, passphrase: passphrase)
-        let encryptedP12 = try encrypter.encrypt(data: p12, password: passphrase)
 
         let p12Path = "\(certDir)/\(cert.id).p12"
-        try await git.writeFile(path: p12Path, content: encryptedP12)
+        try await git.writeFile(path: p12Path, content: p12)
         try await git.commitAndPush(message: "Add certificate \(cert.id) for \(platform.rawValue) \(type.rawValue)", push: push)
 
         logger.info("Created and stored certificate: \(cert.id)")

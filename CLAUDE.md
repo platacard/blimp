@@ -264,7 +264,7 @@ Sources/
 
 ### Flight Stages
 
-1. **Maintenance** (Hangar) - Full cert/profile/device management via App Store Connect API with Git storage. Certificates are encrypted (AES-256-GCM), profiles are stored unencrypted. Handles development, distribution, and ad-hoc profiles with automatic device fetching.
+1. **Maintenance** (Hangar) - Full cert/profile/device management via App Store Connect API with Git storage. Certificates are stored as PKCS#12 (.p12) with passphrase protection. Profiles are stored unencrypted. Handles development, distribution, and ad-hoc profiles with automatic device fetching.
 2. **TakeOff** - `xcodebuild archive/export`
 3. **Approach** - Upload IPA, poll processing
 4. **Land** - Set beta groups, submit review

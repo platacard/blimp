@@ -9,7 +9,7 @@ public extension Blimp {
     ///
     /// Provides:
     /// - Device registration and listing
-    /// - Certificate generation, revocation and encrypted storage
+    /// - Certificate generation, revocation and storage
     /// - Provisioning profile synchronization, listing, and removal
     struct Maintenance: Sendable {
         private let api: ProvisioningAPI
@@ -55,13 +55,11 @@ public extension Blimp {
             push: Bool = false
         ) async throws -> ProvisioningAPI.Certificate {
             let git = GitStorage(localPath: storagePath)
-            let encrypter = FileEncrypter()
             let certGenerator = OpenSSLCertificateGenerator()
 
             let manager = CertificateManager(
                 certificateService: api,
                 git: git,
-                encrypter: encrypter,
                 certGenerator: certGenerator,
                 passphrase: passphrase,
                 push: push

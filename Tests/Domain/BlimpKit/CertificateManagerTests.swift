@@ -5,7 +5,6 @@ import ProvisioningAPI
 final class CertificateManagerTests: XCTestCase {
     var mockCertService: MockCertificateService!
     var mockGit: MockGitRepo!
-    var mockEncrypter: MockEncrypter!
     var mockCertGen: MockCertificateGenerator!
     var manager: CertificateManager!
 
@@ -13,13 +12,11 @@ final class CertificateManagerTests: XCTestCase {
         super.setUp()
         mockCertService = MockCertificateService()
         mockGit = MockGitRepo()
-        mockEncrypter = MockEncrypter()
         mockCertGen = MockCertificateGenerator()
 
         manager = CertificateManager(
             certificateService: mockCertService,
             git: mockGit,
-            encrypter: mockEncrypter,
             certGenerator: mockCertGen,
             passphrase: "test-pass"
         )

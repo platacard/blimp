@@ -68,18 +68,6 @@ actor MockGitRepo: GitManaging {
     }
 }
 
-// MARK: - Encryption Mock
-
-class MockEncrypter: EncryptionService, @unchecked Sendable {
-    func encrypt(data: Data, password: String) throws -> Data {
-        return data
-    }
-
-    func decrypt(data: Data, password: String) throws -> Data {
-        return data
-    }
-}
-
 // MARK: - Certificate Generator Mock
 
 class MockCertificateGenerator: CertificateGenerating, @unchecked Sendable {
