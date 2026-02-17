@@ -311,8 +311,9 @@ swift test
 
 Git storage follows this structure:
 ```
-certificates/{platform}/{type}/{cert-id}.p12  # Encrypted with passphrase
-profiles/{platform}/{type}/{bundle-id}.mobileprovision  # Unencrypted
+certificates/{type}/{cert-id}.p12                        # Universal certs (DISTRIBUTION, DEVELOPMENT) - no platform dir
+certificates/{platform}/{type}/{cert-id}.p12             # Platform-specific certs (IOS_DEVELOPMENT, etc.)
+profiles/{platform}/{type}/{bundle-id}.mobileprovision   # Unencrypted
 ```
 
 Profile installation (`install-profiles`) extracts UUID via `security cms -D` and copies to:

@@ -96,7 +96,7 @@ public extension Blimp {
             let git = GitStorage(localPath: storagePath)
             try await git.cloneOrPull()
 
-            let certDir = "certificates/\(platform.rawValue)/\(type.rawValue)"
+            let certDir = type.storageDirectory(for: platform)
             let appleCerts = try await api.listCertificates(filterType: type)
 
             logger.info("Found \(appleCerts.count) \(type.rawValue) certificates on Developer Portal")
