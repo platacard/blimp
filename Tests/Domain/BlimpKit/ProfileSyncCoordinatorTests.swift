@@ -31,7 +31,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
         try await coordinator.sync(
             platform: .ios,
             type: .iosAppDevelopment,
-            bundleIds: [bundleId],
+            bundleIds: [(bundleId, bundleId)],
             certificateIds: [certificateId]
         )
 
@@ -59,7 +59,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
         try await coordinator.sync(
             platform: .ios,
             type: .iosAppDevelopment,
-            bundleIds: [bundleId],
+            bundleIds: [(bundleId, bundleId)],
             certificateIds: [certificateId]
         )
 
@@ -85,7 +85,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
         try await coordinator.sync(
             platform: .ios,
             type: .iosAppDevelopment,
-            bundleIds: [bundleId],
+            bundleIds: [(bundleId, bundleId)],
             certificateIds: [certificateId],
             force: true
         )
@@ -106,7 +106,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
         try await coordinator.sync(
             platform: .ios,
             type: .iosAppStore,
-            bundleIds: bundleIds,
+            bundleIds: bundleIds.map { ($0, $0) },
             certificateIds: [certificateId]
         )
 
@@ -117,6 +117,32 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
             let exists = await mockGit.fileExists(path: profilePath)
             XCTAssertTrue(exists, "Profile for \(bundleId) should exist")
         }
+    }
+
+    func testSyncWithCustomProfileName() async throws {
+        let bundleId = "com.example.app"
+        let profileName = "com.example.app.ah"
+        let certificateId = "cert-123"
+        mockProfileService.bundleIds[bundleId] = "bundle-resource-id"
+
+        try await coordinator.sync(
+            platform: .ios,
+            type: .iosAppAdhoc,
+            bundleIds: [(bundleId, profileName)],
+            certificateIds: [certificateId]
+        )
+
+        XCTAssertEqual(mockProfileService.profiles.count, 1)
+        let profile = mockProfileService.profiles.first
+        XCTAssertEqual(profile?.name, profileName, "Profile should be created with custom name")
+
+        let profilePath = "profiles/ios/IOS_APP_ADHOC/\(profileName).mobileprovision"
+        let profileExists = await mockGit.fileExists(path: profilePath)
+        XCTAssertTrue(profileExists, "Profile file should use custom name")
+
+        let wrongPath = "profiles/ios/IOS_APP_ADHOC/\(bundleId).mobileprovision"
+        let wrongExists = await mockGit.fileExists(path: wrongPath)
+        XCTAssertFalse(wrongExists, "Profile file should NOT use bundle ID as name")
     }
 
     // MARK: - Device Handling Tests
@@ -132,7 +158,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
         try await coordinator.sync(
             platform: .ios,
             type: .iosAppDevelopment,
-            bundleIds: [bundleId],
+            bundleIds: [(bundleId, bundleId)],
             certificateIds: [certificateId]
         )
 
@@ -150,7 +176,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
         try await coordinator.sync(
             platform: .ios,
             type: .iosAppAdhoc,
-            bundleIds: [bundleId],
+            bundleIds: [(bundleId, bundleId)],
             certificateIds: [certificateId]
         )
 
@@ -167,7 +193,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
         try await coordinator.sync(
             platform: .ios,
             type: .iosAppStore,
-            bundleIds: [bundleId],
+            bundleIds: [(bundleId, bundleId)],
             certificateIds: [certificateId]
         )
 
@@ -189,7 +215,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
         try await coordinator.sync(
             platform: .ios,
             type: .iosAppDevelopment,
-            bundleIds: [bundleId],
+            bundleIds: [(bundleId, bundleId)],
             certificateIds: [certificateId]
         )
 
@@ -211,7 +237,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
         try await coordinator.sync(
             platform: .ios,
             type: .iosAppDevelopment,
-            bundleIds: [bundleId],
+            bundleIds: [(bundleId, bundleId)],
             certificateIds: [certificateId]
         )
 
@@ -246,7 +272,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
             try await coordinator.sync(
                 platform: .ios,
                 type: .iosAppDevelopment,
-                bundleIds: [bundleId],
+                bundleIds: [(bundleId, bundleId)],
                 certificateIds: [certificateId]
             )
             XCTFail("Should throw error for missing bundle ID")

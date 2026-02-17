@@ -29,25 +29,26 @@ public struct ProfileSyncCoordinator: Sendable {
     /// - Parameters:
     ///   - platform: Target platform
     ///   - type: Profile type
-    ///   - bundleIds: Bundle identifiers to sync
+    ///   - bundleIds: Tuples of (bundleId, profileName). bundleId is used for Apple API lookup, profileName for the stored filename.
     ///   - certificateIds: IDs of certificates to include (must exist in Apple Developer Portal)
     ///   - force: If true, regenerates profiles even if they exist
     public func sync(
         platform: ProvisioningAPI.Platform,
         type: ProvisioningAPI.ProfileType,
-        bundleIds: [String],
+        bundleIds: [(bundleId: String, profileName: String)],
         certificateIds: [String],
         force: Bool = false
     ) async throws {
         logger.info("Starting profile sync for \(platform.rawValue) \(type.rawValue)")
-        logger.info("Bundle IDs: \(bundleIds.joined(separator: ", "))")
+        logger.info("Bundle IDs: \(bundleIds.map(\.bundleId).joined(separator: ", "))")
         logger.info("Using \(certificateIds.count) certificate(s): \(certificateIds.joined(separator: ", "))")
 
         try await git.cloneOrPull()
 
-        for bundleId in bundleIds {
+        for entry in bundleIds {
             try await syncProfile(
-                bundleId: bundleId,
+                bundleId: entry.bundleId,
+                profileName: entry.profileName,
                 type: type,
                 platform: platform,
                 certificateIds: certificateIds,
@@ -60,26 +61,27 @@ public struct ProfileSyncCoordinator: Sendable {
 
     private func syncProfile(
         bundleId: String,
+        profileName: String,
         type: ProvisioningAPI.ProfileType,
         platform: ProvisioningAPI.Platform,
         certificateIds: [String],
         force: Bool
     ) async throws {
         let profileDir = "profiles/\(platform.rawValue)/\(type.rawValue)"
-        let fileName = "\(bundleId).mobileprovision"
+        let fileName = "\(profileName).mobileprovision"
         let filePath = "\(profileDir)/\(fileName)"
 
         let fileExists = await git.fileExists(path: filePath)
 
         if !force && fileExists {
-            logger.info("Profile \(bundleId) exists in storage, skipping.")
+            logger.info("Profile \(profileName) exists in storage, skipping.")
             return
         }
 
         if force {
-            let existingProfiles = try await profileService.listProfiles(name: bundleId)
+            let existingProfiles = try await profileService.listProfiles(name: profileName)
             if !existingProfiles.isEmpty {
-                logger.info("Deleting \(existingProfiles.count) existing profile(s) for \(bundleId)")
+                logger.info("Deleting \(existingProfiles.count) existing profile(s) for \(profileName)")
                 for profile in existingProfiles {
                     try await profileService.deleteProfile(id: profile.id)
                 }
@@ -93,7 +95,7 @@ public struct ProfileSyncCoordinator: Sendable {
         }
 
         let newProfile = try await profileService.createProfile(
-            name: bundleId,
+            name: profileName,
             type: type,
             bundleId: bundleResourceId,
             certificateIds: certificateIds,
@@ -105,9 +107,9 @@ public struct ProfileSyncCoordinator: Sendable {
         }
 
         try await git.writeFile(path: filePath, content: content)
-        try await git.commitAndPush(message: "Update profile \(bundleId)", push: push)
+        try await git.commitAndPush(message: "Update profile \(profileName)", push: push)
 
-        logger.info("Synced profile: \(bundleId)")
+        logger.info("Synced profile: \(profileName)")
     }
 
     private func resolveDeviceIds(type: ProvisioningAPI.ProfileType, platform: ProvisioningAPI.Platform) async throws -> [String]? {

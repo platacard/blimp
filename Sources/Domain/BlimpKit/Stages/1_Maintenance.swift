@@ -155,11 +155,12 @@ public extension Blimp {
         /// Automatically finds the appropriate certificate(s) from storage based on profile type.
         /// Does NOT create certificates - use `generateCertificate` first if needed.
         /// - Parameters:
+        ///   - bundleIds: Tuples of (bundleId, profileName). bundleId is used for Apple API lookup, profileName for the stored filename.
         ///   - certificateNames: Optional filter for certificate names. If nil, uses all valid certificates.
         public func syncProfiles(
             platform: ProvisioningAPI.Platform,
             type: ProvisioningAPI.ProfileType,
-            bundleIds: [String],
+            bundleIds: [(bundleId: String, profileName: String)],
             force: Bool,
             storagePath: String,
             push: Bool = false,

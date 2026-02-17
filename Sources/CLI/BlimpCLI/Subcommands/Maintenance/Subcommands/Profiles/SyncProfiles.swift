@@ -13,7 +13,7 @@ struct SyncProfiles: AsyncParsableCommand {
     @Option(
         name: .shortAndLong,
         parsing: .upToNextOption,
-        help: "Bundle IDs to sync"
+        help: "Bundle IDs to sync. Use bundleId:profileName to save under a different name (e.g. com.app:com.app.ah)"
     )
     var bundleIds: [String]
 
@@ -40,10 +40,35 @@ struct SyncProfiles: AsyncParsableCommand {
         let resolvedPath = storagePath == "." ? FileManager.default.currentDirectoryPath : storagePath
         let certificateNames = parseCertificateSelection(certificates)
 
+        var parsed: [(bundleId: String, profileName: String)] = []
+        for entry in bundleIds {
+            guard !entry.isEmpty else {
+                throw ValidationError("Invalid bundleId/profileName '\(entry)'. Expected format 'bundleId' or 'bundleId:profileName'.")
+            }
+
+            let parts = entry.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+            let bundleId = String(parts[0])
+            guard !bundleId.isEmpty else {
+                throw ValidationError("Invalid bundleId/profileName '\(entry)'. Bundle ID must not be empty.")
+            }
+
+            let profileName: String
+            if parts.count > 1 {
+                profileName = String(parts[1])
+                guard !profileName.isEmpty else {
+                    throw ValidationError("Invalid bundleId/profileName '\(entry)'. Profile name must not be empty when ':' is used.")
+                }
+            } else {
+                profileName = bundleId
+            }
+
+            parsed.append((bundleId: bundleId, profileName: profileName))
+        }
+
         try await Blimp.Maintenance.default.syncProfiles(
             platform: platform,
             type: type.asAPI(platform: platform),
-            bundleIds: bundleIds,
+            bundleIds: parsed,
             force: force,
             storagePath: resolvedPath,
             push: push,
