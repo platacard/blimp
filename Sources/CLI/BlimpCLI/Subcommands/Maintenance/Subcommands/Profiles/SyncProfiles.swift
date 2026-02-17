@@ -13,7 +13,7 @@ struct SyncProfiles: AsyncParsableCommand {
     @Option(
         name: .shortAndLong,
         parsing: .upToNextOption,
-        help: "Bundle IDs to sync"
+        help: "Bundle IDs to sync. Use bundleId:profileName to save under a different name (e.g. com.app:com.app.ah)"
     )
     var bundleIds: [String]
 
@@ -40,10 +40,17 @@ struct SyncProfiles: AsyncParsableCommand {
         let resolvedPath = storagePath == "." ? FileManager.default.currentDirectoryPath : storagePath
         let certificateNames = parseCertificateSelection(certificates)
 
+        let parsed = bundleIds.map { entry -> (bundleId: String, profileName: String) in
+            let parts = entry.split(separator: ":", maxSplits: 1)
+            let bundleId = String(parts[0])
+            let profileName = parts.count > 1 ? String(parts[1]) : bundleId
+            return (bundleId: bundleId, profileName: profileName)
+        }
+
         try await Blimp.Maintenance.default.syncProfiles(
             platform: platform,
             type: type.asAPI(platform: platform),
-            bundleIds: bundleIds,
+            bundleIds: parsed,
             force: force,
             storagePath: resolvedPath,
             push: push,
