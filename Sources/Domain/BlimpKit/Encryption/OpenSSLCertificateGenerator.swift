@@ -44,20 +44,21 @@ public struct OpenSSLCertificateGenerator: CertificateGenerating {
         try certContent.write(to: certPath)
         try privateKey.write(to: keyPath)
 
-        // Pass passphrase via environment variable for security
+        // Use -legacy for OpenSSL 3.x compatibility with macOS Keychain.
+        // Falls back without it for LibreSSL which doesn't need (or support) the flag.
+        let env = ["BLIMP_P12_PASSPHRASE": passphrase]
+        let baseArgs = [
+            "openssl", "pkcs12", "-export",
+            "-inkey", keyPath.path,
+            "-in", certPath.path,
+            "-out", p12Path.path,
+            "-passout", "env:BLIMP_P12_PASSPHRASE"
+        ]
+
         do {
-            try Shell.arguments(
-                [
-                    "openssl", "pkcs12", "-export",
-                    "-inkey", keyPath.path,
-                    "-in", certPath.path,
-                    "-out", p12Path.path,
-                    "-passout", "env:BLIMP_P12_PASSPHRASE"
-                ],
-                environment: ["BLIMP_P12_PASSPHRASE": passphrase]
-            ).run()
+            try Shell.arguments(baseArgs + ["-legacy"], environment: env).run()
         } catch {
-            throw Error.commandFailed("openssl pkcs12 failed: \(error.localizedDescription)")
+            try Shell.arguments(baseArgs, environment: env).run()
         }
 
         let p12Data = try Data(contentsOf: p12Path)
