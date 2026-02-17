@@ -41,7 +41,7 @@ public struct CertificateManager: Sendable {
     ) async throws -> String? {
         try await git.cloneOrPull()
 
-        let certDir = "certificates/\(platform.rawValue)/\(type.rawValue)"
+        let certDir = type.storageDirectory(for: platform)
         let appleCerts = try await certificateService.listCertificates(filterType: type)
 
         logger.info("Found \(appleCerts.count) certificates of type \(type.rawValue) on Developer Portal")
@@ -69,7 +69,7 @@ public struct CertificateManager: Sendable {
     ) async throws -> ProvisioningAPI.Certificate {
         try await git.cloneOrPull()
 
-        let certDir = "certificates/\(platform.rawValue)/\(type.rawValue)"
+        let certDir = type.storageDirectory(for: platform)
 
         let (csr, privateKey) = try certGenerator.generateCSR()
 

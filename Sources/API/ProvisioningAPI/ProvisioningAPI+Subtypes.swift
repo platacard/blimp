@@ -51,11 +51,29 @@ public extension ProvisioningAPI {
         case macAppDistribution = "MAC_APP_DISTRIBUTION"
         case distribution = "DISTRIBUTION"
         case development = "DEVELOPMENT"
-        
+
+        /// Universal certificates (Apple Distribution / Apple Development) work across all platforms.
+        public var isUniversal: Bool {
+            switch self {
+            case .distribution, .development: true
+            case .iosDevelopment, .iosDistribution, .macAppDevelopment, .macAppDistribution: false
+            }
+        }
+
+        /// Returns the storage directory for this certificate type.
+        /// Universal types omit the platform directory; platform-specific types include it.
+        public func storageDirectory(for platform: Platform) -> String {
+            if isUniversal {
+                return "certificates/\(rawValue)"
+            } else {
+                return "certificates/\(platform.rawValue)/\(rawValue)"
+            }
+        }
+
         var asApiType: Components.Schemas.CertificateType {
             return .init(rawValue: self.rawValue)!
         }
-        
+
         var asFilterType: Operations.CertificatesGetCollection.Input.Query.FilterLbrackCertificateTypeRbrackPayloadPayload {
             return .init(rawValue: self.rawValue)!
         }
