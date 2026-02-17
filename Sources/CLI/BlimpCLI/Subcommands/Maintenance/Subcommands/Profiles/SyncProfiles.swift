@@ -42,11 +42,11 @@ struct SyncProfiles: AsyncParsableCommand {
 
         var parsed: [(bundleId: String, profileName: String)] = []
         for entry in bundleIds {
-            let parts = entry.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
-            guard !parts.isEmpty else {
+            guard !entry.isEmpty else {
                 throw ValidationError("Invalid bundleId/profileName '\(entry)'. Expected format 'bundleId' or 'bundleId:profileName'.")
             }
 
+            let parts = entry.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
             let bundleId = String(parts[0])
             guard !bundleId.isEmpty else {
                 throw ValidationError("Invalid bundleId/profileName '\(entry)'. Bundle ID must not be empty.")
