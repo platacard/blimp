@@ -137,20 +137,9 @@ public struct ProfileInstaller: Sendable {
 
     /// Extracts UUID from a provisioning profile using `security cms -D`
     private func extractUUID(from profileData: Data) throws -> String {
-        let tempDir = FileManager.default.temporaryDirectory
-        let tempFile = tempDir.appendingPathComponent("\(UUID().uuidString).mobileprovision")
+        let plist = try ProvisioningProfileInfo.decodePlist(profileData: profileData, shell: shell)
 
-        defer {
-            try? FileManager.default.removeItem(at: tempFile)
-        }
-
-        try profileData.write(to: tempFile)
-
-        let output = try shell.run(arguments: ["security", "cms", "-D", "-i", tempFile.path])
-
-        guard let plistData = output.data(using: .utf8),
-              let plist = try? PropertyListSerialization.propertyList(from: plistData, format: nil) as? [String: Any],
-              let uuid = plist["UUID"] as? String else {
+        guard let uuid = plist["UUID"] as? String else {
             throw Error.invalidProfile("Could not extract UUID from profile")
         }
 

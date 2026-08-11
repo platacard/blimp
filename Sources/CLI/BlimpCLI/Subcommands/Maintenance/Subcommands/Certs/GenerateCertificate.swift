@@ -19,54 +19,31 @@ struct GenerateCertificate: AsyncParsableCommand {
     @Option(help: "Storage path")
     var storagePath: String = "."
 
-    @Option(help: "Passphrase (or set BLIMP_PASSPHRASE, or enter interactively)")
+    @Option(help: "Certificate password (or set \(SecretEnvKey.certificatesPassword), or enter interactively)")
     var passphrase: String?
+
+    @Flag(help: "Push to remote after committing")
+    var push: Bool = false
 
     func run() async throws {
         let logger = Cronista(module: "blimp", category: "Maintenance")
-        let passphrase = try resolvePassphrase(passphrase)
+        let passphrase = try resolveSecret(
+            cliValue: passphrase,
+            environmentKey: SecretEnvKey.certificatesPassword,
+            prompt: "Enter passphrase: "
+        )
         let resolvedPath = storagePath == "." ? FileManager.default.currentDirectoryPath : storagePath
 
         let cert = try await Blimp.Maintenance.default.generateCertificate(
             type: type,
             platform: platform,
             storagePath: resolvedPath,
-            passphrase: passphrase
+            passphrase: passphrase,
+            push: push
         )
 
         logger.info("Certificate created successfully")
         logger.info("  ID: \(cert.id)")
         logger.info("  Name: \(cert.name)")
     }
-}
-
-// MARK: - Passphrase interactive input
-
-private func resolvePassphrase(_ cliValue: String?) throws -> String {
-    // Environment variable first (CI-friendly)
-    if let value = ProcessInfo.processInfo.environment["BLIMP_PASSPHRASE"] { return value }
-    if let value = cliValue { return value }
-
-    // Interactive fallback
-    print("Enter passphrase: ", terminator: "")
-    guard let pass = readSecureInput() else {
-        throw ValidationError("Failed to read passphrase")
-    }
-    return pass
-}
-
-private func readSecureInput() -> String? {
-    var oldTermios = termios()
-    tcgetattr(STDIN_FILENO, &oldTermios)
-
-    var newTermios = oldTermios
-    newTermios.c_lflag &= ~UInt(ECHO)
-    tcsetattr(STDIN_FILENO, TCSANOW, &newTermios)
-
-    let result = readLine()
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldTermios)
-    print()
-
-    return result
 }

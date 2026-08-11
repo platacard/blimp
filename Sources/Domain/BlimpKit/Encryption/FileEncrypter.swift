@@ -21,6 +21,11 @@ public struct FileEncrypter: EncryptionService, Sendable {
 
     public init() {}
 
+    /// Whether the data carries the OpenSSL `Salted__` header produced by `encrypt`.
+    public static func isEncrypted(_ data: Data) -> Bool {
+        data.count >= magic.count && data.prefix(magic.count) == magic
+    }
+
     public func encrypt(data: Data, password: String) throws -> Data {
         let salt = try generateSalt()
         let (key, iv) = try deriveKeyAndIV(password: password, salt: salt)

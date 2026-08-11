@@ -15,6 +15,7 @@ struct Maintenance: AsyncParsableCommand {
             // Certificates
             ListCertificates.self,
             GenerateCertificate.self,
+            InstallCertificates.self,
             RevokeCertificate.self,
             // Profiles
             ListProfiles.self,
