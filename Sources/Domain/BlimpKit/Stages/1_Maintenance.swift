@@ -52,7 +52,8 @@ public extension Blimp {
             platform: ProvisioningAPI.Platform,
             storagePath: String,
             passphrase: String,
-            push: Bool = false
+            push: Bool = false,
+            rotate: Bool = false
         ) async throws -> ProvisioningAPI.Certificate {
             let git = GitStorage(localPath: storagePath)
             let certGenerator = OpenSSLCertificateGenerator()
@@ -65,7 +66,9 @@ public extension Blimp {
                 push: push
             )
 
-            return try await manager.rotateCertificate(type: type, platform: platform)
+            return rotate
+                ? try await manager.rotateCertificate(type: type, platform: platform)
+                : try await manager.createAndStoreCertificate(type: type, platform: platform)
         }
 
         /// Finds a valid certificate ID from storage that matches Apple Developer Portal.

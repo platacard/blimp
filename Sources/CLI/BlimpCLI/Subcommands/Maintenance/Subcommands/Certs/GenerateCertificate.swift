@@ -7,7 +7,7 @@ import Cronista
 struct GenerateCertificate: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "generate-cert",
-        abstract: "Rotate the certificate of a type: generate a new one, revoke all previous of that type"
+        abstract: "Generate and store a new certificate; --rotate revokes all previous of the type"
     )
 
     @Option(help: "Certificate type: development, distribution")
@@ -25,6 +25,9 @@ struct GenerateCertificate: AsyncParsableCommand {
     @Flag(help: "Push to remote after committing")
     var push: Bool = false
 
+    @Flag(help: "Revoke all previous certificates of the type and prune their stored p12s")
+    var rotate: Bool = false
+
     func run() async throws {
         let logger = Cronista(module: "blimp", category: "Maintenance")
         let passphrase = try resolveSecret(
@@ -39,7 +42,8 @@ struct GenerateCertificate: AsyncParsableCommand {
             platform: platform,
             storagePath: resolvedPath,
             passphrase: passphrase,
-            push: push
+            push: push,
+            rotate: rotate
         )
 
         logger.info("Certificate created successfully")
