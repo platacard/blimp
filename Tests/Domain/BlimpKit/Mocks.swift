@@ -12,6 +12,7 @@ actor MockGitRepo: GitManaging {
     var fileStore: [String: Data] = [:]
     var pushedCommits: [String] = []
     var cloneOrPullCalled = false
+    var cloneOrPullCount = 0
     private var remoteURL: String? = nil
     private let _localURL: URL
 
@@ -31,6 +32,7 @@ actor MockGitRepo: GitManaging {
 
     func cloneOrPull() throws {
         cloneOrPullCalled = true
+        cloneOrPullCount += 1
     }
 
     func setRemote(url: String) throws {

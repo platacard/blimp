@@ -68,6 +68,88 @@ final class ProfileInstallerTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: expectedPath.path))
     }
 
+    // MARK: - Batch install
+
+    func testBatchInstallsAllBundleIdsWithSinglePull() async throws {
+        let uuid = "12345678-1234-1234-1234-123456789abc"
+        for bundleId in ["com.example.app", "com.example.app.extension"] {
+            try await mockGit.writeFile(
+                path: "profiles/ios/IOS_APP_DEVELOPMENT/\(bundleId).mobileprovision",
+                content: Data("fake profile".utf8)
+            )
+        }
+
+        mockShell.outputForCommand = { _ in
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <plist version="1.0">
+            <dict>
+                <key>UUID</key>
+                <string>\(uuid)</string>
+            </dict>
+            </plist>
+            """
+        }
+
+        let installed = try await installer.installProfiles(
+            platform: .ios,
+            type: .iosAppDevelopment,
+            bundleIds: ["com.example.app", "com.example.app.extension"]
+        )
+
+        XCTAssertEqual(installed.map(\.bundleId), ["com.example.app", "com.example.app.extension"])
+        let pulls = await mockGit.cloneOrPullCount
+        XCTAssertEqual(pulls, 1)
+    }
+
+    func testBatchListsEveryMissingBundleId() async throws {
+        try await mockGit.writeFile(
+            path: "profiles/ios/IOS_APP_DEVELOPMENT/com.example.app.mobileprovision",
+            content: Data("fake profile".utf8)
+        )
+
+        do {
+            _ = try await installer.installProfiles(
+                platform: .ios,
+                type: .iosAppDevelopment,
+                bundleIds: ["com.example.app", "com.missing.one", "com.missing.two"]
+            )
+            XCTFail("Expected profilesNotFound")
+        } catch let error as ProfileInstaller.Error {
+            XCTAssertTrue(error.localizedDescription.contains("com.missing.one"))
+            XCTAssertTrue(error.localizedDescription.contains("com.missing.two"))
+        }
+    }
+
+    func testBatchSkipsPullWhenDisabled() async throws {
+        try await mockGit.writeFile(
+            path: "profiles/ios/IOS_APP_DEVELOPMENT/com.example.app.mobileprovision",
+            content: Data("fake profile".utf8)
+        )
+
+        mockShell.outputForCommand = { _ in
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <plist version="1.0">
+            <dict>
+                <key>UUID</key>
+                <string>12345678-1234-1234-1234-123456789abc</string>
+            </dict>
+            </plist>
+            """
+        }
+
+        _ = try await installer.installProfiles(
+            platform: .ios,
+            type: .iosAppDevelopment,
+            bundleIds: ["com.example.app"],
+            pull: false
+        )
+
+        let pulls = await mockGit.cloneOrPullCount
+        XCTAssertEqual(pulls, 0)
+    }
+
     // MARK: - Bundle ID Filtering
 
     func testInstallProfileFiltersByExactBundleId() async throws {

@@ -96,11 +96,14 @@ public struct CertificateInstaller: Sendable {
         passphrase: String,
         keychain: Keychain = .login,
         keychainPassword: String? = nil,
-        installWWDR: Bool = true
+        installWWDR: Bool = true,
+        pull: Bool = true
     ) async throws -> [InstalledCertificate] {
         logger.info("Installing certificates for \(platform.rawValue)/\(type.rawValue)")
 
-        try await git.cloneOrPull()
+        if pull {
+            try await git.cloneOrPull()
+        }
 
         let keychainPath = keychain.resolvedPath
 
