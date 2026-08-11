@@ -40,6 +40,21 @@ final class CertificateManagerTests: XCTestCase {
         XCTAssertEqual(files, ["\(cert.id).p12"])
     }
 
+    func testRotateFailedCreationRevokesAndDeletesNothing() async throws {
+        let oldDev = try await mockCertService.createCertificate(csrContent: "csr", type: .development)
+        try await mockGit.writeFile(path: "certificates/DEVELOPMENT/\(oldDev.id).p12", content: Data("OLD".utf8))
+        mockCertService.createError = NSError(domain: "asc", code: 1)
+
+        do {
+            _ = try await manager.rotateCertificate(type: .development, platform: .ios)
+            XCTFail("Expected creation failure")
+        } catch {}
+
+        XCTAssertTrue(mockCertService.deletedCertificateIds.isEmpty)
+        let stillStored = await mockGit.fileExists(path: "certificates/DEVELOPMENT/\(oldDev.id).p12")
+        XCTAssertTrue(stillStored)
+    }
+
     // MARK: - Find Certificate Tests
 
     func testFindValidCertificateReturnsIdWhenExists() async throws {

@@ -114,11 +114,10 @@ public struct CertificateManager: Sendable {
         }
 
         let dirURL = git.localURL.appendingPathComponent(certDir)
-        if let files = try? FileManager.default.contentsOfDirectory(atPath: dirURL.path) {
-            for file in files where file.hasSuffix(".p12") && file != "\(cert.id).p12" {
-                try FileManager.default.removeItem(at: dirURL.appendingPathComponent(file))
-                logger.info("Removed stored \(file)")
-            }
+        let files = try FileManager.default.contentsOfDirectory(atPath: dirURL.path)
+        for file in files where file.hasSuffix(".p12") && file != "\(cert.id).p12" {
+            try FileManager.default.removeItem(at: dirURL.appendingPathComponent(file))
+            logger.info("Removed stored \(file)")
         }
 
         try await git.commitAndPush(

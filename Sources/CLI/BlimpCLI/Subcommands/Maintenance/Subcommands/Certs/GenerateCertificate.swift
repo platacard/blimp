@@ -7,7 +7,7 @@ import Cronista
 struct GenerateCertificate: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "generate-cert",
-        abstract: "Rotate the certificate of a type: generate a new one, revoke the previous"
+        abstract: "Rotate the certificate of a type: generate a new one, revoke all previous of that type"
     )
 
     @Option(help: "Certificate type: development, distribution")
