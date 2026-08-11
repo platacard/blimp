@@ -19,14 +19,14 @@ struct GenerateCertificate: AsyncParsableCommand {
     @Option(help: "Storage path")
     var storagePath: String = "."
 
-    @Option(help: "Passphrase (or set BLIMP_PASSPHRASE, or enter interactively)")
+    @Option(help: "Certificate password (or set CERTIFICATES_PASSWORD, or enter interactively)")
     var passphrase: String?
 
     func run() async throws {
         let logger = Cronista(module: "blimp", category: "Maintenance")
         let passphrase = try resolveSecret(
             cliValue: passphrase,
-            environmentKey: "BLIMP_PASSPHRASE",
+            environmentKey: "CERTIFICATES_PASSWORD",
             prompt: "Enter passphrase: "
         )
         let resolvedPath = storagePath == "." ? FileManager.default.currentDirectoryPath : storagePath

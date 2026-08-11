@@ -25,7 +25,7 @@ struct InstallCertificates: AsyncParsableCommand {
     @Option(help: "Keychain password for codesign access without UI prompts (or set KEYCHAIN_PASSWORD)")
     var keychainPassword: String?
 
-    @Option(help: "Passphrase (or set BLIMP_PASSPHRASE, or enter interactively)")
+    @Option(help: "Certificate password (or set CERTIFICATES_PASSWORD, or enter interactively)")
     var passphrase: String?
 
     @Flag(help: "Skip installing the Apple WWDR intermediate certificate")
@@ -35,7 +35,7 @@ struct InstallCertificates: AsyncParsableCommand {
         let logger = Cronista(module: "blimp", category: "Maintenance")
         let passphrase = try resolveSecret(
             cliValue: passphrase,
-            environmentKey: "BLIMP_PASSPHRASE",
+            environmentKey: "CERTIFICATES_PASSWORD",
             prompt: "Enter passphrase: "
         )
         let keychainPassword = self.keychainPassword ?? ProcessInfo.processInfo.environment["KEYCHAIN_PASSWORD"]

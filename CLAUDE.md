@@ -321,7 +321,7 @@ Profile installation (`install-profiles`) extracts UUID via `security cms -D` an
 `~/Library/MobileDevice/Provisioning Profiles/{uuid}.mobileprovision`
 
 Certificate installation (`install-certs`) decrypts stored `.p12` files with the storage
-passphrase (`BLIMP_PASSPHRASE`) and imports them into the keychain via `security import`
+certificate password (`CERTIFICATES_PASSWORD`) and imports them into the keychain via `security import`
 with codesign access; it also installs the Apple WWDR intermediate certificate when missing.
 Pass `--keychain-password` (or `KEYCHAIN_PASSWORD`) to suppress codesign UI prompts via
 `security set-key-partition-list`.
