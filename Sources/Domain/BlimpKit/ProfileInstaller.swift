@@ -137,8 +137,9 @@ public struct ProfileInstaller: Sendable {
 
     /// Extracts UUID from a provisioning profile using `security cms -D`
     private func extractUUID(from profileData: Data) throws -> String {
-        guard let plist = try? ProvisioningProfileInfo.decodePlist(profileData: profileData, shell: shell),
-              let uuid = plist["UUID"] as? String else {
+        let plist = try ProvisioningProfileInfo.decodePlist(profileData: profileData, shell: shell)
+
+        guard let uuid = plist["UUID"] as? String else {
             throw Error.invalidProfile("Could not extract UUID from profile")
         }
 

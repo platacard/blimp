@@ -171,7 +171,7 @@ final class ProfileInstallerTests: XCTestCase {
             )
             XCTFail("Should throw error for invalid profile")
         } catch {
-            XCTAssertTrue(error.localizedDescription.contains("UUID"))
+            XCTAssertTrue(error.localizedDescription.contains("Could not decode profile plist"))
         }
     }
 
