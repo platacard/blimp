@@ -55,6 +55,10 @@ public extension Blimp {
             push: Bool = false,
             rotate: Bool = false
         ) async throws -> ProvisioningAPI.Certificate {
+            if rotate && !push {
+                throw MaintenanceError.rotateRequiresPush
+            }
+
             let git = GitStorage(localPath: storagePath)
             let certGenerator = OpenSSLCertificateGenerator()
 
@@ -239,11 +243,14 @@ public extension Blimp {
         public enum MaintenanceError: Error, LocalizedError {
             case missingData(String)
             case certificateNotFound(String)
+            case rotateRequiresPush
 
             public var errorDescription: String? {
                 switch self {
                 case .missingData(let msg): return msg
                 case .certificateNotFound(let msg): return msg
+                case .rotateRequiresPush:
+                    return "Rotation revokes portal certificates, so the replacement p12 must reach the shared storage: pass push together with rotate"
                 }
             }
         }
