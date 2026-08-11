@@ -87,6 +87,7 @@ class MockCertificateGenerator: CertificateGenerating, @unchecked Sendable {
 class MockCertificateService: CertificateService, @unchecked Sendable {
     var certificates: [ProvisioningAPI.Certificate] = []
     var deletedCertificateIds: [String] = []
+    var createError: Error?
 
     func listCertificates(filterType: ProvisioningAPI.CertificateType?) async throws -> [ProvisioningAPI.Certificate] {
         if let filter = filterType {
@@ -96,6 +97,7 @@ class MockCertificateService: CertificateService, @unchecked Sendable {
     }
 
     func createCertificate(csrContent: String, type: ProvisioningAPI.CertificateType) async throws -> ProvisioningAPI.Certificate {
+        if let createError { throw createError }
         let cert = ProvisioningAPI.Certificate(
             id: UUID().uuidString,
             name: "Mock Cert",

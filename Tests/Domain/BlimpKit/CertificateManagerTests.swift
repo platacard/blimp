@@ -22,6 +22,44 @@ final class CertificateManagerTests: XCTestCase {
         )
     }
 
+    // MARK: - Rotation
+
+    func testRotateRevokesOtherCertsOfTypeAndPrunesStorage() async throws {
+        let oldDev = try await mockCertService.createCertificate(csrContent: "csr", type: .development)
+        let dist = try await mockCertService.createCertificate(csrContent: "csr", type: .distribution)
+        try await mockGit.writeFile(path: "certificates/DEVELOPMENT/\(oldDev.id).p12", content: Data("OLD".utf8))
+
+        let cert = try await manager.rotateCertificate(type: .development, platform: .ios)
+
+        let deleted = mockCertService.deletedCertificateIds
+        XCTAssertEqual(deleted, [oldDev.id])
+        XCTAssertFalse(deleted.contains(dist.id))
+
+        let dir = await mockGit.localURL.appendingPathComponent("certificates/DEVELOPMENT")
+        let files = try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.hasSuffix(".p12") }
+        XCTAssertEqual(files, ["\(cert.id).p12"])
+
+        let commits = await mockGit.pushedCommits
+        XCTAssertEqual(commits.count, 2)
+        XCTAssertTrue(commits[0].contains("Add certificate \(cert.id)"))
+        XCTAssertTrue(commits[1].contains("Prune revoked certificates \(oldDev.id)"))
+    }
+
+    func testRotateFailedCreationRevokesAndDeletesNothing() async throws {
+        let oldDev = try await mockCertService.createCertificate(csrContent: "csr", type: .development)
+        try await mockGit.writeFile(path: "certificates/DEVELOPMENT/\(oldDev.id).p12", content: Data("OLD".utf8))
+        mockCertService.createError = NSError(domain: "asc", code: 1)
+
+        do {
+            _ = try await manager.rotateCertificate(type: .development, platform: .ios)
+            XCTFail("Expected creation failure")
+        } catch {}
+
+        XCTAssertTrue(mockCertService.deletedCertificateIds.isEmpty)
+        let stillStored = await mockGit.fileExists(path: "certificates/DEVELOPMENT/\(oldDev.id).p12")
+        XCTAssertTrue(stillStored)
+    }
+
     // MARK: - Find Certificate Tests
 
     func testFindValidCertificateReturnsIdWhenExists() async throws {
