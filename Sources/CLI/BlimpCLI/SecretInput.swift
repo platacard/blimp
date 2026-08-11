@@ -2,6 +2,11 @@ import ArgumentParser
 import Darwin
 import Foundation
 
+enum SecretEnvKey {
+    static let certificatesPassword = "CERTIFICATES_PASSWORD"
+    static let keychainPassword = "KEYCHAIN_PASSWORD"
+}
+
 /// Resolves a secret from environment, CLI argument, or interactive hidden input.
 func resolveSecret(cliValue: String?, environmentKey: String, prompt: String) throws -> String {
     if let value = cliValue { return value }

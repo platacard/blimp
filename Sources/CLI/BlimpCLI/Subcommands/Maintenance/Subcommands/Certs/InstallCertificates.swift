@@ -22,10 +22,10 @@ struct InstallCertificates: AsyncParsableCommand {
     @Option(help: "Keychain path (defaults to login keychain)")
     var keychain: String?
 
-    @Option(help: "Keychain password for codesign access without UI prompts (or set KEYCHAIN_PASSWORD)")
+    @Option(help: "Keychain password for codesign access without UI prompts (or set \(SecretEnvKey.keychainPassword))")
     var keychainPassword: String?
 
-    @Option(help: "Certificate password (or set CERTIFICATES_PASSWORD, or enter interactively)")
+    @Option(help: "Certificate password (or set \(SecretEnvKey.certificatesPassword), or enter interactively)")
     var passphrase: String?
 
     @Flag(help: "Skip installing the Apple WWDR intermediate certificate")
@@ -35,10 +35,10 @@ struct InstallCertificates: AsyncParsableCommand {
         let logger = Cronista(module: "blimp", category: "Maintenance")
         let passphrase = try resolveSecret(
             cliValue: passphrase,
-            environmentKey: "CERTIFICATES_PASSWORD",
+            environmentKey: SecretEnvKey.certificatesPassword,
             prompt: "Enter passphrase: "
         )
-        let keychainPassword = self.keychainPassword ?? ProcessInfo.processInfo.environment["KEYCHAIN_PASSWORD"]
+        let keychainPassword = self.keychainPassword ?? ProcessInfo.processInfo.environment[SecretEnvKey.keychainPassword]
         let resolvedPath = storagePath == "." ? FileManager.default.currentDirectoryPath : storagePath
 
         let installer = CertificateInstaller(storagePath: resolvedPath)
