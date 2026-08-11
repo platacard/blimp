@@ -108,6 +108,51 @@ public struct ProfileInstaller: Sendable {
         return installed
     }
 
+    /// Installs the given bundle ids in one pass: a single optional pull and one
+    /// storage scan. Throws with every missing bundle id so callers see the full gap.
+    public func installProfiles(
+        platform: ProvisioningAPI.Platform,
+        type: ProvisioningAPI.ProfileType,
+        bundleIds: [String],
+        pull: Bool = true
+    ) async throws -> [InstalledProfile] {
+        guard !bundleIds.isEmpty else { return [] }
+
+        if pull {
+            try await git.cloneOrPull()
+        }
+
+        let profileDir = "profiles/\(platform.rawValue)/\(type.rawValue)"
+        let fileByBundleId = Dictionary(
+            try listProfileFiles(in: profileDir).map { (extractBundleId(from: $0), $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        let missing = bundleIds.filter { fileByBundleId[$0] == nil }
+        guard missing.isEmpty else {
+            throw Error.profilesNotFound(bundleIds: missing, directory: profileDir)
+        }
+
+        var installed: [InstalledProfile] = []
+
+        for bundleId in bundleIds {
+            do {
+                let result = try await installProfile(
+                    filePath: "\(profileDir)/\(fileByBundleId[bundleId]!)",
+                    bundleId: bundleId,
+                    platform: platform,
+                    type: type
+                )
+                installed.append(result)
+            } catch {
+                logger.error("Failed to install \(bundleId): \(error.localizedDescription)")
+                throw error
+            }
+        }
+
+        return installed
+    }
+
     // MARK: - Private
 
     private func installProfile(
@@ -179,12 +224,15 @@ public struct ProfileInstaller: Sendable {
     public enum Error: Swift.Error, LocalizedError {
         case invalidProfile(String)
         case profileNotFound(String)
+        case profilesNotFound(bundleIds: [String], directory: String)
         case installationFailed(String)
 
         public var errorDescription: String? {
             switch self {
             case .invalidProfile(let msg): return msg
             case .profileNotFound(let msg): return msg
+            case .profilesNotFound(let bundleIds, let directory):
+                return "No profiles for \(bundleIds.joined(separator: ", ")) in \(directory)"
             case .installationFailed(let msg): return msg
             }
         }

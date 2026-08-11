@@ -68,6 +68,110 @@ final class ProfileInstallerTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: expectedPath.path))
     }
 
+    // MARK: - Batch install
+
+    func testBatchInstallsAllBundleIdsWithSinglePull() async throws {
+        let uuids = [
+            "11111111-1111-1111-1111-111111111111",
+            "22222222-2222-2222-2222-222222222222"
+        ]
+        for bundleId in ["com.example.app", "com.example.app.extension"] {
+            try await mockGit.writeFile(
+                path: "profiles/ios/IOS_APP_DEVELOPMENT/\(bundleId).mobileprovision",
+                content: Data("fake profile".utf8)
+            )
+        }
+
+        nonisolated(unsafe) var call = 0
+        mockShell.outputForCommand = { _ in
+            defer { call += 1 }
+            return """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <plist version="1.0">
+            <dict>
+                <key>UUID</key>
+                <string>\(uuids[call])</string>
+            </dict>
+            </plist>
+            """
+        }
+
+        let installed = try await installer.installProfiles(
+            platform: .ios,
+            type: .iosAppDevelopment,
+            bundleIds: ["com.example.app", "com.example.app.extension"]
+        )
+
+        XCTAssertEqual(installed.map(\.bundleId), ["com.example.app", "com.example.app.extension"])
+        XCTAssertEqual(installed.map(\.uuid), uuids)
+        for uuid in uuids {
+            let destination = tempDir.appendingPathComponent("\(uuid).mobileprovision")
+            XCTAssertTrue(FileManager.default.fileExists(atPath: destination.path))
+        }
+        let pulls = await mockGit.cloneOrPullCount
+        XCTAssertEqual(pulls, 1)
+    }
+
+    func testBatchSkipsPullForEmptyBundleIds() async throws {
+        let installed = try await installer.installProfiles(
+            platform: .ios,
+            type: .iosAppDevelopment,
+            bundleIds: []
+        )
+
+        XCTAssertTrue(installed.isEmpty)
+        let pulls = await mockGit.cloneOrPullCount
+        XCTAssertEqual(pulls, 0)
+    }
+
+    func testBatchListsEveryMissingBundleId() async throws {
+        try await mockGit.writeFile(
+            path: "profiles/ios/IOS_APP_DEVELOPMENT/com.example.app.mobileprovision",
+            content: Data("fake profile".utf8)
+        )
+
+        do {
+            _ = try await installer.installProfiles(
+                platform: .ios,
+                type: .iosAppDevelopment,
+                bundleIds: ["com.example.app", "com.missing.one", "com.missing.two"]
+            )
+            XCTFail("Expected profilesNotFound")
+        } catch let error as ProfileInstaller.Error {
+            XCTAssertTrue(error.localizedDescription.contains("com.missing.one"))
+            XCTAssertTrue(error.localizedDescription.contains("com.missing.two"))
+        }
+    }
+
+    func testBatchSkipsPullWhenDisabled() async throws {
+        try await mockGit.writeFile(
+            path: "profiles/ios/IOS_APP_DEVELOPMENT/com.example.app.mobileprovision",
+            content: Data("fake profile".utf8)
+        )
+
+        mockShell.outputForCommand = { _ in
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <plist version="1.0">
+            <dict>
+                <key>UUID</key>
+                <string>12345678-1234-1234-1234-123456789abc</string>
+            </dict>
+            </plist>
+            """
+        }
+
+        _ = try await installer.installProfiles(
+            platform: .ios,
+            type: .iosAppDevelopment,
+            bundleIds: ["com.example.app"],
+            pull: false
+        )
+
+        let pulls = await mockGit.cloneOrPullCount
+        XCTAssertEqual(pulls, 0)
+    }
+
     // MARK: - Bundle ID Filtering
 
     func testInstallProfileFiltersByExactBundleId() async throws {
