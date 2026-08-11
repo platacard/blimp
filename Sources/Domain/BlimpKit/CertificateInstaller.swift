@@ -99,8 +99,6 @@ public struct CertificateInstaller: Sendable {
         installWWDR: Bool = true,
         pull: Bool = true
     ) async throws -> [InstalledCertificate] {
-        logger.info("Installing certificates for \(platform.rawValue)/\(type.rawValue)")
-
         if pull {
             try await git.cloneOrPull()
         }
@@ -117,8 +115,6 @@ public struct CertificateInstaller: Sendable {
         guard !certFiles.isEmpty else {
             throw Error.noCertificatesFound("No .p12 files found in \(certDir)")
         }
-
-        logger.info("Found \(certFiles.count) certificate(s) in storage")
 
         var installed: [InstalledCertificate] = []
 
@@ -141,7 +137,6 @@ public struct CertificateInstaller: Sendable {
             try allowCodesignAccess(keychainPath: keychainPath, keychainPassword: keychainPassword)
         }
 
-        logger.info("Installed \(installed.count) certificate(s)")
         return installed
     }
 

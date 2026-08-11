@@ -118,8 +118,6 @@ public struct ProfileInstaller: Sendable {
     ) async throws -> [InstalledProfile] {
         guard !bundleIds.isEmpty else { return [] }
 
-        logger.info("Installing \(bundleIds.count) profile(s) for \(platform.rawValue)/\(type.rawValue)")
-
         if pull {
             try await git.cloneOrPull()
         }
