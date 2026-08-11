@@ -171,7 +171,6 @@ public struct CertificateInstaller: Sendable {
             try? FileManager.default.removeItem(at: tempFile)
         }
 
-        // Owner-only permissions: the file briefly holds the decrypted p12.
         let created = FileManager.default.createFile(
             atPath: tempFile.path,
             contents: p12Data,
