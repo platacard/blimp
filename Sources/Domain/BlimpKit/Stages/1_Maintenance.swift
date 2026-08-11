@@ -65,7 +65,7 @@ public extension Blimp {
                 push: push
             )
 
-            return try await manager.createAndStoreCertificate(type: type, platform: platform)
+            return try await manager.rotateCertificate(type: type, platform: platform)
         }
 
         /// Finds a valid certificate ID from storage that matches Apple Developer Portal.

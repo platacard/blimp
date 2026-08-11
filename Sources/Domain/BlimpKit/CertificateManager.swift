@@ -85,6 +85,52 @@ public struct CertificateManager: Sendable {
         return cert
     }
 
+    /// Creates a new certificate, then revokes every other portal certificate of the
+    /// same type and prunes their stored p12s — storage and portal end with exactly one.
+    public func rotateCertificate(
+        type: ProvisioningAPI.CertificateType,
+        platform: ProvisioningAPI.Platform
+    ) async throws -> ProvisioningAPI.Certificate {
+        try await git.cloneOrPull()
+
+        let certDir = type.storageDirectory(for: platform)
+
+        let (csr, privateKey) = try certGenerator.generateCSR()
+        let cert = try await certificateService.createCertificate(csrContent: csr, type: type)
+        guard let certContent = cert.content else {
+            throw Error.missingData("Certificate created but no content returned")
+        }
+
+        let p12 = try certGenerator.generateP12(certContent: certContent, privateKey: privateKey, passphrase: passphrase)
+        try await git.writeFile(path: "\(certDir)/\(cert.id).p12", content: p12)
+
+        let stale = try await certificateService.listCertificates(filterType: type)
+            .map(\.id)
+            .filter { $0 != cert.id }
+
+        for id in stale {
+            try await certificateService.deleteCertificate(id: id)
+            logger.info("Revoked certificate \(id)")
+        }
+
+        let dirURL = git.localURL.appendingPathComponent(certDir)
+        if let files = try? FileManager.default.contentsOfDirectory(atPath: dirURL.path) {
+            for file in files where file.hasSuffix(".p12") && file != "\(cert.id).p12" {
+                try FileManager.default.removeItem(at: dirURL.appendingPathComponent(file))
+                logger.info("Removed stored \(file)")
+            }
+        }
+
+        try await git.commitAndPush(
+            message: "Rotate certificate \(cert.id) for \(platform.rawValue) \(type.rawValue)"
+                + (stale.isEmpty ? "" : ", revoked \(stale.joined(separator: ", "))"),
+            push: push
+        )
+
+        logger.info("Rotated certificate: \(cert.id)")
+        return cert
+    }
+
     /// Finds an existing valid certificate or creates a new one.
     /// - Parameters:
     ///   - type: Certificate type
