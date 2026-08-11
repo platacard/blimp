@@ -26,13 +26,13 @@ func resolveSecret(cliValue: String?, environmentKey: String, prompt: String) th
 private func readSecureInput() -> String? {
     var oldTermios = termios()
     guard tcgetattr(STDIN_FILENO, &oldTermios) == 0 else {
-        return readLine()
+        return nil
     }
 
     var newTermios = oldTermios
     newTermios.c_lflag &= ~UInt(ECHO)
     guard tcsetattr(STDIN_FILENO, TCSANOW, &newTermios) == 0 else {
-        return readLine()
+        return nil
     }
 
     defer {
