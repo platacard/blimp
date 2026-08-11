@@ -15,7 +15,12 @@ public struct URLWWDRCertificateProvider: WWDRCertificateProviding {
     public init() {}
 
     public func fetch() async throws -> Data {
-        let (data, _) = try await URLSession.shared.data(from: Self.certificateURL)
+        let (data, response) = try await URLSession.shared.data(from: Self.certificateURL)
+
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+
         return data
     }
 }
@@ -35,8 +40,10 @@ public struct InstalledCertificate: Sendable {
 
 /// Installs signing certificates from Git storage into a macOS keychain.
 ///
-/// Reads encrypted `.p12` files from `certificates/<TYPE>/`, decrypts them with the
-/// storage passphrase, and imports them via `security import` with codesign access.
+/// Reads encrypted `.p12` files from the certificate storage directory
+/// (`certificates/<TYPE>/` for universal types, `certificates/<platform>/<TYPE>/` otherwise),
+/// decrypts them with the storage passphrase, and imports them via `security import`
+/// with codesign access.
 public struct CertificateInstaller: Sendable {
 
     public enum Keychain: Sendable {
@@ -49,7 +56,7 @@ public struct CertificateInstaller: Sendable {
                 return FileManager.default.homeDirectoryForCurrentUser
                     .appendingPathComponent("Library/Keychains/login.keychain-db").path
             case .path(let path):
-                return path
+                return (path as NSString).expandingTildeInPath
             }
         }
     }
@@ -113,7 +120,7 @@ public struct CertificateInstaller: Sendable {
         var installed: [InstalledCertificate] = []
 
         for fileName in certFiles {
-            let certificateId = fileName.replacingOccurrences(of: ".p12", with: "")
+            let certificateId = (fileName as NSString).deletingPathExtension
             let encryptedData = try await git.readFile(path: "\(certDir)/\(fileName)")
             let p12Data = try encrypter.decrypt(data: encryptedData, password: passphrase)
 

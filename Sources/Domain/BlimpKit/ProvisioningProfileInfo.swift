@@ -33,7 +33,14 @@ public struct ProvisioningProfileInfo: Sendable {
             try? FileManager.default.removeItem(at: tempFile)
         }
 
-        try profileData.write(to: tempFile)
+        let created = FileManager.default.createFile(
+            atPath: tempFile.path,
+            contents: profileData,
+            attributes: [.posixPermissions: 0o600]
+        )
+        guard created else {
+            throw Error.invalidProfile("Could not write temporary profile file")
+        }
 
         let output = try shell.run(arguments: ["security", "cms", "-D", "-i", tempFile.path])
 
