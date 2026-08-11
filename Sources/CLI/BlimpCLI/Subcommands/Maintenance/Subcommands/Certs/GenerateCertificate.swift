@@ -24,7 +24,11 @@ struct GenerateCertificate: AsyncParsableCommand {
 
     func run() async throws {
         let logger = Cronista(module: "blimp", category: "Maintenance")
-        let passphrase = try resolvePassphrase(passphrase)
+        let passphrase = try resolveSecret(
+            cliValue: passphrase,
+            environmentKey: "BLIMP_PASSPHRASE",
+            prompt: "Enter passphrase: "
+        )
         let resolvedPath = storagePath == "." ? FileManager.default.currentDirectoryPath : storagePath
 
         let cert = try await Blimp.Maintenance.default.generateCertificate(
@@ -38,35 +42,4 @@ struct GenerateCertificate: AsyncParsableCommand {
         logger.info("  ID: \(cert.id)")
         logger.info("  Name: \(cert.name)")
     }
-}
-
-// MARK: - Passphrase interactive input
-
-private func resolvePassphrase(_ cliValue: String?) throws -> String {
-    // Environment variable first (CI-friendly)
-    if let value = ProcessInfo.processInfo.environment["BLIMP_PASSPHRASE"] { return value }
-    if let value = cliValue { return value }
-
-    // Interactive fallback
-    print("Enter passphrase: ", terminator: "")
-    guard let pass = readSecureInput() else {
-        throw ValidationError("Failed to read passphrase")
-    }
-    return pass
-}
-
-private func readSecureInput() -> String? {
-    var oldTermios = termios()
-    tcgetattr(STDIN_FILENO, &oldTermios)
-
-    var newTermios = oldTermios
-    newTermios.c_lflag &= ~UInt(ECHO)
-    tcsetattr(STDIN_FILENO, TCSANOW, &newTermios)
-
-    let result = readLine()
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldTermios)
-    print()
-
-    return result
 }

@@ -283,6 +283,7 @@ blimp maintenance list-devices --platform ios
 blimp maintenance register-device UDID-123 "iPhone 15" --platform ios
 blimp maintenance list-certs --type DEVELOPMENT
 blimp maintenance generate-cert --type DEVELOPMENT --platform ios --storage-path ./certs --passphrase pass
+blimp maintenance install-certs --type DEVELOPMENT --storage-path ./certs   # decrypt + import into keychain
 blimp maintenance remove-cert CERT-ID
 blimp maintenance list-profiles --name "Blimp*"
 blimp maintenance sync-profiles --bundle-ids com.app --platform ios --type development --storage-path ./certs
@@ -318,6 +319,12 @@ profiles/{platform}/{type}/{bundle-id}.mobileprovision   # Unencrypted
 
 Profile installation (`install-profiles`) extracts UUID via `security cms -D` and copies to:
 `~/Library/MobileDevice/Provisioning Profiles/{uuid}.mobileprovision`
+
+Certificate installation (`install-certs`) decrypts stored `.p12` files with the storage
+passphrase (`BLIMP_PASSPHRASE`) and imports them into the keychain via `security import`
+with codesign access; it also installs the Apple WWDR intermediate certificate when missing.
+Pass `--keychain-password` (or `KEYCHAIN_PASSWORD`) to suppress codesign UI prompts via
+`security set-key-partition-list`.
 
 ## Key Protocols
 

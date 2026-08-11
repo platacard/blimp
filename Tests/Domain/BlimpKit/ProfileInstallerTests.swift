@@ -251,11 +251,15 @@ final class ProfileInstallerTests: XCTestCase {
 
 class MockShellExecutor: ShellExecuting, @unchecked Sendable {
     var outputForCommand: ((String) -> String)?
+    var errorForCommand: ((String) -> Error?)?
     var executedCommands: [String] = []
 
     func run(arguments: [String]) throws -> String {
         let command = arguments.joined(separator: " ")
         executedCommands.append(command)
+        if let error = errorForCommand?(command) {
+            throw error
+        }
         return outputForCommand?(command) ?? ""
     }
 }
