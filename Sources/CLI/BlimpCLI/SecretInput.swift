@@ -4,9 +4,8 @@ import Foundation
 
 /// Resolves a secret from environment, CLI argument, or interactive hidden input.
 func resolveSecret(cliValue: String?, environmentKey: String, prompt: String) throws -> String {
-    // Environment variable first (CI-friendly)
-    if let value = ProcessInfo.processInfo.environment[environmentKey] { return value }
     if let value = cliValue { return value }
+    if let value = ProcessInfo.processInfo.environment[environmentKey] { return value }
 
     guard isatty(STDIN_FILENO) == 1 else {
         throw ValidationError("No TTY to prompt for a secret. Set \(environmentKey) or pass it as an argument.")
