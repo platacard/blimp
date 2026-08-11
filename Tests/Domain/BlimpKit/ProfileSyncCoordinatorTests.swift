@@ -117,6 +117,27 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
             let exists = await mockGit.fileExists(path: profilePath)
             XCTAssertTrue(exists, "Profile for \(bundleId) should exist")
         }
+
+        let commits = await mockGit.pushedCommits
+        XCTAssertEqual(commits, ["Update appstore profiles"], "All synced profiles should land in one commit")
+    }
+
+    func testSyncDoesNotCommitWhenNothingChanged() async throws {
+        let bundleId = "com.example.app"
+        mockProfileService.bundleIds[bundleId] = "bundle-resource-id"
+
+        let profilePath = "profiles/ios/IOS_APP_DEVELOPMENT/\(bundleId).mobileprovision"
+        try await mockGit.writeFile(path: profilePath, content: Data())
+
+        try await coordinator.sync(
+            platform: .ios,
+            type: .iosAppDevelopment,
+            bundleIds: [(bundleId, bundleId)],
+            certificateIds: ["cert-123"]
+        )
+
+        let commits = await mockGit.pushedCommits
+        XCTAssertTrue(commits.isEmpty, "Skipped profiles should not produce a commit")
     }
 
     func testSyncWithCustomProfileName() async throws {

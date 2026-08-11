@@ -45,8 +45,10 @@ public struct ProfileSyncCoordinator: Sendable {
 
         try await git.cloneOrPull()
 
+        var updated: [String] = []
+
         for entry in bundleIds {
-            try await syncProfile(
+            let synced = try await syncProfile(
                 bundleId: entry.bundleId,
                 profileName: entry.profileName,
                 type: type,
@@ -54,6 +56,13 @@ public struct ProfileSyncCoordinator: Sendable {
                 certificateIds: certificateIds,
                 force: force
             )
+            if synced {
+                updated.append(entry.profileName)
+            }
+        }
+
+        if !updated.isEmpty {
+            try await git.commitAndPush(message: "Update \(typeLabel(type)) profiles", push: push)
         }
 
         logger.info("Profile sync completed successfully.")
@@ -66,7 +75,7 @@ public struct ProfileSyncCoordinator: Sendable {
         platform: ProvisioningAPI.Platform,
         certificateIds: [String],
         force: Bool
-    ) async throws {
+    ) async throws -> Bool {
         let profileDir = "profiles/\(platform.rawValue)/\(type.rawValue)"
         let fileName = "\(profileName).mobileprovision"
         let filePath = "\(profileDir)/\(fileName)"
@@ -75,7 +84,7 @@ public struct ProfileSyncCoordinator: Sendable {
 
         if !force && fileExists {
             logger.info("Profile \(profileName) exists in storage, skipping.")
-            return
+            return false
         }
 
         if force {
@@ -107,9 +116,19 @@ public struct ProfileSyncCoordinator: Sendable {
         }
 
         try await git.writeFile(path: filePath, content: content)
-        try await git.commitAndPush(message: "Update profile \(profileName)", push: push)
 
         logger.info("Synced profile: \(profileName)")
+        return true
+    }
+
+    private func typeLabel(_ type: ProvisioningAPI.ProfileType) -> String {
+        switch type {
+        case .iosAppDevelopment, .macAppDevelopment, .tvosAppDevelopment, .macCatalystAppDevelopment: "development"
+        case .iosAppStore, .macAppStore, .tvosAppStore, .macCatalystAppStore: "appstore"
+        case .iosAppAdhoc, .tvosAppAdhoc: "adhoc"
+        case .iosAppInhouse, .tvosAppInhouse: "inhouse"
+        case .macAppDirect, .macCatalystAppDirect: "direct"
+        }
     }
 
     private func resolveDeviceIds(type: ProvisioningAPI.ProfileType, platform: ProvisioningAPI.Platform) async throws -> [String]? {
