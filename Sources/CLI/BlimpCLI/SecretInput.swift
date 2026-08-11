@@ -8,6 +8,10 @@ func resolveSecret(cliValue: String?, environmentKey: String, prompt: String) th
     if let value = ProcessInfo.processInfo.environment[environmentKey] { return value }
     if let value = cliValue { return value }
 
+    guard isatty(STDIN_FILENO) == 1 else {
+        throw ValidationError("No TTY to prompt for a secret. Set \(environmentKey) or pass it as an argument.")
+    }
+
     print(prompt, terminator: "")
     guard let value = readSecureInput() else {
         throw ValidationError("Failed to read secret input")
