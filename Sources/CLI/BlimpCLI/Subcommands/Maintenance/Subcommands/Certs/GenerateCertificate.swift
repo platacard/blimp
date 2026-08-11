@@ -22,6 +22,9 @@ struct GenerateCertificate: AsyncParsableCommand {
     @Option(help: "Certificate password (or set \(SecretEnvKey.certificatesPassword), or enter interactively)")
     var passphrase: String?
 
+    @Flag(help: "Push to remote after committing")
+    var push: Bool = false
+
     func run() async throws {
         let logger = Cronista(module: "blimp", category: "Maintenance")
         let passphrase = try resolveSecret(
@@ -35,7 +38,8 @@ struct GenerateCertificate: AsyncParsableCommand {
             type: type,
             platform: platform,
             storagePath: resolvedPath,
-            passphrase: passphrase
+            passphrase: passphrase,
+            push: push
         )
 
         logger.info("Certificate created successfully")
