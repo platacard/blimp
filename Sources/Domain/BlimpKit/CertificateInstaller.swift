@@ -171,7 +171,16 @@ public struct CertificateInstaller: Sendable {
             try? FileManager.default.removeItem(at: tempFile)
         }
 
-        try p12Data.write(to: tempFile, options: [.completeFileProtection])
+        // Owner-only permissions: the file briefly holds the decrypted p12.
+        let created = FileManager.default.createFile(
+            atPath: tempFile.path,
+            contents: p12Data,
+            attributes: [.posixPermissions: 0o600]
+        )
+        guard created else {
+            throw Error.importFailed("Could not write temporary p12 file")
+        }
+
         _ = try shell.run(arguments: [
             "security", "import", tempFile.path,
             "-k", keychainPath,
@@ -203,11 +212,13 @@ public struct CertificateInstaller: Sendable {
     public enum Error: Swift.Error, LocalizedError {
         case noCertificatesFound(String)
         case wwdrUnavailable(String)
+        case importFailed(String)
 
         public var errorDescription: String? {
             switch self {
             case .noCertificatesFound(let msg): return msg
             case .wwdrUnavailable(let msg): return msg
+            case .importFailed(let msg): return msg
             }
         }
     }
