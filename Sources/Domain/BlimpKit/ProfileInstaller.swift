@@ -116,6 +116,8 @@ public struct ProfileInstaller: Sendable {
         bundleIds: [String],
         pull: Bool = true
     ) async throws -> [InstalledProfile] {
+        guard !bundleIds.isEmpty else { return [] }
+
         logger.info("Installing \(bundleIds.count) profile(s) for \(platform.rawValue)/\(type.rawValue)")
 
         if pull {
@@ -136,14 +138,19 @@ public struct ProfileInstaller: Sendable {
         var installed: [InstalledProfile] = []
 
         for bundleId in bundleIds {
-            let result = try await installProfile(
-                filePath: "\(profileDir)/\(fileByBundleId[bundleId]!)",
-                bundleId: bundleId,
-                platform: platform,
-                type: type
-            )
-            installed.append(result)
-            logger.info("Installed: \(bundleId) -> \(result.uuid)")
+            do {
+                let result = try await installProfile(
+                    filePath: "\(profileDir)/\(fileByBundleId[bundleId]!)",
+                    bundleId: bundleId,
+                    platform: platform,
+                    type: type
+                )
+                installed.append(result)
+                logger.info("Installed: \(bundleId) -> \(result.uuid)")
+            } catch {
+                logger.error("Failed to install \(bundleId): \(error.localizedDescription)")
+                throw error
+            }
         }
 
         return installed

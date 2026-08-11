@@ -71,7 +71,10 @@ final class ProfileInstallerTests: XCTestCase {
     // MARK: - Batch install
 
     func testBatchInstallsAllBundleIdsWithSinglePull() async throws {
-        let uuid = "12345678-1234-1234-1234-123456789abc"
+        let uuids = [
+            "11111111-1111-1111-1111-111111111111",
+            "22222222-2222-2222-2222-222222222222"
+        ]
         for bundleId in ["com.example.app", "com.example.app.extension"] {
             try await mockGit.writeFile(
                 path: "profiles/ios/IOS_APP_DEVELOPMENT/\(bundleId).mobileprovision",
@@ -79,13 +82,15 @@ final class ProfileInstallerTests: XCTestCase {
             )
         }
 
+        nonisolated(unsafe) var call = 0
         mockShell.outputForCommand = { _ in
-            """
+            defer { call += 1 }
+            return """
             <?xml version="1.0" encoding="UTF-8"?>
             <plist version="1.0">
             <dict>
                 <key>UUID</key>
-                <string>\(uuid)</string>
+                <string>\(uuids[call])</string>
             </dict>
             </plist>
             """
@@ -98,8 +103,25 @@ final class ProfileInstallerTests: XCTestCase {
         )
 
         XCTAssertEqual(installed.map(\.bundleId), ["com.example.app", "com.example.app.extension"])
+        XCTAssertEqual(installed.map(\.uuid), uuids)
+        for uuid in uuids {
+            let destination = tempDir.appendingPathComponent("\(uuid).mobileprovision")
+            XCTAssertTrue(FileManager.default.fileExists(atPath: destination.path))
+        }
         let pulls = await mockGit.cloneOrPullCount
         XCTAssertEqual(pulls, 1)
+    }
+
+    func testBatchSkipsPullForEmptyBundleIds() async throws {
+        let installed = try await installer.installProfiles(
+            platform: .ios,
+            type: .iosAppDevelopment,
+            bundleIds: []
+        )
+
+        XCTAssertTrue(installed.isEmpty)
+        let pulls = await mockGit.cloneOrPullCount
+        XCTAssertEqual(pulls, 0)
     }
 
     func testBatchListsEveryMissingBundleId() async throws {
