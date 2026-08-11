@@ -109,6 +109,24 @@ final class CertificateInstallerTests: XCTestCase {
         XCTAssertEqual(capturedContent, "PLAIN_P12_CONTENT")
     }
 
+    func testInstallsSingleP12FromRawData() async throws {
+        try await installer.installCertificate(
+            p12Data: Data("RAW_P12".utf8),
+            passphrase: passphrase,
+            keychain: .path(keychainPath),
+            keychainPassword: "kc-pass",
+            installWWDR: false
+        )
+
+        let importCommand = mockShell.executedCommands.first { $0.contains("security import") }
+        XCTAssertNotNil(importCommand)
+        XCTAssertTrue(importCommand!.contains("-P \(passphrase)"))
+
+        let partitionCommand = mockShell.executedCommands.first { $0.contains("set-key-partition-list") }
+        XCTAssertNotNil(partitionCommand)
+        XCTAssertTrue(partitionCommand!.contains("-k kc-pass"))
+    }
+
     func testImportsAllStoredCertificates() async throws {
         try await storeEncryptedCertificate(id: "CERT1", type: .distribution)
         try await storeEncryptedCertificate(id: "CERT2", type: .distribution)

@@ -122,11 +122,13 @@ public struct CertificateInstaller: Sendable {
         for fileName in certFiles {
             let certificateId = (fileName as NSString).deletingPathExtension
             let storedData = try await git.readFile(path: "\(certDir)/\(fileName)")
-            let p12Data = FileEncrypter.isEncrypted(storedData)
-                ? try encrypter.decrypt(data: storedData, password: passphrase)
-                : storedData
 
-            try importP12(p12Data, passphrase: passphrase, keychainPath: keychainPath)
+            try await installCertificate(
+                p12Data: storedData,
+                passphrase: passphrase,
+                keychain: keychain,
+                installWWDR: false
+            )
 
             installed.append(InstalledCertificate(certificateId: certificateId, type: type, keychainPath: keychainPath))
             logger.info("Imported certificate \(certificateId)")
@@ -138,6 +140,32 @@ public struct CertificateInstaller: Sendable {
 
         logger.info("Installed \(installed.count) certificate(s)")
         return installed
+    }
+
+    /// Installs a single p12 into the keychain, regardless of where it was stored.
+    /// Decrypts first when the data carries the OpenSSL `Salted__` header.
+    public func installCertificate(
+        p12Data: Data,
+        passphrase: String,
+        keychain: Keychain = .login,
+        keychainPassword: String? = nil,
+        installWWDR: Bool = true
+    ) async throws {
+        let keychainPath = keychain.resolvedPath
+
+        if installWWDR {
+            try await ensureWWDRCertificate(keychainPath: keychainPath)
+        }
+
+        let p12 = FileEncrypter.isEncrypted(p12Data)
+            ? try encrypter.decrypt(data: p12Data, password: passphrase)
+            : p12Data
+
+        try importP12(p12, passphrase: passphrase, keychainPath: keychainPath)
+
+        if let keychainPassword {
+            try allowCodesignAccess(keychainPath: keychainPath, keychainPassword: keychainPassword)
+        }
     }
 
     // MARK: - Private
