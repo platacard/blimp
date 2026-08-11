@@ -38,6 +38,11 @@ final class CertificateManagerTests: XCTestCase {
         let dir = await mockGit.localURL.appendingPathComponent("certificates/DEVELOPMENT")
         let files = try FileManager.default.contentsOfDirectory(atPath: dir.path).filter { $0.hasSuffix(".p12") }
         XCTAssertEqual(files, ["\(cert.id).p12"])
+
+        let commits = await mockGit.pushedCommits
+        XCTAssertEqual(commits.count, 2)
+        XCTAssertTrue(commits[0].contains("Add certificate \(cert.id)"))
+        XCTAssertTrue(commits[1].contains("Prune revoked certificates \(oldDev.id)"))
     }
 
     func testRotateFailedCreationRevokesAndDeletesNothing() async throws {

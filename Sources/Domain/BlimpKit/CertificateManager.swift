@@ -87,6 +87,8 @@ public struct CertificateManager: Sendable {
 
     /// Creates a new certificate, then revokes every other portal certificate of the
     /// same type and prunes their stored p12s — storage and portal end with exactly one.
+    /// The new p12 is committed and pushed before any revocation, so a failed push
+    /// never leaves remote storage without the p12 of the only valid certificate.
     public func rotateCertificate(
         type: ProvisioningAPI.CertificateType,
         platform: ProvisioningAPI.Platform
@@ -103,6 +105,10 @@ public struct CertificateManager: Sendable {
 
         let p12 = try certGenerator.generateP12(certContent: certContent, privateKey: privateKey, passphrase: passphrase)
         try await git.writeFile(path: "\(certDir)/\(cert.id).p12", content: p12)
+        try await git.commitAndPush(
+            message: "Add certificate \(cert.id) for \(platform.rawValue) \(type.rawValue)",
+            push: push
+        )
 
         let stale = try await certificateService.listCertificates(filterType: type)
             .map(\.id)
@@ -120,11 +126,12 @@ public struct CertificateManager: Sendable {
             logger.info("Removed stored \(file)")
         }
 
-        try await git.commitAndPush(
-            message: "Rotate certificate \(cert.id) for \(platform.rawValue) \(type.rawValue)"
-                + (stale.isEmpty ? "" : ", revoked \(stale.joined(separator: ", "))"),
-            push: push
-        )
+        if !stale.isEmpty {
+            try await git.commitAndPush(
+                message: "Prune revoked certificates \(stale.joined(separator: ", ")) for \(platform.rawValue) \(type.rawValue)",
+                push: push
+            )
+        }
 
         logger.info("Rotated certificate: \(cert.id)")
         return cert
