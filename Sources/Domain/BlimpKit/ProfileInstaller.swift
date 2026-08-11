@@ -144,7 +144,6 @@ public struct ProfileInstaller: Sendable {
                     type: type
                 )
                 installed.append(result)
-                logger.info("Installed: \(bundleId) -> \(result.uuid)")
             } catch {
                 logger.error("Failed to install \(bundleId): \(error.localizedDescription)")
                 throw error
