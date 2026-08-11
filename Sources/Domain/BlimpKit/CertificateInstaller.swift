@@ -40,10 +40,10 @@ public struct InstalledCertificate: Sendable {
 
 /// Installs signing certificates from Git storage into a macOS keychain.
 ///
-/// Reads encrypted `.p12` files from the certificate storage directory
-/// (`certificates/<TYPE>/` for universal types, `certificates/<platform>/<TYPE>/` otherwise),
-/// decrypts them with the storage passphrase, and imports them via `security import`
-/// with codesign access.
+/// Reads password-protected `.p12` files from the certificate storage directory
+/// (`certificates/<TYPE>/` for universal types, `certificates/<platform>/<TYPE>/` otherwise)
+/// and imports them via `security import` with codesign access. Files additionally
+/// encrypted at rest (OpenSSL `Salted__` header) are decrypted with the same passphrase first.
 public struct CertificateInstaller: Sendable {
 
     public enum Keychain: Sendable {
@@ -121,8 +121,10 @@ public struct CertificateInstaller: Sendable {
 
         for fileName in certFiles {
             let certificateId = (fileName as NSString).deletingPathExtension
-            let encryptedData = try await git.readFile(path: "\(certDir)/\(fileName)")
-            let p12Data = try encrypter.decrypt(data: encryptedData, password: passphrase)
+            let storedData = try await git.readFile(path: "\(certDir)/\(fileName)")
+            let p12Data = FileEncrypter.isEncrypted(storedData)
+                ? try encrypter.decrypt(data: storedData, password: passphrase)
+                : storedData
 
             try importP12(p12Data, passphrase: passphrase, keychainPath: keychainPath)
 

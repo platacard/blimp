@@ -36,6 +36,10 @@ final class CertificateInstallerTests: XCTestCase {
         try await mockGit.writeFile(path: "certificates/\(type.rawValue)/\(id).p12", content: encrypted)
     }
 
+    private func storePlainCertificate(id: String, type: ProvisioningAPI.CertificateType, content: String) async throws {
+        try await mockGit.writeFile(path: "certificates/\(type.rawValue)/\(id).p12", content: Data(content.utf8))
+    }
+
     // MARK: - Import
 
     func testImportsDecryptedCertificateWithCodesignAccess() async throws {
@@ -80,6 +84,29 @@ final class CertificateInstallerTests: XCTestCase {
         )
 
         XCTAssertEqual(capturedContent, "ORIGINAL_P12_CONTENT")
+    }
+
+    func testImportsPlainP12WithoutDecryption() async throws {
+        try await storePlainCertificate(id: "CERT123", type: .development, content: "PLAIN_P12_CONTENT")
+
+        var capturedContent: String?
+        mockShell.outputForCommand = { command in
+            if command.contains("security import"), let path = command.split(separator: " ").dropFirst(2).first {
+                capturedContent = try? String(contentsOfFile: String(path), encoding: .utf8)
+            }
+            return ""
+        }
+
+        let installed = try await installer.installCertificates(
+            platform: .ios,
+            type: .development,
+            passphrase: passphrase,
+            keychain: .path(keychainPath),
+            installWWDR: false
+        )
+
+        XCTAssertEqual(installed.count, 1)
+        XCTAssertEqual(capturedContent, "PLAIN_P12_CONTENT")
     }
 
     func testImportsAllStoredCertificates() async throws {
