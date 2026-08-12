@@ -3,7 +3,7 @@
 [![All Contributors](https://img.shields.io/badge/all_contributors-4-orange.svg?style=flat-square)](#contributors-)
 <!-- ALL-CONTRIBUTORS-BADGE:END -->
 
-Finally, a Swift deployment automation for Apple platforms.
+Finally, Swift deployment automation for Apple platforms.
 
 Heavily inspired by [fastlane](https://fastlane.tools/).
 
