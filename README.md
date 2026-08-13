@@ -99,7 +99,8 @@ Then, you can use the binary artifact directly:
 1. `blimp takeoff {params}` - Archive the project
 2. `blimp approach {params}` - Upload the archive to App Store Connect
 3. `blimp land {params}` - Assign the build's beta groups and send it to external review
-4. `blimp hangar {subcommand} {params}` - A set of commands to interact with provisioning profiles, see app size, etc.
+4. `blimp hangar {subcommand} {params}` - Additional checks and operations with App Store Connect API
+5. `blimp maintenance {subcommand} {params}` — Manage provisioning profiles, certificates, and devices
 
 ## Architecture overview
 
