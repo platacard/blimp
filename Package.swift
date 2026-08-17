@@ -118,6 +118,7 @@ let package = Package(
             .product(name: "Crypto", package: "swift-crypto")
         ]),
         .apiTest(name: "TestflightAPI"),
+        .apiTest(name: "WebhooksAPI"),
         .coreTest(name: "DeployHelpers", resources: [.process("Resources")]),
         .domainTest(name: "Uploader"),
         .domainTest(name: "JWTProvider"),

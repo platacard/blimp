@@ -44,7 +44,7 @@ public struct WebhooksAPI: Sendable {
                 _type: .webhooks,
                 attributes: .init(
                     enabled: enabled,
-                    eventTypes: eventTypes.map(\.generated),
+                    eventTypes: try eventTypes.map { try $0.generated() },
                     name: name,
                     secret: secret,
                     url: url
@@ -90,7 +90,7 @@ public struct WebhooksAPI: Sendable {
                 id: id,
                 attributes: .init(
                     enabled: enabled,
-                    eventTypes: eventTypes.map { $0.map(\.generated) },
+                    eventTypes: try eventTypes.map { try $0.map { try $0.generated() } },
                     name: name,
                     secret: secret,
                     url: url
@@ -175,6 +175,21 @@ public extension WebhooksAPI {
         public let url: String?
         public let enabled: Bool
         public let eventTypes: [Event]
+        /// Raw event type strings as returned by App Store Connect, including
+        /// values this library version does not model yet. Use this for
+        /// desired-vs-actual comparisons.
+        public let rawEventTypes: [String]
+    }
+
+    enum Error: Swift.Error, CustomStringConvertible {
+        case unsupportedEventType(String)
+
+        public var description: String {
+            switch self {
+            case let .unsupportedEventType(rawValue):
+                return "Event type \(rawValue) is not supported by the generated App Store Connect spec"
+            }
+        }
     }
 
     /// A webhook delivery attempt.
@@ -199,24 +214,28 @@ public extension WebhooksAPI {
 
 // MARK: - Schema mapping
 
-private extension WebhooksAPI.Event {
-    var generated: Components.Schemas.WebhookEventType {
-        // Raw values are identical by construction; fall back to the safest event
-        // only if Apple ever removes a case from the spec.
-        Components.Schemas.WebhookEventType(rawValue: rawValue) ?? .buildUploadStateUpdated
+extension WebhooksAPI.Event {
+    // Raw values are identical by construction; throwing here surfaces drift
+    // between this enum and the generated spec instead of silently subscribing
+    // to a different event.
+    func generated() throws -> Components.Schemas.WebhookEventType {
+        guard let mapped = Components.Schemas.WebhookEventType(rawValue: rawValue) else {
+            throw WebhooksAPI.Error.unsupportedEventType(rawValue)
+        }
+        return mapped
     }
 }
 
-private extension WebhooksAPI.Webhook {
+extension WebhooksAPI.Webhook {
     init(schema: Components.Schemas.Webhook) {
+        let rawEventTypes = (schema.attributes?.eventTypes ?? []).map(\.rawValue)
         self.init(
             id: schema.id,
             name: schema.attributes?.name,
             url: schema.attributes?.url,
             enabled: schema.attributes?.enabled ?? false,
-            eventTypes: (schema.attributes?.eventTypes ?? []).compactMap {
-                WebhooksAPI.Event(rawValue: $0.rawValue)
-            }
+            eventTypes: rawEventTypes.compactMap { WebhooksAPI.Event(rawValue: $0) },
+            rawEventTypes: rawEventTypes
         )
     }
 }
