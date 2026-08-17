@@ -7,10 +7,16 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "Blimp", targets: ["BlimpKit"]),
-        .executable(name: "blimp", targets: ["BlimpCLI"])
+        .library(name: "WebhookKit", targets: ["WebhookKit"]),
+        .executable(name: "blimp", targets: ["BlimpCLI"]),
+        .executable(name: "blimp-relay", targets: ["BlimpRelay"])
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-crypto.git", from: "4.0.0"),
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.5.0"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
+        .package(url: "https://github.com/hummingbird-project/hummingbird.git", from: "2.0.0"),
+        .package(url: "https://github.com/swift-server/async-http-client.git", from: "1.20.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.6.2"),
         .package(url: "https://github.com/apple/swift-openapi-generator", exact: "1.10.3"),
         .package(url: "https://github.com/apple/swift-openapi-runtime", exact: "1.8.3"),
@@ -65,6 +71,23 @@ let package = Package(
             ]
         ),
         .domain(
+            name: "WebhookKit",
+            dependencies: [
+                .product(name: "Crypto", package: "swift-crypto")
+            ]
+        ),
+        .executableTarget(
+            name: "BlimpRelay",
+            dependencies: [
+                "WebhookKit",
+                .product(name: "Hummingbird", package: "hummingbird"),
+                .product(name: "AsyncHTTPClient", package: "async-http-client"),
+                .product(name: "Logging", package: "swift-log"),
+                .product(name: "NIOCore", package: "swift-nio")
+            ],
+            path: "Sources/Relay"
+        ),
+        .domain(
             name: "JWTProvider",
             dependencies: [
                 "ASCCredentials",
@@ -98,6 +121,12 @@ let package = Package(
         .coreTest(name: "DeployHelpers", resources: [.process("Resources")]),
         .domainTest(name: "Uploader"),
         .domainTest(name: "JWTProvider"),
+        .domainTest(name: "WebhookKit"),
+        .testTarget(
+            name: "BlimpRelayTests",
+            dependencies: ["BlimpRelay"],
+            path: "Tests/Relay"
+        ),
         .testTarget(
             name: "BlimpKitTests",
             dependencies: [
