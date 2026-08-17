@@ -1,22 +1,24 @@
 import Foundation
 
-struct GitLabVariable: Sendable, Equatable {
-    let key: String
-    let value: String
-}
-
 /// The subset of the GitLab REST API used by ``GitLabPipelineTriggerSink``.
 /// Abstracted so tests can stub the HTTP layer.
+///
+/// Pending upload state lives in the generic package registry as
+/// `packages/generic/<packageName>/<uploadId>/state.json` — one package per
+/// upload, so parallel deploys never touch each other and nothing leaks into
+/// CI job environments the way project variables would.
 protocol GitLabAPIClient: Sendable {
 
-    /// Fetches a project CI/CD variable. Returns `nil` when the variable does not exist (404).
-    func getVariable(key: String) async throws -> GitLabVariable?
+    /// Downloads the pending-state file for an upload.
+    /// Returns `nil` when no package with that version exists (404).
+    func getPendingState(version: String) async throws -> String?
 
-    /// Deletes a project CI/CD variable. Returns `false` when the variable was already gone (404).
-    func deleteVariable(key: String) async throws -> Bool
+    /// Deletes the pending-state package, claiming the upload for this delivery.
+    /// Returns `false` when the package was already gone (claimed concurrently).
+    func claimPendingState(version: String) async throws -> Bool
 
-    /// Creates a project CI/CD variable (unmasked, unprotected).
-    func createVariable(key: String, value: String) async throws
+    /// Re-publishes a pending-state file (compensation after a failed trigger).
+    func restorePendingState(version: String, content: String) async throws
 
     /// Triggers a pipeline on the given ref with the given trigger variables.
     func triggerPipeline(ref: String, variables: [String: String]) async throws

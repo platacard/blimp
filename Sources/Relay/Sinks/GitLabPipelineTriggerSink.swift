@@ -3,23 +3,24 @@ import Logging
 import WebhookKit
 
 enum GitLabPipelineTriggerError: Error, CustomStringConvertible, Equatable {
-    case invalidPendingState(key: String)
+    case invalidPendingState(version: String)
 
     var description: String {
         switch self {
-        case .invalidPendingState(let key):
-            return "Pending variable '\(key)' does not contain base64-encoded JSON with a 'branch' field"
+        case .invalidPendingState(let version):
+            return "Pending state '\(version)' does not contain base64-encoded JSON with a 'branch' field"
         }
     }
 }
 
 /// Resumes a waiting CI pipeline when a build upload reaches a terminal state.
 ///
-/// The upload side of the pipeline stores its state in a GitLab project variable named
-/// `<prefix><instanceId>` (dashes replaced with underscores) whose value is a base64-encoded
-/// JSON blob containing at least a `branch` field. This sink claims that variable
-/// (get + delete, so concurrent redeliveries race safely) and triggers a pipeline on the
-/// stored branch, passing the blob back through as a trigger variable.
+/// The upload side of the pipeline publishes its state to the GitLab generic
+/// package registry as `packages/generic/<name>/<uploadId>/state.json` — a
+/// base64-encoded JSON blob containing at least a `branch` field. This sink
+/// claims that package (download + delete, so concurrent redeliveries race
+/// safely) and triggers a pipeline on the stored branch, passing the blob back
+/// through as a trigger variable.
 struct GitLabPipelineTriggerSink: WebhookSink {
 
     static let handledEventType = "buildUploadStateUpdated"
@@ -27,7 +28,6 @@ struct GitLabPipelineTriggerSink: WebhookSink {
 
     let name = "gitlab-pipeline-trigger"
     let apiClient: any GitLabAPIClient
-    let pendingVariablePrefix: String
     let extraTriggerVariables: [String: String]
     let sendAlert: (@Sendable (String) async -> Void)?
     let logger: Logger
@@ -48,25 +48,25 @@ struct GitLabPipelineTriggerSink: WebhookSink {
             return
         }
 
-        let key = pendingVariablePrefix + instanceId.replacingOccurrences(of: "-", with: "_")
-
-        guard let variable = try await apiClient.getVariable(key: key) else {
-            logger.info("Pending variable not found, upload is unknown or already claimed", metadata: [
-                "key": .string(key)
+        guard let pendingState = try await apiClient.getPendingState(version: instanceId) else {
+            logger.info("Pending state not found, upload is unknown or already claimed", metadata: [
+                "uploadId": .string(instanceId)
             ])
             return
         }
 
-        let branch = try parseBranch(fromPendingValue: variable.value, key: key)
+        let branch = try parseBranch(fromPendingValue: pendingState, version: instanceId)
 
-        guard try await apiClient.deleteVariable(key: key) else {
-            logger.info("Lost claim to a concurrent delivery, skipping", metadata: ["key": .string(key)])
+        guard try await apiClient.claimPendingState(version: instanceId) else {
+            logger.info("Lost claim to a concurrent delivery, skipping", metadata: [
+                "uploadId": .string(instanceId)
+            ])
             return
         }
 
         var variables = extraTriggerVariables
         variables["TESTFLIGHT_FINALIZE"] = "true"
-        variables["TF_STATE"] = variable.value
+        variables["TF_STATE"] = pendingState
         variables["TF_UPLOAD_STATE"] = newState
 
         do {
@@ -74,10 +74,10 @@ struct GitLabPipelineTriggerSink: WebhookSink {
             logger.info("Triggered pipeline", metadata: [
                 "ref": .string(branch),
                 "uploadState": .string(newState),
-                "key": .string(key)
+                "uploadId": .string(instanceId)
             ])
         } catch {
-            let restored = await restorePendingVariable(variable)
+            let restored = await restorePendingState(version: instanceId, content: pendingState)
             let stateNote = restored
                 ? "pending state restored, Apple redelivery will retry"
                 : "RESTORE ALSO FAILED - pending state is lost, finalize manually"
@@ -88,7 +88,7 @@ struct GitLabPipelineTriggerSink: WebhookSink {
         }
     }
 
-    private func parseBranch(fromPendingValue value: String, key: String) throws -> String {
+    private func parseBranch(fromPendingValue value: String, version: String) throws -> String {
         struct PendingState: Decodable {
             let branch: String?
         }
@@ -99,18 +99,18 @@ struct GitLabPipelineTriggerSink: WebhookSink {
             let branch = state.branch,
             !branch.isEmpty
         else {
-            throw GitLabPipelineTriggerError.invalidPendingState(key: key)
+            throw GitLabPipelineTriggerError.invalidPendingState(version: version)
         }
         return branch
     }
 
-    private func restorePendingVariable(_ variable: GitLabVariable) async -> Bool {
+    private func restorePendingState(version: String, content: String) async -> Bool {
         do {
-            try await apiClient.createVariable(key: variable.key, value: variable.value)
+            try await apiClient.restorePendingState(version: version, content: content)
             return true
         } catch {
-            logger.error("Failed to restore pending variable after trigger failure", metadata: [
-                "key": .string(variable.key),
+            logger.error("Failed to restore pending state after trigger failure", metadata: [
+                "uploadId": .string(version),
                 "error": .string(String(describing: error))
             ])
             return false

@@ -12,7 +12,7 @@ struct GitLabSinkConfiguration: Sendable {
     let projectId: String
     let apiToken: String
     let triggerToken: String
-    let pendingVariablePrefix: String
+    let pendingPackageName: String
     let alertWebhookURL: String?
     let extraTriggerVariables: [String: String]
 }
@@ -130,7 +130,7 @@ extension RelayConfiguration {
             projectId: try require("GITLAB_PROJECT_ID", in: environment, hint: hint),
             apiToken: try require("GITLAB_API_TOKEN", in: environment, hint: hint),
             triggerToken: try require("GITLAB_TRIGGER_TOKEN", in: environment, hint: hint),
-            pendingVariablePrefix: environment["PENDING_VAR_PREFIX"] ?? "TF_PENDING_",
+            pendingPackageName: environment["PENDING_PACKAGE_NAME"] ?? "tf-pending",
             alertWebhookURL: environment["ALERT_WEBHOOK_URL"],
             extraTriggerVariables: try parseExtraTriggerVariables(environment["EXTRA_TRIGGER_VARIABLES"])
         )

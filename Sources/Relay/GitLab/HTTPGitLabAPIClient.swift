@@ -7,18 +7,20 @@ struct GitLabAPIError: Error, CustomStringConvertible {
     let status: UInt
 
     var description: String {
-        "GitLab API call '\(endpoint)' failed with status \(status)"
+        "GitLab API call '\(endpoint)' failed with HTTP \(status)"
     }
 }
 
 struct HTTPGitLabAPIClient: GitLabAPIClient {
 
     private static let requestTimeout = TimeAmount.seconds(30)
-    private static let maxResponseBytes = 1 << 20
+    private static let maxResponseBytes = 4 << 20
+    private static let maxListPages = 10
 
     private let httpClient: HTTPClient
     private let baseURL: String
     private let projectPath: String
+    private let packageName: String
     private let apiToken: String
     private let triggerToken: String
 
@@ -30,12 +32,13 @@ struct HTTPGitLabAPIClient: GitLabAPIClient {
         // Numeric id or an already-percent-encoded path (GitLab API convention) —
         // never re-encode, or `group%2Fproject` becomes `group%252Fproject`.
         self.projectPath = configuration.projectId
+        self.packageName = configuration.pendingPackageName
         self.apiToken = configuration.apiToken
         self.triggerToken = configuration.triggerToken
     }
 
-    func getVariable(key: String) async throws -> GitLabVariable? {
-        var request = HTTPClientRequest(url: "\(baseURL)/projects/\(projectPath)/variables/\(key.formURLEncoded)")
+    func getPendingState(version: String) async throws -> String? {
+        var request = HTTPClientRequest(url: pendingFileURL(version: version))
         request.method = .GET
         request.headers.add(name: "PRIVATE-TOKEN", value: apiToken)
 
@@ -44,16 +47,19 @@ struct HTTPGitLabAPIClient: GitLabAPIClient {
             return nil
         }
         guard (200..<300).contains(response.status.code) else {
-            throw GitLabAPIError(endpoint: "get variable", status: response.status.code)
+            throw GitLabAPIError(endpoint: "get pending state", status: response.status.code)
         }
 
         let body = try await response.body.collect(upTo: Self.maxResponseBytes)
-        let decoded = try JSONDecoder().decode(VariableResponse.self, from: Data(body.readableBytesView))
-        return GitLabVariable(key: decoded.key, value: decoded.value)
+        return String(buffer: body)
     }
 
-    func deleteVariable(key: String) async throws -> Bool {
-        var request = HTTPClientRequest(url: "\(baseURL)/projects/\(projectPath)/variables/\(key.formURLEncoded)")
+    func claimPendingState(version: String) async throws -> Bool {
+        guard let packageId = try await findPackageId(version: version) else {
+            return false
+        }
+
+        var request = HTTPClientRequest(url: "\(baseURL)/projects/\(projectPath)/packages/\(packageId)")
         request.method = .DELETE
         request.headers.add(name: "PRIVATE-TOKEN", value: apiToken)
 
@@ -62,26 +68,20 @@ struct HTTPGitLabAPIClient: GitLabAPIClient {
             return false
         }
         guard (200..<300).contains(response.status.code) else {
-            throw GitLabAPIError(endpoint: "delete variable", status: response.status.code)
+            throw GitLabAPIError(endpoint: "delete pending package", status: response.status.code)
         }
         return true
     }
 
-    func createVariable(key: String, value: String) async throws {
-        var request = HTTPClientRequest(url: "\(baseURL)/projects/\(projectPath)/variables")
-        request.method = .POST
+    func restorePendingState(version: String, content: String) async throws {
+        var request = HTTPClientRequest(url: pendingFileURL(version: version))
+        request.method = .PUT
         request.headers.add(name: "PRIVATE-TOKEN", value: apiToken)
-        request.headers.add(name: "content-type", value: "application/x-www-form-urlencoded")
-        request.body = .bytes(ByteBuffer(string: [
-            ("key", key),
-            ("value", value),
-            ("masked", "false"),
-            ("protected", "false")
-        ].formURLEncoded))
+        request.body = .bytes(ByteBuffer(string: content))
 
         let response = try await httpClient.execute(request, timeout: Self.requestTimeout)
         guard (200..<300).contains(response.status.code) else {
-            throw GitLabAPIError(endpoint: "create variable", status: response.status.code)
+            throw GitLabAPIError(endpoint: "restore pending state", status: response.status.code)
         }
     }
 
@@ -105,9 +105,40 @@ struct HTTPGitLabAPIClient: GitLabAPIClient {
         }
     }
 
-    private struct VariableResponse: Decodable {
-        let key: String
-        let value: String
+    // MARK: - Helpers
+
+    private func pendingFileURL(version: String) -> String {
+        "\(baseURL)/projects/\(projectPath)/packages/generic/\(packageName.formURLEncoded)/\(version.formURLEncoded)/state.json"
+    }
+
+    private func findPackageId(version: String) async throws -> Int? {
+        for page in 1...Self.maxListPages {
+            let url = "\(baseURL)/projects/\(projectPath)/packages"
+                + "?package_type=generic&package_name=\(packageName.formURLEncoded)&per_page=100&page=\(page)"
+            var request = HTTPClientRequest(url: url)
+            request.method = .GET
+            request.headers.add(name: "PRIVATE-TOKEN", value: apiToken)
+
+            let response = try await httpClient.execute(request, timeout: Self.requestTimeout)
+            guard (200..<300).contains(response.status.code) else {
+                throw GitLabAPIError(endpoint: "list pending packages", status: response.status.code)
+            }
+
+            let body = try await response.body.collect(upTo: Self.maxResponseBytes)
+            let packages = try JSONDecoder().decode([PackageListItem].self, from: Data(body.readableBytesView))
+            if let match = packages.first(where: { $0.version == version }) {
+                return match.id
+            }
+            if packages.isEmpty {
+                return nil
+            }
+        }
+        return nil
+    }
+
+    private struct PackageListItem: Decodable {
+        let id: Int
+        let version: String
     }
 }
 
@@ -127,7 +158,6 @@ extension String {
 }
 
 extension [(String, String)] {
-
     var formURLEncoded: String {
         map { "\($0.formURLEncoded)=\($1.formURLEncoded)" }.joined(separator: "&")
     }

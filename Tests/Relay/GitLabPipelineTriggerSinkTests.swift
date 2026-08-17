@@ -36,7 +36,6 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
     ) -> GitLabPipelineTriggerSink {
         GitLabPipelineTriggerSink(
             apiClient: apiClient,
-            pendingVariablePrefix: "TF_PENDING_",
             extraTriggerVariables: extraTriggerVariables,
             sendAlert: sendAlert,
             logger: Logger(label: "test")
@@ -47,23 +46,24 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
         Data(#"{"branch":"\#(branch)","buildNumber":"456"}"#.utf8).base64EncodedString()
     }
 
-    private let expectedKey = "TF_PENDING_1234abcd_56ef_78aa_90bb_ccddeeff0011"
+    // The package version is the raw buildUploads id - no sanitization.
+    private let expectedVersion = "1234abcd-56ef-78aa-90bb-ccddeeff0011"
 
     // MARK: - Happy path
 
     func testTriggersPipelineOnCompleteUpload() async throws {
         let value = pendingValue(branch: "release/1.2.3")
         let client = StubGitLabAPIClient()
-        await client.setVariable(GitLabVariable(key: expectedKey, value: value))
+        await client.setPendingState(value)
         let sink = makeSink(apiClient: client, extraTriggerVariables: ["TEAM": "ios"])
 
         try await sink.handle(makeEvent())
 
         let getCalls = await client.getCalls
-        let deleteCalls = await client.deleteCalls
+        let claimCalls = await client.claimCalls
         let triggerCalls = await client.triggerCalls
-        XCTAssertEqual(getCalls, [expectedKey])
-        XCTAssertEqual(deleteCalls, [expectedKey])
+        XCTAssertEqual(getCalls, [expectedVersion])
+        XCTAssertEqual(claimCalls, [expectedVersion])
         XCTAssertEqual(triggerCalls.count, 1)
         XCTAssertEqual(triggerCalls.first?.ref, "release/1.2.3")
         XCTAssertEqual(triggerCalls.first?.variables, [
@@ -76,7 +76,7 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
 
     func testFailedStatePassesFailedUploadState() async throws {
         let client = StubGitLabAPIClient()
-        await client.setVariable(GitLabVariable(key: expectedKey, value: pendingValue(branch: "main")))
+        await client.setPendingState(pendingValue(branch: "main"))
         let sink = makeSink(apiClient: client)
 
         try await sink.handle(makeEvent(newState: "FAILED"))
@@ -95,17 +95,17 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
         try await sink.handle(makeEvent())
 
         let getCalls = await client.getCalls
-        let deleteCalls = await client.deleteCalls
+        let claimCalls = await client.claimCalls
         let triggerCalls = await client.triggerCalls
-        XCTAssertEqual(getCalls, [expectedKey])
-        XCTAssertTrue(deleteCalls.isEmpty)
+        XCTAssertEqual(getCalls, [expectedVersion])
+        XCTAssertTrue(claimCalls.isEmpty)
         XCTAssertTrue(triggerCalls.isEmpty)
     }
 
     func testSkipsWhenClaimLostToConcurrentDelivery() async throws {
         let client = StubGitLabAPIClient()
-        await client.setVariable(GitLabVariable(key: expectedKey, value: pendingValue(branch: "main")))
-        await client.setDeleteResult(false)
+        await client.setPendingState(pendingValue(branch: "main"))
+        await client.setClaimResult(false)
         let sink = makeSink(apiClient: client)
 
         try await sink.handle(makeEvent())
@@ -138,42 +138,42 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
 
     // MARK: - Failures
 
-    func testUndecodablePendingValueThrowsWithoutDeleting() async throws {
+    func testUndecodablePendingValueThrowsWithoutClaiming() async throws {
         let client = StubGitLabAPIClient()
-        await client.setVariable(GitLabVariable(key: expectedKey, value: "not-base64!!!"))
+        await client.setPendingState("not-base64!!!")
         let sink = makeSink(apiClient: client)
 
         do {
             try await sink.handle(makeEvent())
             XCTFail("Expected invalidPendingState error")
         } catch let error as GitLabPipelineTriggerError {
-            XCTAssertEqual(error, .invalidPendingState(key: expectedKey))
+            XCTAssertEqual(error, .invalidPendingState(version: expectedVersion))
         }
 
-        let deleteCalls = await client.deleteCalls
+        let claimCalls = await client.claimCalls
         let triggerCalls = await client.triggerCalls
-        XCTAssertTrue(deleteCalls.isEmpty)
+        XCTAssertTrue(claimCalls.isEmpty)
         XCTAssertTrue(triggerCalls.isEmpty)
     }
 
     func testMissingBranchFieldThrows() async throws {
         let client = StubGitLabAPIClient()
         let value = Data(#"{"buildNumber":"456"}"#.utf8).base64EncodedString()
-        await client.setVariable(GitLabVariable(key: expectedKey, value: value))
+        await client.setPendingState(value)
         let sink = makeSink(apiClient: client)
 
         do {
             try await sink.handle(makeEvent())
             XCTFail("Expected invalidPendingState error")
         } catch let error as GitLabPipelineTriggerError {
-            XCTAssertEqual(error, .invalidPendingState(key: expectedKey))
+            XCTAssertEqual(error, .invalidPendingState(version: expectedVersion))
         }
     }
 
-    func testTriggerFailureRestoresVariableAlertsAndThrows() async throws {
+    func testTriggerFailureRestoresStateAlertsAndThrows() async throws {
         let value = pendingValue(branch: "main")
         let client = StubGitLabAPIClient()
-        await client.setVariable(GitLabVariable(key: expectedKey, value: value))
+        await client.setPendingState(value)
         await client.setTriggerError(TriggerFailure())
 
         let alerts = AlertRecorder()
@@ -186,14 +186,36 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
             // expected
         }
 
-        let createCalls = await client.createCalls
-        XCTAssertEqual(createCalls.count, 1)
-        XCTAssertEqual(createCalls.first?.key, expectedKey)
-        XCTAssertEqual(createCalls.first?.value, value)
+        let restoreCalls = await client.restoreCalls
+        XCTAssertEqual(restoreCalls.count, 1)
+        XCTAssertEqual(restoreCalls.first?.version, expectedVersion)
+        XCTAssertEqual(restoreCalls.first?.content, value)
 
         let messages = await alerts.messages
         XCTAssertEqual(messages.count, 1)
         XCTAssertTrue(messages[0].contains("main"))
+        XCTAssertTrue(messages[0].contains("pending state restored"))
+    }
+
+    func testTriggerAndRestoreDoubleFailureEscalatesAlert() async throws {
+        let client = StubGitLabAPIClient()
+        await client.setPendingState(pendingValue(branch: "main"))
+        await client.setTriggerError(TriggerFailure())
+        await client.setRestoreError(TriggerFailure())
+
+        let alerts = AlertRecorder()
+        let sink = makeSink(apiClient: client, sendAlert: { await alerts.record($0) })
+
+        do {
+            try await sink.handle(makeEvent())
+            XCTFail("Expected trigger error to be rethrown")
+        } catch is TriggerFailure {
+            // expected
+        }
+
+        let messages = await alerts.messages
+        XCTAssertEqual(messages.count, 1)
+        XCTAssertTrue(messages[0].contains("RESTORE ALSO FAILED"))
     }
 }
 
@@ -210,39 +232,47 @@ private actor AlertRecorder {
 
 actor StubGitLabAPIClient: GitLabAPIClient {
 
-    private var variable: GitLabVariable?
-    private var deleteResult = true
+    private var pendingState: String?
+    private var claimResult = true
     private var triggerError: Error?
+    private var restoreError: Error?
 
     private(set) var getCalls: [String] = []
-    private(set) var deleteCalls: [String] = []
-    private(set) var createCalls: [(key: String, value: String)] = []
+    private(set) var claimCalls: [String] = []
+    private(set) var restoreCalls: [(version: String, content: String)] = []
     private(set) var triggerCalls: [(ref: String, variables: [String: String])] = []
 
-    func setVariable(_ variable: GitLabVariable?) {
-        self.variable = variable
+    func setPendingState(_ state: String?) {
+        pendingState = state
     }
 
-    func setDeleteResult(_ result: Bool) {
-        deleteResult = result
+    func setClaimResult(_ result: Bool) {
+        claimResult = result
     }
 
     func setTriggerError(_ error: Error?) {
         triggerError = error
     }
 
-    func getVariable(key: String) async throws -> GitLabVariable? {
-        getCalls.append(key)
-        return variable
+    func setRestoreError(_ error: Error?) {
+        restoreError = error
     }
 
-    func deleteVariable(key: String) async throws -> Bool {
-        deleteCalls.append(key)
-        return deleteResult
+    func getPendingState(version: String) async throws -> String? {
+        getCalls.append(version)
+        return pendingState
     }
 
-    func createVariable(key: String, value: String) async throws {
-        createCalls.append((key: key, value: value))
+    func claimPendingState(version: String) async throws -> Bool {
+        claimCalls.append(version)
+        return claimResult
+    }
+
+    func restorePendingState(version: String, content: String) async throws {
+        restoreCalls.append((version: version, content: content))
+        if let restoreError {
+            throw restoreError
+        }
     }
 
     func triggerPipeline(ref: String, variables: [String: String]) async throws {

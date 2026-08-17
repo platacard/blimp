@@ -101,7 +101,7 @@ final class RelayConfigurationTests: XCTestCase {
         XCTAssertEqual(gitLab.projectId, "42")
         XCTAssertEqual(gitLab.apiToken, "glpat-token")
         XCTAssertEqual(gitLab.triggerToken, "glptt-token")
-        XCTAssertEqual(gitLab.pendingVariablePrefix, "TF_PENDING_")
+        XCTAssertEqual(gitLab.pendingPackageName, "tf-pending")
         XCTAssertNil(gitLab.alertWebhookURL)
         XCTAssertEqual(gitLab.extraTriggerVariables, ["TEAM": "ios", "SOURCE": "asc-webhook"])
     }

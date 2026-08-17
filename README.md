@@ -112,7 +112,7 @@ Sinks (comma-separated in `SINKS`, executed in order per delivery):
 
 - `log` — logs a one-line summary of each delivery.
 - `forward` — POSTs the raw, already-verified body to `FORWARD_URL` (original content type plus an `x-relay-event-type` header).
-- `gitlab-pipeline-trigger` — resumes a waiting CI pipeline when a build upload reaches `COMPLETE`/`FAILED`. The upload job stores its state in a GitLab project variable `<PENDING_VAR_PREFIX><uploadId>` (dashes replaced with underscores, value is a base64-encoded JSON blob with at least a `branch` field). The relay claims the variable (get + delete, safe against concurrent redeliveries) and triggers a pipeline on that branch with `TESTFLIGHT_FINALIZE=true`, `TF_STATE=<the blob>`, and `TF_UPLOAD_STATE=<COMPLETE|FAILED>`.
+- `gitlab-pipeline-trigger` — resumes a waiting CI pipeline when a build upload reaches `COMPLETE`/`FAILED`. The upload job publishes its state to the GitLab generic package registry as `packages/generic/<PENDING_PACKAGE_NAME>/<uploadId>/state.json` (a base64-encoded JSON blob with at least a `branch` field; one package per upload, so parallel deploys never interfere and nothing is injected into CI job environments). The relay claims the package (download + delete, safe against concurrent redeliveries) and triggers a pipeline on that branch with `TESTFLIGHT_FINALIZE=true`, `TF_STATE=<the blob>`, and `TF_UPLOAD_STATE=<COMPLETE|FAILED>`.
 
 If any sink fails, the relay answers 5xx so Apple redelivers. Pings, unknown event types, and unparseable-but-verified payloads are acknowledged with 200.
 
@@ -127,10 +127,10 @@ If any sink fails, the relay answers 5xx so Apple redelivers. Pings, unknown eve
 | `SINKS` | no | `log` | Comma-separated sinks: `log`, `forward`, `gitlab-pipeline-trigger`. |
 | `FORWARD_URL` | for `forward` | — | URL the raw delivery is POSTed to. |
 | `GITLAB_BASE_URL` | for `gitlab-pipeline-trigger` | — | GitLab API base URL, e.g. `https://gitlab.example.com/api/v4`. |
-| `GITLAB_PROJECT_ID` | for `gitlab-pipeline-trigger` | — | Project ID (or URL-encoded path) holding the pending variables and pipelines. |
-| `GITLAB_API_TOKEN` | for `gitlab-pipeline-trigger` | — | Token with API access to project variables (sent as `PRIVATE-TOKEN`). |
+| `GITLAB_PROJECT_ID` | for `gitlab-pipeline-trigger` | — | Project ID (or URL-encoded path) holding the pending packages and pipelines. |
+| `GITLAB_API_TOKEN` | for `gitlab-pipeline-trigger` | — | Token with API access to the project's package registry (sent as `PRIVATE-TOKEN`). |
 | `GITLAB_TRIGGER_TOKEN` | for `gitlab-pipeline-trigger` | — | Pipeline trigger token. |
-| `PENDING_VAR_PREFIX` | no | `TF_PENDING_` | Prefix of the pending-upload project variables. |
+| `PENDING_PACKAGE_NAME` | no | `tf-pending` | Generic package name holding pending-upload state files. |
 | `ALERT_WEBHOOK_URL` | no | — | If set, trigger failures POST a JSON alert (`{"text": "..."}`) here. |
 | `EXTRA_TRIGGER_VARIABLES` | no | — | Comma-separated `key=value` pairs passed through as extra pipeline trigger variables. |
 

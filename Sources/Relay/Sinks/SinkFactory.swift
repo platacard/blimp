@@ -20,7 +20,6 @@ enum SinkFactory {
             case .gitlabPipelineTrigger(let gitLab):
                 return GitLabPipelineTriggerSink(
                     apiClient: HTTPGitLabAPIClient(httpClient: httpClient, configuration: gitLab),
-                    pendingVariablePrefix: gitLab.pendingVariablePrefix,
                     extraTriggerVariables: gitLab.extraTriggerVariables,
                     sendAlert: makeAlertSender(url: gitLab.alertWebhookURL, httpClient: httpClient, logger: logger),
                     logger: logger
