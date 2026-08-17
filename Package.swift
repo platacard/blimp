@@ -8,6 +8,7 @@ let package = Package(
     products: [
         .library(name: "Blimp", targets: ["BlimpKit"]),
         .library(name: "WebhookKit", targets: ["WebhookKit"]),
+        .library(name: "WebhooksAPI", targets: ["WebhooksAPI"]),
         .executable(name: "blimp", targets: ["BlimpCLI"]),
         .executable(name: "blimp-relay", targets: ["BlimpRelay"])
     ],
