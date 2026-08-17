@@ -25,7 +25,10 @@ struct ForwardSink: WebhookSink {
             name: "content-type",
             value: event.headers["content-type"] ?? "application/json"
         )
-        request.headers.add(name: "x-relay-event-type", value: event.payload.eventType)
+        let safeEventType = String(event.payload.eventType.unicodeScalars.filter {
+            CharacterSet.alphanumerics.contains($0)
+        })
+        request.headers.add(name: "x-relay-event-type", value: safeEventType)
         request.body = .bytes(ByteBuffer(bytes: event.rawBody))
 
         let response = try await httpClient.execute(request, timeout: .seconds(30))

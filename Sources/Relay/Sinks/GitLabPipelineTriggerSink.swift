@@ -77,9 +77,12 @@ struct GitLabPipelineTriggerSink: WebhookSink {
                 "key": .string(key)
             ])
         } catch {
-            await restorePendingVariable(variable)
+            let restored = await restorePendingVariable(variable)
+            let stateNote = restored
+                ? "pending state restored, Apple redelivery will retry"
+                : "RESTORE ALSO FAILED - pending state is lost, finalize manually"
             await sendAlert?(
-                "blimp-relay failed to trigger a pipeline on ref '\(branch)' for upload '\(instanceId)' (\(newState)): \(error)"
+                "blimp-relay failed to trigger a pipeline on ref '\(branch)' for upload '\(instanceId)' (\(newState)): \(error). \(stateNote)"
             )
             throw error
         }
@@ -101,14 +104,16 @@ struct GitLabPipelineTriggerSink: WebhookSink {
         return branch
     }
 
-    private func restorePendingVariable(_ variable: GitLabVariable) async {
+    private func restorePendingVariable(_ variable: GitLabVariable) async -> Bool {
         do {
             try await apiClient.createVariable(key: variable.key, value: variable.value)
+            return true
         } catch {
             logger.error("Failed to restore pending variable after trigger failure", metadata: [
                 "key": .string(variable.key),
                 "error": .string(String(describing: error))
             ])
+            return false
         }
     }
 }

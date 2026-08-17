@@ -19,7 +19,15 @@ enum RelayRouter {
         router.get("/sys/health/readiness") { _, _ in "OK" }
 
         router.post(RouterPath(webhookPath)) { request, _ -> Response in
-            let buffer = try await request.body.collect(upTo: maxBodyBytes)
+            let buffer: ByteBuffer
+            do {
+                buffer = try await request.body.collect(upTo: maxBodyBytes)
+            } catch {
+                // Oversized bodies can never verify; a 4xx keeps Apple from
+                // redelivering them and from masquerading as sink failures.
+                logger.warning("Rejected delivery: body exceeds \(maxBodyBytes) bytes")
+                return jsonResponse(status: .contentTooLarge, body: #"{"status":"too_large"}"#)
+            }
             let rawBody = Data(buffer.readableBytesView)
 
             var headers = [String: String]()

@@ -27,7 +27,9 @@ struct HTTPGitLabAPIClient: GitLabAPIClient {
         self.baseURL = configuration.baseURL.hasSuffix("/")
             ? String(configuration.baseURL.dropLast())
             : configuration.baseURL
-        self.projectPath = configuration.projectId.formURLEncoded
+        // Numeric id or an already-percent-encoded path (GitLab API convention) —
+        // never re-encode, or `group%2Fproject` becomes `group%252Fproject`.
+        self.projectPath = configuration.projectId
         self.apiToken = configuration.apiToken
         self.triggerToken = configuration.triggerToken
     }
