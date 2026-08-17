@@ -116,6 +116,10 @@ Sinks (comma-separated in `SINKS`, executed in order per delivery):
 
 If any sink fails, the relay answers 5xx so Apple redelivers. Pings, unknown event types, and unparseable-but-verified payloads are acknowledged with 200.
 
+#### Porting to another CI provider
+
+The trigger sink is provider-neutral: it works against two small protocols in `Sources/Relay/Providers/` — `PendingStateStore` (keyed state with an atomic claim; GitLab backs it with the generic package registry and delete-as-claim) and `PipelineTrigger` (start a run on a ref with parameters). A GitHub port, for example, would implement the store with one git ref per upload (ref deletion is atomic) and the trigger with `repository_dispatch`. GitLab is currently the only shipped implementation; the `forward` sink is the zero-code alternative for anything that can receive an HTTP POST.
+
 ### Environment reference
 
 | Variable | Required | Default | Description |

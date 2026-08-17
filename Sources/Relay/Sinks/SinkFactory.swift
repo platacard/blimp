@@ -18,8 +18,11 @@ enum SinkFactory {
             case .forward(let url):
                 return ForwardSink(url: url, httpClient: httpClient)
             case .gitlabPipelineTrigger(let gitLab):
-                return GitLabPipelineTriggerSink(
-                    apiClient: HTTPGitLabAPIClient(httpClient: httpClient, configuration: gitLab),
+                let client = HTTPGitLabAPIClient(httpClient: httpClient, configuration: gitLab)
+                return PipelineTriggerSink(
+                    name: "gitlab-pipeline-trigger",
+                    store: client,
+                    trigger: client,
                     extraTriggerVariables: gitLab.extraTriggerVariables,
                     sendAlert: makeAlertSender(url: gitLab.alertWebhookURL, httpClient: httpClient, logger: logger),
                     logger: logger

@@ -4,7 +4,7 @@ import Foundation
 import Logging
 import WebhookKit
 
-final class GitLabPipelineTriggerSinkTests: XCTestCase {
+final class PipelineTriggerSinkTests: XCTestCase {
 
     private struct TriggerFailure: Error {}
 
@@ -30,12 +30,14 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
     }
 
     private func makeSink(
-        apiClient: StubGitLabAPIClient,
+        apiClient: StubProvider,
         extraTriggerVariables: [String: String] = [:],
         sendAlert: (@Sendable (String) async -> Void)? = nil
-    ) -> GitLabPipelineTriggerSink {
-        GitLabPipelineTriggerSink(
-            apiClient: apiClient,
+    ) -> PipelineTriggerSink {
+        PipelineTriggerSink(
+            name: "gitlab-pipeline-trigger",
+            store: apiClient,
+            trigger: apiClient,
             extraTriggerVariables: extraTriggerVariables,
             sendAlert: sendAlert,
             logger: Logger(label: "test")
@@ -53,7 +55,7 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
 
     func testTriggersPipelineOnCompleteUpload() async throws {
         let value = pendingValue(branch: "release/1.2.3")
-        let client = StubGitLabAPIClient()
+        let client = StubProvider()
         await client.setPendingState(value)
         let sink = makeSink(apiClient: client, extraTriggerVariables: ["TEAM": "ios"])
 
@@ -75,7 +77,7 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
     }
 
     func testFailedStatePassesFailedUploadState() async throws {
-        let client = StubGitLabAPIClient()
+        let client = StubProvider()
         await client.setPendingState(pendingValue(branch: "main"))
         let sink = makeSink(apiClient: client)
 
@@ -89,7 +91,7 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
     // MARK: - Benign skips
 
     func testSkipsUnknownOrAlreadyClaimedUpload() async throws {
-        let client = StubGitLabAPIClient()
+        let client = StubProvider()
         let sink = makeSink(apiClient: client)
 
         try await sink.handle(makeEvent())
@@ -103,7 +105,7 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
     }
 
     func testSkipsWhenClaimLostToConcurrentDelivery() async throws {
-        let client = StubGitLabAPIClient()
+        let client = StubProvider()
         await client.setPendingState(pendingValue(branch: "main"))
         await client.setClaimResult(false)
         let sink = makeSink(apiClient: client)
@@ -115,7 +117,7 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
     }
 
     func testIgnoresOtherEventTypes() async throws {
-        let client = StubGitLabAPIClient()
+        let client = StubProvider()
         let sink = makeSink(apiClient: client)
 
         try await sink.handle(makeEvent(eventType: "betaFeedbackScreenshotSubmissionCreated"))
@@ -126,7 +128,7 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
     }
 
     func testIgnoresNonTerminalStates() async throws {
-        let client = StubGitLabAPIClient()
+        let client = StubProvider()
         let sink = makeSink(apiClient: client)
 
         try await sink.handle(makeEvent(newState: "PROCESSING"))
@@ -139,15 +141,15 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
     // MARK: - Failures
 
     func testUndecodablePendingValueThrowsWithoutClaiming() async throws {
-        let client = StubGitLabAPIClient()
+        let client = StubProvider()
         await client.setPendingState("not-base64!!!")
         let sink = makeSink(apiClient: client)
 
         do {
             try await sink.handle(makeEvent())
             XCTFail("Expected invalidPendingState error")
-        } catch let error as GitLabPipelineTriggerError {
-            XCTAssertEqual(error, .invalidPendingState(version: expectedVersion))
+        } catch let error as PipelineTriggerSinkError {
+            XCTAssertEqual(error, .invalidPendingState(uploadId: expectedVersion))
         }
 
         let claimCalls = await client.claimCalls
@@ -157,7 +159,7 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
     }
 
     func testMissingBranchFieldThrows() async throws {
-        let client = StubGitLabAPIClient()
+        let client = StubProvider()
         let value = Data(#"{"buildNumber":"456"}"#.utf8).base64EncodedString()
         await client.setPendingState(value)
         let sink = makeSink(apiClient: client)
@@ -165,14 +167,14 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
         do {
             try await sink.handle(makeEvent())
             XCTFail("Expected invalidPendingState error")
-        } catch let error as GitLabPipelineTriggerError {
-            XCTAssertEqual(error, .invalidPendingState(version: expectedVersion))
+        } catch let error as PipelineTriggerSinkError {
+            XCTAssertEqual(error, .invalidPendingState(uploadId: expectedVersion))
         }
     }
 
     func testTriggerFailureRestoresStateAlertsAndThrows() async throws {
         let value = pendingValue(branch: "main")
-        let client = StubGitLabAPIClient()
+        let client = StubProvider()
         await client.setPendingState(value)
         await client.setTriggerError(TriggerFailure())
 
@@ -198,7 +200,7 @@ final class GitLabPipelineTriggerSinkTests: XCTestCase {
     }
 
     func testTriggerAndRestoreDoubleFailureEscalatesAlert() async throws {
-        let client = StubGitLabAPIClient()
+        let client = StubProvider()
         await client.setPendingState(pendingValue(branch: "main"))
         await client.setTriggerError(TriggerFailure())
         await client.setRestoreError(TriggerFailure())
@@ -230,7 +232,7 @@ private actor AlertRecorder {
     }
 }
 
-actor StubGitLabAPIClient: GitLabAPIClient {
+actor StubProvider: PendingStateStore, PipelineTrigger {
 
     private var pendingState: String?
     private var claimResult = true
@@ -258,17 +260,17 @@ actor StubGitLabAPIClient: GitLabAPIClient {
         restoreError = error
     }
 
-    func getPendingState(version: String) async throws -> String? {
+    func getPendingState(uploadId version: String) async throws -> String? {
         getCalls.append(version)
         return pendingState
     }
 
-    func claimPendingState(version: String) async throws -> Bool {
+    func claimPendingState(uploadId version: String) async throws -> Bool {
         claimCalls.append(version)
         return claimResult
     }
 
-    func restorePendingState(version: String, content: String) async throws {
+    func restorePendingState(uploadId version: String, content: String) async throws {
         restoreCalls.append((version: version, content: content))
         if let restoreError {
             throw restoreError

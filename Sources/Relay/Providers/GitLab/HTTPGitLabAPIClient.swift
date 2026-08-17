@@ -11,7 +11,7 @@ struct GitLabAPIError: Error, CustomStringConvertible {
     }
 }
 
-struct HTTPGitLabAPIClient: GitLabAPIClient {
+struct HTTPGitLabAPIClient: PendingStateStore, PipelineTrigger {
 
     private static let requestTimeout = TimeAmount.seconds(30)
     private static let maxResponseBytes = 4 << 20
@@ -37,7 +37,7 @@ struct HTTPGitLabAPIClient: GitLabAPIClient {
         self.triggerToken = configuration.triggerToken
     }
 
-    func getPendingState(version: String) async throws -> String? {
+    func getPendingState(uploadId version: String) async throws -> String? {
         var request = HTTPClientRequest(url: pendingFileURL(version: version))
         request.method = .GET
         request.headers.add(name: "PRIVATE-TOKEN", value: apiToken)
@@ -54,7 +54,7 @@ struct HTTPGitLabAPIClient: GitLabAPIClient {
         return String(buffer: body)
     }
 
-    func claimPendingState(version: String) async throws -> Bool {
+    func claimPendingState(uploadId version: String) async throws -> Bool {
         guard let packageId = try await findPackageId(version: version) else {
             return false
         }
@@ -73,7 +73,7 @@ struct HTTPGitLabAPIClient: GitLabAPIClient {
         return true
     }
 
-    func restorePendingState(version: String, content: String) async throws {
+    func restorePendingState(uploadId version: String, content: String) async throws {
         var request = HTTPClientRequest(url: pendingFileURL(version: version))
         request.method = .PUT
         request.headers.add(name: "PRIVATE-TOKEN", value: apiToken)
