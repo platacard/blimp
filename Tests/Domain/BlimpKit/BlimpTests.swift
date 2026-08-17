@@ -231,8 +231,8 @@ final class BlimpTests: XCTestCase {
 // MARK: - Mock Helpers
 
 private struct MockAppStoreConnectUploader: AppStoreConnectUploader {
-    func upload(config: UploadConfig, verbose: Bool) async throws {
-        // Mock implementation - does nothing
+    func upload(config: UploadConfig, verbose: Bool) async throws -> UploadReceipt {
+        UploadReceipt(uploadId: "mock-upload-id")
     }
 }
 

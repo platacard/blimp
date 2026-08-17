@@ -37,6 +37,7 @@ let package = Package(
         .api(name: "AppsAPI"),
         .api(name: "ProvisioningAPI"),
         .api(name: "TestflightAPI"),
+        .api(name: "WebhooksAPI"),
 
         .core(name: "ASCCredentials"),
         .core(
@@ -54,6 +55,7 @@ let package = Package(
                 "AppsAPI",
                 "ProvisioningAPI",
                 "TestflightAPI",
+                "WebhooksAPI",
                 "JWTProvider",
                 "DeployHelpers",
                 .product(name: "Cronista", package: "cronista"),

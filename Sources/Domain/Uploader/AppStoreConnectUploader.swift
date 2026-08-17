@@ -2,7 +2,20 @@ import Foundation
 
 public protocol AppStoreConnectUploader: Sendable {
     /// Upload the resource with the selected transporter, typically IPA file
-    func upload(config: UploadConfig, verbose: Bool) async throws
+    @discardableResult
+    func upload(config: UploadConfig, verbose: Bool) async throws -> UploadReceipt
+}
+
+/// Metadata about a completed binary upload.
+public struct UploadReceipt: Sendable {
+    /// The `buildUploads` resource id created for this upload, when the transporter
+    /// goes through the App Store Connect API. Webhook `buildUploadStateUpdated`
+    /// events reference this id in `relationships.instance.data.id`.
+    public let uploadId: String?
+
+    public init(uploadId: String?) {
+        self.uploadId = uploadId
+    }
 }
 
 public struct UploadConfig: Sendable {

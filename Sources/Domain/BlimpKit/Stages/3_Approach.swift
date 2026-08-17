@@ -49,12 +49,14 @@ public extension Blimp {
 
 public extension Blimp.Approach {
     /// Upload the build with App Store Connect API
-    func start(config: UploadConfig, verbose: Bool) async throws {
+    /// - Returns: receipt with the `buildUploads` id, usable to correlate webhook events
+    @discardableResult
+    func start(config: UploadConfig, verbose: Bool) async throws -> UploadReceipt {
         do {
-            try await uploader.upload(config: config, verbose: verbose)
+            return try await uploader.upload(config: config, verbose: verbose)
         } catch let TransporterError.toolError(error) {
             logger.warning("Transporter error: [\(error.localizedDescription)]!")
-            if ignoreUploaderFailure { return }
+            if ignoreUploaderFailure { return UploadReceipt(uploadId: nil) }
 
             throw error
         } catch {
