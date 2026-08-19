@@ -65,6 +65,23 @@ final class DeliveryPayloadTests: XCTestCase {
         XCTAssertEqual(payload.instanceId, "upload-2")
     }
 
+    func testDecodesValueSpelledStateTransitionAttributes() throws {
+        let payload = try decode(#"""
+        {
+          "data": {
+            "type": "appStoreVersionAppVersionStateUpdated",
+            "id": "evt-789",
+            "attributes": {"oldValue": "PROCESSING", "newValue": "COMPLETE", "timestamp": "2026-08-19T10:00:00Z"},
+            "relationships": {"instance": {"data": {"type": "appStoreVersions", "id": "version-1"}}}
+          }
+        }
+        """#)
+
+        XCTAssertEqual(payload.oldState, "PROCESSING")
+        XCTAssertEqual(payload.newState, "COMPLETE")
+        XCTAssertEqual(payload.instanceId, "version-1")
+    }
+
     func testDecodesUnknownEventTypeLeniently() throws {
         let payload = try decode(#"""
         {

@@ -73,6 +73,10 @@ struct HTTPGitLabAPIClient: PendingStateStore, PipelineTrigger {
         return true
     }
 
+    // Re-publishing after a claim DELETE is safe even with duplicate-package
+    // rejection enabled: GitLab's generic duplicate check excludes entries in
+    // pending_destruction (not_pending_destruction scope in
+    // packages/generic/create_package_file_service.rb).
     func restorePendingState(uploadId version: String, content: String) async throws {
         var request = HTTPClientRequest(url: pendingFileURL(version: version))
         request.method = .PUT

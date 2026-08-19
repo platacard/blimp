@@ -52,9 +52,33 @@ public struct WebhookDeliveryPayload: Codable, Sendable {
         public var oldState: String?
         public var newState: String?
 
+        enum CodingKeys: String, CodingKey {
+            case oldState
+            case newState
+            case oldValue
+            case newValue
+        }
+
         public init(oldState: String? = nil, newState: String? = nil) {
             self.oldState = oldState
             self.newState = newState
+        }
+
+        // Apple's state-transition payloads are inconsistent across event types:
+        // buildUploadStateUpdated carries oldState/newState, while appStoreVersion
+        // events carry oldValue/newValue. Accept both spellings.
+        public init(from decoder: any Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            oldState = try container.decodeIfPresent(String.self, forKey: .oldState)
+                ?? container.decodeIfPresent(String.self, forKey: .oldValue)
+            newState = try container.decodeIfPresent(String.self, forKey: .newState)
+                ?? container.decodeIfPresent(String.self, forKey: .newValue)
+        }
+
+        public func encode(to encoder: any Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encodeIfPresent(oldState, forKey: .oldState)
+            try container.encodeIfPresent(newState, forKey: .newState)
         }
     }
 

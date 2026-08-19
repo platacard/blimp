@@ -36,6 +36,7 @@ enum RelayConfigurationError: Error, CustomStringConvertible, Equatable {
     case missingSecret
     case invalidPort(String)
     case unknownSink(String)
+    case emptySinkList
     case missingVariable(String, hint: String)
     case malformedExtraTriggerVariables(String)
 
@@ -48,6 +49,9 @@ enum RelayConfigurationError: Error, CustomStringConvertible, Equatable {
         case .unknownSink(let name):
             let known = SinkKind.allCases.map(\.rawValue).joined(separator: ", ")
             return "Unknown sink '\(name)' in SINKS. Known sinks: \(known)."
+        case .emptySinkList:
+            let known = SinkKind.allCases.map(\.rawValue).joined(separator: ", ")
+            return "SINKS is set but resolves to an empty list. Unset it to get the default 'log' sink, or list at least one of: \(known)."
         case .missingVariable(let name, let hint):
             return "\(name) is not set. \(hint)"
         case .malformedExtraTriggerVariables(let entry):
@@ -111,7 +115,7 @@ extension RelayConfiguration {
         guard let rawValue, !rawValue.isEmpty else {
             return [.log]
         }
-        return try rawValue
+        let kinds = try rawValue
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
@@ -121,6 +125,12 @@ extension RelayConfiguration {
                 }
                 return kind
             }
+        guard !kinds.isEmpty else {
+            // An explicitly set SINKS that resolves to nothing (e.g. ",") would
+            // make the relay 200-acknowledge every delivery without processing it.
+            throw RelayConfigurationError.emptySinkList
+        }
+        return kinds
     }
 
     private static func loadGitLabConfiguration(from environment: [String: String]) throws -> GitLabSinkConfiguration {

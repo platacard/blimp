@@ -73,6 +73,15 @@ final class RelayConfigurationTests: XCTestCase {
         }
     }
 
+    func testSinksResolvingToEmptyListThrows() {
+        var environment = baseEnvironment
+        environment["SINKS"] = " , "
+
+        XCTAssertThrowsError(try RelayConfiguration.load(from: environment)) { error in
+            XCTAssertEqual(error as? RelayConfigurationError, .emptySinkList)
+        }
+    }
+
     func testForwardSinkRequiresURL() throws {
         var environment = baseEnvironment
         environment["SINKS"] = "forward"
