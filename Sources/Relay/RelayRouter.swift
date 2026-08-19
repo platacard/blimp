@@ -32,6 +32,8 @@ enum RelayRouter {
 
             var headers = [String: String]()
             for field in request.headers {
+                // canonicalName is the lowercased field name (swift-http-types),
+                // matching the lowercase lookups below and in VerifiedWebhookEvent.
                 headers[field.name.canonicalName] = field.value
             }
 

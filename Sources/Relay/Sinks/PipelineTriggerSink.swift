@@ -8,7 +8,7 @@ enum PipelineTriggerSinkError: Error, CustomStringConvertible, Equatable {
     var description: String {
         switch self {
         case .invalidPendingState(let uploadId):
-            return "Pending state '\(uploadId)' does not contain base64-encoded JSON with a 'branch' field"
+            return "Pending state for upload '\(uploadId)' is not base64-encoded JSON with a 'branch' field"
         }
     }
 }
