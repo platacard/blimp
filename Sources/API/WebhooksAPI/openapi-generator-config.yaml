@@ -1,0 +1,17 @@
+generate:
+  - client
+  - types
+filter:
+  operations:
+    - webhooks_createInstance # POST /v1/webhooks
+    - webhooks_getInstance # GET /v1/webhooks/{id}
+    - webhooks_updateInstance # PATCH /v1/webhooks/{id}
+    - webhooks_deleteInstance # DELETE /v1/webhooks/{id}
+    - apps_webhooks_getToManyRelated # GET /v1/apps/{id}/webhooks
+    - webhooks_deliveries_getToManyRelated # GET /v1/webhooks/{id}/deliveries
+    - webhookDeliveries_createInstance # POST /v1/webhookDeliveries (redelivery)
+    - webhookPings_createInstance # POST /v1/webhookPings (test ping)
+namingStrategy: idiomatic
+
+# Run from root when changed:
+# ./Scripts/update_api.sh WebhooksAPI

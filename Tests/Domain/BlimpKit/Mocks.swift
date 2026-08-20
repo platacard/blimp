@@ -260,10 +260,12 @@ class MockAppQueryService: AppQueryService, @unchecked Sendable {
 class MockUploader: AppStoreConnectUploader, @unchecked Sendable {
     var uploadCalls: [UploadConfig] = []
     var errorToThrow: Error?
+    var receiptToReturn = UploadReceipt(uploadId: "mock-upload-id")
 
-    func upload(config: UploadConfig, verbose: Bool) async throws {
+    func upload(config: UploadConfig, verbose: Bool) async throws -> UploadReceipt {
         if let error = errorToThrow { throw error }
         uploadCalls.append(config)
+        return receiptToReturn
     }
 }
 

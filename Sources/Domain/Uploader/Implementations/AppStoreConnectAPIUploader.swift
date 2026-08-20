@@ -33,7 +33,8 @@ public actor AppStoreConnectAPIUploader: AppStoreConnectUploader {
         self.pollInterval = pollInterval
     }
 
-    public func upload(config: UploadConfig, verbose: Bool) async throws {
+    @discardableResult
+    public func upload(config: UploadConfig, verbose: Bool) async throws -> UploadReceipt {
         let ipaURL = URL(fileURLWithPath: config.filePath, isDirectory: false).standardizedFileURL
 
         guard FileManager.default.fileExists(atPath: ipaURL.path()) else {
@@ -110,6 +111,8 @@ public actor AppStoreConnectAPIUploader: AppStoreConnectUploader {
             logger.error("Unexpected `.awaitingUpload` status after the binary successfully uploaded")
             throw TransporterError.toolError(ASCTransporterError.uploadFailed(["Awaiting upload after binary uploaded"]))
         }
+
+        return UploadReceipt(uploadId: plan.uploadId)
     }
 }
 
