@@ -19,6 +19,26 @@
             "target": "blimp",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release blimp"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:blimp}",
+            "name": "Debug blimp-relay",
+            "target": "blimp-relay",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug blimp-relay"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:blimp}",
+            "name": "Release blimp-relay",
+            "target": "blimp-relay",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release blimp-relay"
         }
     ]
 }

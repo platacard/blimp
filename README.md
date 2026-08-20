@@ -20,7 +20,7 @@ This project is still a work in progress but aims to be a native Swift `fastlane
 As package dependency:
 ```swift
 dependencies: [
-    .package(url: "https://github.com/platacard/blimp.git", from: "0.8.0")
+    .package(url: "https://github.com/platacard/blimp.git", from: "0.9.0")
 ]
 ```
 
@@ -108,6 +108,43 @@ Then, you can use the binary artifact directly:
 
 > The relay never needs App Store Connect credentials. It only holds the webhook secret you configured in App Store Connect — deliveries are verified by signature, not by calling back into the ASC API.
 
+### Polling (default) vs webhooks
+
+By default, no relay is needed: `blimp approach` uploads the IPA and then **blocks, polling** the App Store Connect API every 30 seconds — first until the build appears, then until processing finishes. There is no built-in timeout; your CI job's timeout is the limit. Zero setup, but the runner stays busy for the whole processing window (typically 5–30 minutes).
+
+With the relay, the upload job can exit right after the upload and let Apple call you back:
+
+1. Apple processes the build and sends a `BUILD_UPLOAD_STATE_UPDATED` webhook to the relay.
+2. The relay verifies the signature and runs its sinks — e.g. triggers a finalize pipeline on GitLab.
+
+The polling path is untouched either way — webhooks are opt-in.
+
+### Setup
+
+1. **Deploy the relay** somewhere reachable by Apple over HTTPS (see [Running with Docker](#running-with-docker)) with at least `ASC_WEBHOOK_SECRET` set.
+2. **Register the webhook in App Store Connect** — the relay only receives deliveries, it does not register itself. Use the ASC UI (App → Webhooks) or the `WebhooksAPI` library product:
+
+   ```swift
+   import WebhooksAPI
+
+   let api = WebhooksAPI(jwtProvider: DefaultJWTProvider())
+   try await api.createWebhook(
+       appId: appId,
+       name: "blimp-relay",
+       url: "https://relay.example.com/webhooks/appstoreconnect",
+       secret: secret, // must equal the relay's ASC_WEBHOOK_SECRET
+       eventTypes: [.buildUploadStateUpdated]
+   )
+   ```
+
+3. **Configure sinks** via the `SINKS` env variable (see the environment reference below).
+
+For the `gitlab-pipeline-trigger` sink, the upload job supplies the resume context ("producer side"):
+
+- `Approach.start(...)` (BlimpKit) returns an `UploadReceipt` with the `uploadId` of the build upload. The `blimp approach` CLI command always polls; to exit after upload, call `Approach.start` from your own CLI instead of `hold`.
+- Publish a base64-encoded JSON blob containing at least a non-empty `"branch"` field to the GitLab generic package registry at `packages/generic/<PENDING_PACKAGE_NAME>/<uploadId>/state.json`.
+- When the upload reaches `COMPLETE` or `FAILED`, the relay claims that package and triggers a pipeline on `branch` with the variables `TESTFLIGHT_FINALIZE=true`, `TF_STATE=<your blob>`, and `TF_UPLOAD_STATE=<COMPLETE|FAILED>` (plus anything from `EXTRA_TRIGGER_VARIABLES`). Your finalize pipeline reacts to these and continues with `blimp land`.
+
 Sinks (comma-separated in `SINKS`, executed in order per delivery):
 
 - `log` — logs a one-line summary of each delivery.
@@ -116,7 +153,7 @@ Sinks (comma-separated in `SINKS`, executed in order per delivery):
 
 If any sink fails, the relay answers 5xx so Apple redelivers. Pings, unknown event types, and unparseable-but-verified payloads are acknowledged with 200.
 
-#### Porting to another CI provider
+### Porting to another CI provider
 
 The trigger sink is provider-neutral: it works against two small protocols in `Sources/Relay/Providers/` — `PendingStateStore` (keyed state with an atomic claim; GitLab backs it with the generic package registry and delete-as-claim) and `PipelineTrigger` (start a run on a ref with parameters). A GitHub port, for example, would implement the store with one git ref per upload (ref deletion is atomic) and the trigger with `repository_dispatch`. GitLab is currently the only shipped implementation; the `forward` sink is the zero-code alternative for anything that can receive an HTTP POST.
 
@@ -144,6 +181,16 @@ The trigger sink is provider-neutral: it works against two small protocols in `S
 - `GET /sys/health/liveness`, `GET /sys/health/readiness` — health probes.
 
 ### Running with Docker
+
+Prebuilt multi-arch images are published to GHCR on every version tag:
+
+```bash
+docker run --rm -p 13100:13100 \
+    -e ASC_WEBHOOK_SECRET=whsec_... \
+    ghcr.io/platacard/blimp-relay:0.9.0
+```
+
+Or build locally:
 
 ```bash
 docker build -t blimp-relay .
