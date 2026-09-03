@@ -73,6 +73,14 @@ The trigger sink is provider-neutral: it works against two small protocols in [`
 | `ALERT_WEBHOOK_URL` | no | — | If set, trigger failures POST a JSON alert (`{"text": "..."}`) here. |
 | `EXTRA_TRIGGER_VARIABLES` | no | — | Comma-separated `key=value` pairs passed through as extra pipeline trigger variables. |
 
+## Development
+
+Signature verification is covered at two levels: `SignatureVerifierTests` (WebhookKit, pure HMAC/parsing cases) and `RelayRouterTests` (in-process Hummingbird requests through the real router: 401/413/500 mapping, header case, secret rotation).
+
+```bash
+swift test --filter "WebhookKitTests|BlimpRelayTests"
+```
+
 ## Endpoints
 
 - `POST /webhooks/appstoreconnect` — the webhook receiver (point App Store Connect here).
