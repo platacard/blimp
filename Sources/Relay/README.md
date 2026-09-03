@@ -2,6 +2,8 @@
 
 `blimp-relay` is a small, separately deployable HTTP server that receives [App Store Connect webhooks](https://developer.apple.com/documentation/appstoreconnectapi/webhooks), verifies their HMAC-SHA256 signatures, and relays them to configurable sinks — turn ASC webhooks into GitLab pipeline triggers, or forward them anywhere. The signature verification and payload models are also available as a standalone `WebhookKit` library product if you'd rather embed webhook handling in your own server.
 
+![blimp-relay flow: upload job publishes pending state, Apple webhook, relay verifies and claims, triggered finalize pipeline](../../docs/relay-flow.svg)
+
 > The relay never needs App Store Connect credentials. It only holds the webhook secret you configured in App Store Connect — deliveries are verified by signature, not by calling back into the ASC API.
 
 ## Polling (default) vs webhooks
