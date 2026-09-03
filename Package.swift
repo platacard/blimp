@@ -126,7 +126,10 @@ let package = Package(
         .domainTest(name: "WebhookKit"),
         .testTarget(
             name: "BlimpRelayTests",
-            dependencies: ["BlimpRelay"],
+            dependencies: [
+                "BlimpRelay",
+                .product(name: "HummingbirdTesting", package: "hummingbird")
+            ],
             path: "Tests/Relay"
         ),
         .testTarget(

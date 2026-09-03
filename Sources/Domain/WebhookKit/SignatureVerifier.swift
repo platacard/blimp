@@ -34,14 +34,22 @@ public struct SignatureVerifier: Sendable {
         }
     }
 
+    private static let headerPrefix = "hmacsha256="
+
+    /// Parses `hmacsha256=<hex>` into the raw digest bytes.
+    ///
+    /// The digest length is checked here as well as inside the HMAC comparison so a
+    /// truncated or padded digest is rejected before any key is touched.
     private static func parseSignature(_ header: String) -> Foundation.Data? {
         let trimmed = header.trimmingCharacters(in: .whitespacesAndNewlines)
-        let prefix = "hmacsha256="
-        guard trimmed.lowercased().hasPrefix(prefix) else {
+        guard trimmed.prefix(headerPrefix.count).lowercased() == headerPrefix else {
             return nil
         }
-        let hex = trimmed.dropFirst(prefix.count).trimmingCharacters(in: .whitespaces)
-        return Foundation.Data(hexEncoded: hex)
+        let hex = trimmed.dropFirst(headerPrefix.count).trimmingCharacters(in: .whitespaces)
+        guard let digest = Foundation.Data(hexEncoded: hex), digest.count == SHA256.byteCount else {
+            return nil
+        }
+        return digest
     }
 }
 

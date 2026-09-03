@@ -105,4 +105,76 @@ final class SignatureVerifierTests: XCTestCase {
 
         XCTAssertFalse(verifier.verify(rawBody: body, signatureHeader: "hmacsha256=\(knownHexDigest)"))
     }
+
+    // MARK: - Digest length
+
+    func testRejectsTruncatedDigest() {
+        let verifier = SignatureVerifier(secrets: [secret])
+        let truncated = String(knownHexDigest.dropLast(2))
+
+        XCTAssertFalse(verifier.verify(rawBody: body, signatureHeader: "hmacsha256=\(truncated)"))
+    }
+
+    func testRejectsOverlongDigest() {
+        let verifier = SignatureVerifier(secrets: [secret])
+
+        XCTAssertFalse(verifier.verify(rawBody: body, signatureHeader: "hmacsha256=\(knownHexDigest)00"))
+    }
+
+    func testRejectsWhitespaceInsideDigest() {
+        let verifier = SignatureVerifier(secrets: [secret])
+        let split = knownHexDigest.prefix(10) + " " + knownHexDigest.dropFirst(10)
+
+        XCTAssertFalse(verifier.verify(rawBody: body, signatureHeader: "hmacsha256=\(split)"))
+    }
+
+    func testRejectsSpaceBeforeEqualsSign() {
+        let verifier = SignatureVerifier(secrets: [secret])
+
+        XCTAssertFalse(verifier.verify(rawBody: body, signatureHeader: "hmacsha256 =\(knownHexDigest)"))
+    }
+
+    // MARK: - Secret configuration
+
+    func testIgnoresEmptySecrets() {
+        let header = "hmacsha256=\(knownHexDigest)"
+
+        XCTAssertFalse(SignatureVerifier(secrets: [""]).verify(rawBody: body, signatureHeader: header))
+        XCTAssertTrue(SignatureVerifier(secrets: ["", secret]).verify(rawBody: body, signatureHeader: header))
+    }
+
+    func testRejectsWhenNoConfiguredSecretMatches() {
+        let verifier = SignatureVerifier(secrets: ["one", "two", "three"])
+
+        XCTAssertFalse(verifier.verify(rawBody: body, signatureHeader: "hmacsha256=\(knownHexDigest)"))
+    }
+
+    // MARK: - Body handling
+
+    func testSignsExactBytesIncludingBinaryAndUnicode() {
+        var body = Data("{\"name\":\"Ünïcødé 🚀\"}".utf8)
+        body.append(0)
+        let verifier = SignatureVerifier(secrets: [secret])
+        let header = "hmacsha256=\(computedHexDigest(body: body, secret: secret))"
+
+        XCTAssertTrue(verifier.verify(rawBody: body, signatureHeader: header))
+        XCTAssertFalse(verifier.verify(rawBody: body + Data("\n".utf8), signatureHeader: header))
+        XCTAssertFalse(verifier.verify(rawBody: body.dropLast(), signatureHeader: header))
+    }
+
+    func testVerifiesEmptyBody() {
+        let verifier = SignatureVerifier(secrets: [secret])
+        let header = "hmacsha256=\(computedHexDigest(body: Data(), secret: secret))"
+
+        XCTAssertTrue(verifier.verify(rawBody: Data(), signatureHeader: header))
+        XCTAssertFalse(verifier.verify(rawBody: body, signatureHeader: header))
+    }
+
+    func testAcceptsAnyDataProtocolBody() {
+        let verifier = SignatureVerifier(secrets: [secret])
+        let header = "hmacsha256=\(knownHexDigest)"
+
+        XCTAssertTrue(verifier.verify(rawBody: Array(body), signatureHeader: header))
+        XCTAssertTrue(verifier.verify(rawBody: body[body.startIndex...], signatureHeader: header))
+    }
 }
