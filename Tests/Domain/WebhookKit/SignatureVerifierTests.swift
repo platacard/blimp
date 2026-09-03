@@ -26,6 +26,17 @@ final class SignatureVerifierTests: XCTestCase {
         XCTAssertEqual(computedHexDigest(body: body, secret: secret), knownHexDigest)
     }
 
+
+    /// The worked example from Apple's "Configuring and parsing App Store Connect API
+    /// webhook notifications" documentation, pinned so the verifier stays aligned with the spec.
+    func testVerifiesAppleDocumentedVector() {
+        let verifier = SignatureVerifier(secrets: ["This is my secret"])
+        let body = Data("Hello, World!".utf8)
+        let header = "hmacsha256=7f062172b01cb00b53ca068614674a3d982a34062a0f5d37687d5e3377e54657"
+
+        XCTAssertTrue(verifier.verify(rawBody: body, signatureHeader: header))
+    }
+
     func testVerifiesComputedSignatureForArbitraryBody() {
         let body = Data("hello webhook body".utf8)
         let verifier = SignatureVerifier(secrets: ["primary-secret"])
