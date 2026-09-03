@@ -1,5 +1,5 @@
 {
-  "originHash" : "33cd38fa81eef8949a40e856374dc4eedd8a81e3d40cdb61aa2a7f624f488a71",
+  "originHash" : "d2c3acf04783237b360b2f1313c914a7613027b370c59078af70c4cca3cf7ec0",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/platacard/cronista",
       "state" : {
-        "revision" : "8560d4eaf181586663ea4b5667d034fcc5e24a18",
-        "version" : "1.1.0"
+        "revision" : "ac6a808b249de4dc3ddf0f65cc6f5dc9855128d0",
+        "version" : "1.1.2"
       }
     },
     {
