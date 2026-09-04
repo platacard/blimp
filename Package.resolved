@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/platacard/cronista",
       "state" : {
-        "revision" : "ac6a808b249de4dc3ddf0f65cc6f5dc9855128d0",
-        "version" : "1.1.2"
+        "revision" : "efff02de6e798e43b935d208ced6c16f7747b4dd",
+        "version" : "1.1.3"
       }
     },
     {
