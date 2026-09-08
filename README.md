@@ -106,7 +106,7 @@ Then, you can use the binary artifact directly:
 
 By default, `blimp approach` blocks and polls the App Store Connect API every 30 seconds until the build finishes processing — zero setup, but the CI runner stays busy for the whole processing window.
 
-Once the build is processed, `blimp approach` prints `BuildId: <id>` and, on GitHub Actions, appends `BUILD_ID=<id>` to `$GITHUB_OUTPUT` so a later step can pass `${{ steps.<approach step id>.outputs.BUILD_ID }}` to `blimp land --build-id`. In a shell, capture the id from the output (`grep -oE 'BuildId: [0-9a-f-]+'`).
+Once the build is processed, `blimp approach` prints `BuildId: <id>` and, on GitHub Actions, appends `BUILD_ID=<id>` to `$GITHUB_OUTPUT` so a later step can pass `${{ steps.<approach step id>.outputs.BUILD_ID }}` to `blimp land --build-id`. In a shell, capture the id from the output: `blimp approach … | tee approach.log` then `BUILD_ID=$(grep -oE 'BuildId: [0-9a-f-]+' approach.log | head -1 | awk '{print $2}')`.
 
 `blimp-relay` is the webhook alternative: a small, separately deployable HTTP server that receives [App Store Connect webhooks](https://developer.apple.com/documentation/appstoreconnectapi/webhooks), verifies their signatures, and relays them to configurable sinks (log, HTTP forward, GitLab pipeline trigger) — so the upload job can exit right after the upload and a webhook resumes your pipeline.
 

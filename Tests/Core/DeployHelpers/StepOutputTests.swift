@@ -43,6 +43,13 @@ final class StepOutputTests: XCTestCase {
                        "NOTES<<BLIMP_EOF\nline one\nline two\nBLIMP_EOF\n")
     }
 
+    func testHeredocDelimiterNeverOccursInTheValue() throws {
+        let sut = StepOutput(environment: ["GITHUB_OUTPUT": outputFile.path])
+        try sut.export("NOTES", "has BLIMP_EOF inside\nand BLIMP_EOF_1 too")
+        XCTAssertEqual(try String(contentsOf: outputFile, encoding: .utf8),
+                       "NOTES<<BLIMP_EOF_2\nhas BLIMP_EOF inside\nand BLIMP_EOF_1 too\nBLIMP_EOF_2\n")
+    }
+
     func testExportOutsideCIIsANoOp() throws {
         let sut = StepOutput(environment: [:])
         XCTAssertNil(try sut.export("BUILD_ID", "abc"))

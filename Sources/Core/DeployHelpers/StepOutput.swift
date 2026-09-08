@@ -29,10 +29,22 @@ public struct StepOutput: Sendable {
         guard let path = environment[Self.gitHubOutputKey], !path.isEmpty else { return nil }
         let file = URL(fileURLWithPath: path)
         let line = value.contains("\n")
-            ? "\(name)<<\(Self.heredocDelimiter)\n\(value)\n\(Self.heredocDelimiter)\n"
+            ? "\(name)<<\(delimiter(absentFrom: value))\n\(value)\n\(delimiter(absentFrom: value))\n"
             : "\(name)=\(value)\n"
         try append(line, to: file)
         return file
+    }
+
+    /// A heredoc delimiter the value cannot terminate early: the base one, or
+    /// the base plus a counter when the value happens to contain it.
+    private func delimiter(absentFrom value: String) -> String {
+        var candidate = Self.heredocDelimiter
+        var n = 1
+        while value.contains(candidate) {
+            candidate = "\(Self.heredocDelimiter)_\(n)"
+            n += 1
+        }
+        return candidate
     }
 
     private func append(_ text: String, to file: URL) throws {
