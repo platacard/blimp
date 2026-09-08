@@ -1,5 +1,6 @@
 import Foundation
 import BlimpKit
+import DeployHelpers
 import ArgumentParser
 import Cronista
 import Uploader
@@ -63,7 +64,11 @@ struct Approach: AsyncParsableCommand {
 
         logger.info("Build with id: \(processingResult.buildId) has been successfully processed!")
 
-        ProcessInfo.processInfo.setValue(processingResult.buildId, forKey: "BUILD_ID")
+        // Hand the id to the next step (`blimp land`): `steps.<id>.outputs.BUILD_ID`
+        // on GitHub Actions; elsewhere the caller reads the "BuildId:" line above.
+        if let outputs = try StepOutput().export("BUILD_ID", processingResult.buildId) {
+            logger.info("BUILD_ID=\(processingResult.buildId) written to \(outputs.path)")
+        }
         logger.info("Done!")
     }
 }

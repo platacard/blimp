@@ -32,6 +32,7 @@ let package = Package(
             name: "BlimpCLI",
             dependencies: [
                 "BlimpKit",
+                "DeployHelpers",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "Cronista", package: "cronista"),
                 .product(name: "Corredor", package: "corredor"),
