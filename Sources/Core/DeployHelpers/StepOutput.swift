@@ -28,9 +28,8 @@ public struct StepOutput: Sendable {
     public func export(_ name: String, _ value: String) throws -> URL? {
         guard let path = environment[Self.gitHubOutputKey], !path.isEmpty else { return nil }
         let file = URL(fileURLWithPath: path)
-        let line = value.contains("\n")
-            ? "\(name)<<\(delimiter(absentFrom: value))\n\(value)\n\(delimiter(absentFrom: value))\n"
-            : "\(name)=\(value)\n"
+        let eof = delimiter(absentFrom: value)
+        let line = value.contains("\n") ? "\(name)<<\(eof)\n\(value)\n\(eof)\n" : "\(name)=\(value)\n"
         try append(line, to: file)
         return file
     }
