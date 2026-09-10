@@ -1,5 +1,6 @@
 import Foundation
 import BlimpKit
+import DeployHelpers
 import ArgumentParser
 import Cronista
 
@@ -12,8 +13,8 @@ struct Land: AsyncParsableCommand {
 
     @Option(help: "App's bundle identifier")
     var bundleId: String
-    @Option(help: "Processed build identifier from the `approach` step")
-    var buildId: String
+    @Option(help: "Processed build identifier from the `approach` step. Defaults to $BUILD_ID")
+    var buildId: String?
     @Option(parsing: .remaining)
     var betaGroups: [String]
 
@@ -23,6 +24,7 @@ struct Land: AsyncParsableCommand {
     func run() async throws {
         let logger = Cronista(module: "blimp", category: "Land")
         let land = Blimp.Land()
+        let buildId = try StepInput().value(StepInput.buildIdKey, option: buildId)
 
         logger.info("Setting beta groups...")
         try await land.engage(bundleId: bundleId, buildId: buildId, betaGroups: betaGroups)

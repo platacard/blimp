@@ -10,9 +10,14 @@ import Foundation
 /// to the file named by `GITHUB_OUTPUT` in the `name=value` form GitHub Actions
 /// exposes as `steps.<id>.outputs.<name>`. Outside CI the step logs the value
 /// and shell callers capture it from the output.
+///
+/// A step can also leave a note on the run page: markdown appended to the file
+/// named by `GITHUB_STEP_SUMMARY`.
 public struct StepOutput: Sendable {
     /// GitHub Actions' per-step outputs file.
     public static let gitHubOutputKey = "GITHUB_OUTPUT"
+    /// GitHub Actions' per-step markdown summary file.
+    public static let gitHubStepSummaryKey = "GITHUB_STEP_SUMMARY"
     private static let heredocDelimiter = "BLIMP_EOF"
 
     private let environment: [String: String]
@@ -31,6 +36,16 @@ public struct StepOutput: Sendable {
         let eof = delimiter(absentFrom: value)
         let line = value.contains("\n") ? "\(name)<<\(eof)\n\(value)\n\(eof)\n" : "\(name)=\(value)\n"
         try append(line, to: file)
+        return file
+    }
+
+    /// Appends a markdown line to the step summary shown on the run page.
+    /// Returns that file, or nil when no summary file is configured.
+    @discardableResult
+    public func summarize(_ markdown: String) throws -> URL? {
+        guard let path = environment[Self.gitHubStepSummaryKey], !path.isEmpty else { return nil }
+        let file = URL(fileURLWithPath: path)
+        try append(markdown.hasSuffix("\n") ? markdown : markdown + "\n", to: file)
         return file
     }
 

@@ -106,7 +106,45 @@ Then, you can use the binary artifact directly:
 
 By default, `blimp approach` blocks and polls the App Store Connect API every 30 seconds until the build finishes processing — zero setup, but the CI runner stays busy for the whole processing window.
 
-Once the build is processed, `blimp approach` prints `BuildId: <id>` and, on GitHub Actions, appends `BUILD_ID=<id>` to `$GITHUB_OUTPUT` so a later step can pass `${{ steps.<approach step id>.outputs.BUILD_ID }}` to `blimp land --build-id`. In a shell, capture the id from the output: `blimp approach … | tee approach.log` then `BUILD_ID=$(grep -oE 'BuildId: [0-9a-f-]+' approach.log | head -1 | awk '{print $2}')`.
+Once the build is processed, `blimp approach` prints `BuildId: <id>` and hands the id to `blimp land`, which takes it from `--build-id` or, when the option is omitted, from the `BUILD_ID` environment variable.
+
+### GitHub Actions
+
+On GitHub Actions, `blimp approach` appends `BUILD_ID=<id>` to `$GITHUB_OUTPUT` and leaves a one-line note in the step summary. Give the step an `id` and pass the output to `blimp land`:
+
+```yaml
+- name: Upload to App Store Connect
+  id: approach
+  run: blimp approach --bundle-id com.app --ipa-path build/App.ipa --app-version 1.0 --build-number ${{ github.run_number }}
+
+- name: Assign beta groups and submit for review
+  env:
+    BUILD_ID: ${{ steps.approach.outputs.BUILD_ID }}
+  run: blimp land --bundle-id com.app --beta-groups "Beta Testers"
+```
+
+Step outputs stay inside the job. To land in a separate job, expose the output at the job level and read it through `needs`:
+
+```yaml
+jobs:
+  upload:
+    runs-on: macos-latest
+    outputs:
+      build-id: ${{ steps.approach.outputs.BUILD_ID }}
+    steps:
+      - id: approach
+        run: blimp approach …
+
+  land:
+    needs: upload
+    runs-on: macos-latest
+    steps:
+      - run: blimp land --bundle-id com.app --build-id "${{ needs.upload.outputs.build-id }}" --beta-groups "Beta Testers"
+```
+
+### Other CI and shells
+
+Capture the id from the output: `blimp approach … | tee approach.log` then `BUILD_ID=$(grep -oE 'BuildId: [0-9a-f-]+' approach.log | head -1 | awk '{print $2}')` and export it (or pass `--build-id`) to `blimp land`.
 
 `blimp-relay` is the webhook alternative: a small, separately deployable HTTP server that receives [App Store Connect webhooks](https://developer.apple.com/documentation/appstoreconnectapi/webhooks), verifies their signatures, and relays them to configurable sinks (log, HTTP forward, GitLab pipeline trigger) — so the upload job can exit right after the upload and a webhook resumes your pipeline.
 

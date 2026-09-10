@@ -60,4 +60,25 @@ final class StepOutputTests: XCTestCase {
         let sut = StepOutput(environment: ["GITHUB_OUTPUT": ""])
         XCTAssertNil(try sut.export("BUILD_ID", "abc"))
     }
+
+    func testSummarizeAppendsMarkdownToTheStepSummary() throws {
+        try "# Earlier\n".write(to: outputFile, atomically: true, encoding: .utf8)
+        let sut = StepOutput(environment: ["GITHUB_STEP_SUMMARY": outputFile.path])
+        let file = try sut.summarize("Build 1.0 (42) processed")
+        XCTAssertEqual(file, outputFile)
+        XCTAssertEqual(try String(contentsOf: outputFile, encoding: .utf8),
+                       "# Earlier\nBuild 1.0 (42) processed\n")
+    }
+
+    func testSummarizeKeepsASingleTrailingNewline() throws {
+        let sut = StepOutput(environment: ["GITHUB_STEP_SUMMARY": outputFile.path])
+        try sut.summarize("line\n")
+        XCTAssertEqual(try String(contentsOf: outputFile, encoding: .utf8), "line\n")
+    }
+
+    func testSummarizeOutsideCIIsANoOp() throws {
+        let sut = StepOutput(environment: ["GITHUB_STEP_SUMMARY": ""])
+        XCTAssertNil(try sut.summarize("ignored"))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: outputFile.path))
+    }
 }
