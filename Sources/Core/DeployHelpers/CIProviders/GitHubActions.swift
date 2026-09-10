@@ -1,9 +1,7 @@
 import Foundation
 
-/// GitHub Actions: `name=value` lines appended to the file named by
-/// `GITHUB_OUTPUT` become `steps.<id>.outputs.<name>`; multi-line values use
-/// the heredoc form. Markdown appended to `GITHUB_STEP_SUMMARY` shows on the
-/// run page.
+/// `$GITHUB_OUTPUT` (`steps.<id>.outputs.<name>`, heredoc form for multi-line
+/// values) and `$GITHUB_STEP_SUMMARY`.
 public struct GitHubActions: CIProvider {
     public static let name = "GitHub Actions"
     public static let outputKey = "GITHUB_OUTPUT"
@@ -28,8 +26,7 @@ public struct GitHubActions: CIProvider {
 }
 
 private extension GitHubActions {
-    /// A heredoc delimiter the value cannot terminate early: the base one, or
-    /// the base plus a counter when the value happens to contain it.
+    /// A delimiter the value cannot terminate early.
     func delimiter(absentFrom value: String) -> String {
         var candidate = Self.heredocDelimiter
         var n = 1

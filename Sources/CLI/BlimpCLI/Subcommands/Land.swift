@@ -39,8 +39,7 @@ struct Land: AsyncParsableCommand {
 }
 
 private extension Land {
-    /// `--build-id`, else `$BUILD_ID`. A missing id is a usage error, reported
-    /// like every other argument problem.
+    /// `--build-id`, else `$BUILD_ID`; missing is a usage error.
     var resolvedBuildId: String {
         get throws {
             do {

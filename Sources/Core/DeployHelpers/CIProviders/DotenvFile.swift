@@ -1,8 +1,7 @@
 import Foundation
 
-/// A plain dotenv file at the path named by `BLIMP_OUTPUT`: one `name=value`
-/// per line. GitLab CI consumes it as a dotenv artifact report, and any shell
-/// can `source` it. Dotenv has no multi-line form, so such values are rejected.
+/// `name=value` lines at `$BLIMP_OUTPUT`: a GitLab CI dotenv artifact, or a
+/// file any shell can `source`. Dotenv has no multi-line form.
 public struct DotenvFile: CIProvider {
     public enum Error: Swift.Error, Equatable, CustomStringConvertible {
         case multilineValue(String)

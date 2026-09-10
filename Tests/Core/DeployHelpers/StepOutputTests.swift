@@ -2,9 +2,6 @@
 import Foundation
 import XCTest
 
-/// `blimp approach` hands the processed build id to the next step. A process
-/// cannot set a variable in its parent shell, so the output goes to the file
-/// the detected (or injected) `CIProvider` names.
 final class StepOutputTests: XCTestCase {
     private var outputFile: URL!
 
@@ -18,13 +15,10 @@ final class StepOutputTests: XCTestCase {
     }
 
     func testExportAppendsProviderEntriesToItsOutputFile() throws {
-        // Given: GitHub Actions creates the file before the step runs.
         try "".write(to: outputFile, atomically: true, encoding: .utf8)
         let sut = StepOutput(environment: ["GITHUB_OUTPUT": outputFile.path])
-        // When
         let first = try sut.export("BUILD_ID", "6bab2907-f08a-4b0d-82ed-4423d5874ed7")
         try sut.export("VERSION", "1.0")
-        // Then
         XCTAssertEqual(first, outputFile)
         XCTAssertEqual(try String(contentsOf: outputFile, encoding: .utf8),
                        "BUILD_ID=6bab2907-f08a-4b0d-82ed-4423d5874ed7\nVERSION=1.0\n")

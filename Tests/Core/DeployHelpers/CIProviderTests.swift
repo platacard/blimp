@@ -2,9 +2,6 @@
 import Foundation
 import XCTest
 
-/// Each CI system reads a step's outputs from its own place, in its own
-/// format. `StepOutput` only knows the `CIProvider` protocol; the concrete
-/// provider is detected from the environment or injected.
 final class CIProviderTests: XCTestCase {
     private var outputFile: URL!
 

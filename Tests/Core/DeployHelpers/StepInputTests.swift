@@ -1,8 +1,6 @@
 @testable import DeployHelpers
 import XCTest
 
-/// `blimp land` takes the build id as an option, or from the environment when
-/// a CI step hands it over via `env:` instead of an inline expression.
 final class StepInputTests: XCTestCase {
     func testExplicitOptionWinsOverTheEnvironment() throws {
         let sut = StepInput(environment: ["BUILD_ID": "from-env"])

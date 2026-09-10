@@ -64,9 +64,6 @@ struct Approach: AsyncParsableCommand {
 
         logger.info("Build with id: \(processingResult.buildId) has been successfully processed!")
 
-        // Hand the id to the next step (`blimp land`) through the detected CI
-        // provider's outputs file; without one the caller parses the
-        // "BuildId: <id>" line the processing stage (BlimpKit `Approach.hold`) logs.
         let stepOutput = StepOutput()
         if let outputs = try stepOutput.export(StepInput.buildIdKey, processingResult.buildId) {
             let provider = stepOutput.providerName ?? "CI"

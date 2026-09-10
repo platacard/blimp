@@ -1,30 +1,22 @@
 import Foundation
 
-/// Where a CI system reads what a step hands to the next one, and in which
-/// format. `StepOutput` depends only on this protocol; the concrete provider
-/// is detected from the environment (`CIProviders.detect`) or injected.
+/// Where a CI system reads step outputs, and in which format.
 public protocol CIProvider: Sendable {
-    /// Human-readable name for logs.
     static var name: String { get }
 
-    /// The provider when the environment says the process runs under it,
-    /// nil otherwise.
+    /// nil when the environment does not belong to this provider.
     init?(environment: [String: String])
 
-    /// The file that receives step outputs.
     var outputFile: URL? { get }
-
-    /// The file that receives a markdown note for the run page, when the
-    /// provider has one.
+    /// Markdown shown on the run page, for providers that have one.
     var summaryFile: URL? { get }
 
-    /// One output entry in the provider's file format, newline-terminated.
+    /// One newline-terminated entry in the provider's format.
     func entry(name: String, value: String) throws -> String
 }
 
 public enum CIProviders {
-    /// Detection order: an explicit blimp output file wins over what the CI
-    /// vendor advertises, so a user can always redirect outputs.
+    /// An explicit blimp output file wins over what the CI vendor advertises.
     public static let all: [any CIProvider.Type] = [DotenvFile.self, GitHubActions.self]
 
     public static func detect(
