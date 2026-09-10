@@ -63,6 +63,9 @@ jobs:
           ram: 6144
           threads: 3
 
+      # swift-build is launched directly: Xcode's swift driver is itself traced
+      # and would inject a per-process id into its environment, which SwiftPM
+      # hashes into the manifest cache key.
       # CodeQL only sees what the traced build compiles. Pull requests
       # recompile what the change touches; pushes to main and the weekly run
       # recompile everything. A change with no Swift in it still extracts one
@@ -80,7 +83,7 @@ jobs:
           else
             find Sources -name '*.swift' -exec touch {} +
           fi
-          .github/scripts/stable-env.sh swift build --manifest-cache local
+          .github/scripts/stable-env.sh "$(xcrun --find swift-build)" --manifest-cache local
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
