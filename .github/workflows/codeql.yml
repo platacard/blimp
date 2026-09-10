@@ -33,33 +33,43 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: chetan/git-restore-mtime-action@v2
+        if: matrix.language == 'swift'
 
       - name: Swift version
         if: matrix.language == 'swift'
         id: swift
-        run: echo "version=$(swift --version 2>&1 | head -1 | tr -d ' ')" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(swift --version 2>&1 | grep -oE 'Swift version [0-9.]+' | tr -d ' ')" >> "$GITHUB_OUTPUT"
 
-      # Dependencies come back compiled; first-party sources are touched so the
-      # traced build recompiles them and CodeQL sees every line of our code.
       - name: Cache SwiftPM checkouts and build products
         if: matrix.language == 'swift'
         uses: actions/cache@v4
         with:
           path: .build
-          key: codeql-spm-${{ runner.os }}-${{ steps.swift.outputs.version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          key: codeql-spm-v2-${{ runner.os }}-${{ steps.swift.outputs.version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}-${{ github.sha }}
           restore-keys: |
-            codeql-spm-${{ runner.os }}-${{ steps.swift.outputs.version }}-
+            codeql-spm-v2-${{ runner.os }}-${{ steps.swift.outputs.version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}-
+            codeql-spm-v2-${{ runner.os }}-${{ steps.swift.outputs.version }}-
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
+          config: |
+            paths-ignore:
+              - '**/Generated/**'
 
+      # CodeQL only sees what the traced build compiles. Hand-written sources
+      # are touched so they always recompile; dependencies and the generated
+      # OpenAPI code come from the cache and are not analysed.
       - name: Build
         if: matrix.language == 'swift'
         run: |
-          find Sources Tests -name '*.swift' -exec touch {} +
+          find Sources -name '*.swift' -not -path '*/Generated/*' -exec touch {} +
           swift build
 
       - name: Perform CodeQL Analysis

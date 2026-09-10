@@ -16,18 +16,25 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Checkout stamps every file with "now"; commit times let the incremental
+      # build skip whatever did not change since the cached build.
+      - uses: chetan/git-restore-mtime-action@v2
 
       - name: Swift version
         id: swift
-        run: echo "version=$(swift --version 2>&1 | head -1 | tr -d ' ')" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(swift --version 2>&1 | grep -oE 'Swift version [0-9.]+' | tr -d ' ')" >> "$GITHUB_OUTPUT"
 
       - name: Cache SwiftPM checkouts and build products
         uses: actions/cache@v4
         with:
           path: .build
-          key: spm-${{ runner.os }}-${{ steps.swift.outputs.version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          key: spm-v2-${{ runner.os }}-${{ steps.swift.outputs.version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}-${{ github.sha }}
           restore-keys: |
-            spm-${{ runner.os }}-${{ steps.swift.outputs.version }}-
+            spm-v2-${{ runner.os }}-${{ steps.swift.outputs.version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}-
+            spm-v2-${{ runner.os }}-${{ steps.swift.outputs.version }}-
 
       - name: Build
         run: swift build --build-tests
