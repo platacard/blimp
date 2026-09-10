@@ -42,7 +42,7 @@ jobs:
         run: |
           base="${{ github.event.pull_request.base.sha || github.event.before }}"
           git rev-parse -q --verify "$base^{commit}" >/dev/null || base=$(git rev-parse HEAD~1)
-          git diff --name-only --diff-filter=AMR "$base" HEAD -- Sources Tests Package.swift Package.resolved \
+          git diff --name-only --diff-filter=AMR "$base...HEAD" -- Sources Tests Package.swift Package.resolved \
             | while IFS= read -r f; do [ -e "$f" ] && touch "$f"; done
           true
 

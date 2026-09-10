@@ -72,7 +72,7 @@ jobs:
             find Sources -name '*.swift' -not -path '*/Generated/*' -exec touch {} +
             base="${{ github.event.pull_request.base.sha || github.event.before }}"
             git rev-parse -q --verify "$base^{commit}" >/dev/null || base=$(git rev-parse HEAD~1)
-            git diff --name-only --diff-filter=AMR "$base" HEAD -- Sources \
+            git diff --name-only --diff-filter=AMR "$base...HEAD" -- Sources \
               | while IFS= read -r f; do [ -e "$f" ] && touch "$f"; done
           fi
           swift build
