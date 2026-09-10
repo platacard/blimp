@@ -21,15 +21,33 @@ struct Land: AsyncParsableCommand {
     @Flag(help: "Produce more output")
     var verbose = false
 
+    func validate() throws {
+        _ = try resolvedBuildId
+    }
+
     func run() async throws {
         let logger = Cronista(module: "blimp", category: "Land")
         let land = Blimp.Land()
-        let buildId = try StepInput().value(StepInput.buildIdKey, option: buildId)
+        let buildId = try resolvedBuildId
 
         logger.info("Setting beta groups...")
         try await land.engage(bundleId: bundleId, buildId: buildId, betaGroups: betaGroups)
         logger.info("Sending to a testflight review...")
         try await land.confirm(buildId: buildId)
         logger.info("Done! Build for \(bundleId) with id: \(buildId) has been successfully sent to Testflight review")
+    }
+}
+
+private extension Land {
+    /// `--build-id`, else `$BUILD_ID`. A missing id is a usage error, reported
+    /// like every other argument problem.
+    var resolvedBuildId: String {
+        get throws {
+            do {
+                return try StepInput().value(StepInput.buildIdKey, option: buildId)
+            } catch {
+                throw ValidationError("\(error)")
+            }
+        }
     }
 }

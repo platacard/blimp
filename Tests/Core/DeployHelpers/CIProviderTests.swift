@@ -59,6 +59,12 @@ final class CIProviderTests: XCTestCase {
                        "NOTES<<BLIMP_EOF\none\ntwo\nBLIMP_EOF\n")
     }
 
+    func testGitHubActionsHeredocPreservesATrailingNewline() throws {
+        let sut = try XCTUnwrap(GitHubActions(environment: ["GITHUB_OUTPUT": outputFile.path]))
+        XCTAssertEqual(try sut.entry(name: "NOTES", value: "one\ntwo\n"),
+                       "NOTES<<BLIMP_EOF\none\ntwo\nBLIMP_EOF\n")
+    }
+
     func testGitHubActionsHeredocDelimiterNeverOccursInTheValue() throws {
         let sut = try XCTUnwrap(GitHubActions(environment: ["GITHUB_OUTPUT": outputFile.path]))
         XCTAssertEqual(try sut.entry(name: "NOTES", value: "has BLIMP_EOF inside\nand BLIMP_EOF_1 too"),

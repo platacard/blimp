@@ -22,7 +22,8 @@ public struct GitHubActions: CIProvider {
     public func entry(name: String, value: String) throws -> String {
         guard value.contains("\n") else { return "\(name)=\(value)\n" }
         let eof = delimiter(absentFrom: value)
-        return "\(name)<<\(eof)\n\(value)\n\(eof)\n"
+        let body = value.hasSuffix("\n") ? value : value + "\n"
+        return "\(name)<<\(eof)\n\(body)\(eof)\n"
     }
 }
 
