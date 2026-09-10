@@ -77,7 +77,7 @@ jobs:
           else
             find Sources -name '*.swift' -exec touch {} +
           fi
-          swift build --manifest-cache local -v
+          .github/scripts/stable-env.sh swift build --manifest-cache local
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3

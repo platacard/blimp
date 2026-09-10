@@ -47,7 +47,7 @@ jobs:
           true
 
       - name: Build
-        run: swift build --build-tests --manifest-cache local
+        run: .github/scripts/stable-env.sh swift build --build-tests --manifest-cache local
 
       - name: Run tests
-        run: swift test --skip-build --manifest-cache local
+        run: .github/scripts/stable-env.sh swift test --skip-build --manifest-cache local
