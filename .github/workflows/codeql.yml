@@ -60,20 +60,22 @@ jobs:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
 
-      # CodeQL only sees what the traced build compiles. Hand-written sources
-      # always recompile; generated OpenAPI code recompiles when the change
-      # touches it, and everything does on the weekly run.
+      # CodeQL only sees what the traced build compiles. Pull requests
+      # recompile what the change touches; pushes to main and the weekly run
+      # recompile everything. A change with no Swift in it still extracts one
+      # small module so the analysis has a database.
       - name: Build
         if: matrix.language == 'swift'
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            find Sources -name '*.swift' -exec touch {} +
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            changed=$(git diff --name-only --diff-filter=AMR "${{ github.event.pull_request.base.sha }}...HEAD" -- Sources)
+            if [ -n "$changed" ]; then
+              echo "$changed" | while IFS= read -r f; do [ -e "$f" ] && touch "$f"; done
+            else
+              find Sources/Core/ASCCredentials -name '*.swift' -exec touch {} +
+            fi
           else
-            find Sources -name '*.swift' -not -path '*/Generated/*' -exec touch {} +
-            base="${{ github.event.pull_request.base.sha || github.event.before }}"
-            git rev-parse -q --verify "$base^{commit}" >/dev/null || base=$(git rev-parse HEAD~1)
-            git diff --name-only --diff-filter=AMR "$base...HEAD" -- Sources \
-              | while IFS= read -r f; do [ -e "$f" ] && touch "$f"; done
+            find Sources -name '*.swift' -exec touch {} +
           fi
           swift build
 
