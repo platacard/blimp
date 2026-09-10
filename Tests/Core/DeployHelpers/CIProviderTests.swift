@@ -39,6 +39,20 @@ final class CIProviderTests: XCTestCase {
         XCTAssertEqual(provider?.outputFile, outputFile)
     }
 
+    func testGitLabCIIsDetectedFromItsRunnerVariables() {
+        let provider = CIProviders.detect(environment: ["GITLAB_CI": "true", "CI_PROJECT_DIR": "/builds/app"])
+        XCTAssertTrue(provider is GitLabCI)
+    }
+
+    func testAnExplicitBlimpOutputWinsOverGitLabCI() {
+        let provider = CIProviders.detect(environment: [
+            "GITLAB_CI": "true",
+            "CI_PROJECT_DIR": "/builds/app",
+            "BLIMP_OUTPUT": outputFile.path,
+        ])
+        XCTAssertTrue(provider is DotenvFile)
+    }
+
     func testEmptyPathsCountAsUnset() {
         XCTAssertNil(CIProviders.detect(environment: ["GITHUB_OUTPUT": "", "BLIMP_OUTPUT": ""]))
     }
@@ -86,12 +100,35 @@ final class CIProviderTests: XCTestCase {
     func testDotenvFileRejectsMultilineValues() throws {
         let sut = try XCTUnwrap(DotenvFile(environment: ["BLIMP_OUTPUT": outputFile.path]))
         XCTAssertThrowsError(try sut.entry(name: "NOTES", value: "one\ntwo")) { error in
-            XCTAssertEqual(error as? DotenvFile.Error, .multilineValue("NOTES"))
+            XCTAssertEqual(error as? Dotenv.Error, .multilineValue("NOTES"))
         }
     }
 
     func testDotenvFileHasNoSummary() throws {
         let sut = try XCTUnwrap(DotenvFile(environment: ["BLIMP_OUTPUT": outputFile.path]))
         XCTAssertNil(sut.summaryFile)
+    }
+}
+
+// MARK: GitLab CI
+
+extension CIProviderTests {
+    func testGitLabCIWritesADotenvFileInTheProjectDir() throws {
+        let sut = try XCTUnwrap(GitLabCI(environment: ["GITLAB_CI": "true", "CI_PROJECT_DIR": "/builds/app"]))
+        XCTAssertEqual(sut.outputFile, URL(fileURLWithPath: "/builds/app/blimp.env"))
+        XCTAssertEqual(try sut.entry(name: "BUILD_ID", value: "abc"), "BUILD_ID=abc\n")
+        XCTAssertNil(sut.summaryFile)
+    }
+
+    func testGitLabCIRejectsMultilineValues() throws {
+        let sut = try XCTUnwrap(GitLabCI(environment: ["GITLAB_CI": "true", "CI_PROJECT_DIR": "/builds/app"]))
+        XCTAssertThrowsError(try sut.entry(name: "NOTES", value: "one\ntwo")) { error in
+            XCTAssertEqual(error as? Dotenv.Error, .multilineValue("NOTES"))
+        }
+    }
+
+    func testGitLabCINeedsTheProjectDir() {
+        XCTAssertNil(GitLabCI(environment: ["GITLAB_CI": "true"]))
+        XCTAssertNil(GitLabCI(environment: ["CI_PROJECT_DIR": "/builds/app"]))
     }
 }

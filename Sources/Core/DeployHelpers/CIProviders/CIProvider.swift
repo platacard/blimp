@@ -17,7 +17,7 @@ public protocol CIProvider: Sendable {
 
 public enum CIProviders {
     /// An explicit blimp output file wins over what the CI vendor advertises.
-    public static let all: [any CIProvider.Type] = [DotenvFile.self, GitHubActions.self]
+    public static let all: [any CIProvider.Type] = [DotenvFile.self, GitLabCI.self, GitHubActions.self]
 
     public static func detect(
         environment: [String: String] = ProcessInfo.processInfo.environment,

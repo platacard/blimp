@@ -112,7 +112,8 @@ How the id travels between steps depends on the CI provider, detected from the e
 
 | Provider | Detected by | Outputs go to |
 |----------|-------------|---------------|
-| dotenv file (GitLab CI, any shell) | `BLIMP_OUTPUT` | `name=value` lines at that path |
+| dotenv file (any CI or shell) | `BLIMP_OUTPUT` | `name=value` lines at that path |
+| GitLab CI | `GITLAB_CI` | `$CI_PROJECT_DIR/blimp.env`, a dotenv artifact |
 | GitHub Actions | `GITHUB_OUTPUT` | `$GITHUB_OUTPUT`, plus a note in the step summary |
 
 An explicit `BLIMP_OUTPUT` wins, so outputs can always be redirected. With neither set, nothing is written and the logged `BuildId:` line is the handoff.
@@ -153,18 +154,16 @@ jobs:
 
 ### GitLab CI
 
-Point `BLIMP_OUTPUT` at a file and publish it as a [dotenv artifact](https://docs.gitlab.com/ci/yaml/#artifactsreportsdotenv); GitLab then injects `BUILD_ID` into every job that depends on the upload job:
+`blimp approach` writes `blimp.env` in the project directory. Publish it as a [dotenv artifact](https://docs.gitlab.com/ci/yaml/#artifactsreportsdotenv) and GitLab injects `BUILD_ID` into every job that depends on the upload job:
 
 ```yaml
 upload:
   stage: deploy
-  variables:
-    BLIMP_OUTPUT: build.env
   script:
     - blimp approach --bundle-id com.app --ipa-path build/App.ipa --app-version 1.0 --build-number $CI_PIPELINE_IID
   artifacts:
     reports:
-      dotenv: build.env
+      dotenv: blimp.env
 
 land:
   stage: deploy
