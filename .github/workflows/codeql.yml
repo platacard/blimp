@@ -59,17 +59,22 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
-          config: |
-            paths-ignore:
-              - '**/Generated/**'
 
       # CodeQL only sees what the traced build compiles. Hand-written sources
-      # are touched so they always recompile; dependencies and the generated
-      # OpenAPI code come from the cache and are not analysed.
+      # always recompile; generated OpenAPI code recompiles when the change
+      # touches it, and everything does on the weekly run.
       - name: Build
         if: matrix.language == 'swift'
         run: |
-          find Sources -name '*.swift' -not -path '*/Generated/*' -exec touch {} +
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            find Sources -name '*.swift' -exec touch {} +
+          else
+            find Sources -name '*.swift' -not -path '*/Generated/*' -exec touch {} +
+            base="${{ github.event.pull_request.base.sha || github.event.before }}"
+            git rev-parse -q --verify "$base^{commit}" >/dev/null || base=$(git rev-parse HEAD~1)
+            git diff --name-only --diff-filter=AMR "$base" HEAD -- Sources \
+              | while IFS= read -r f; do [ -e "$f" ] && touch "$f"; done
+          fi
           swift build
 
       - name: Perform CodeQL Analysis
