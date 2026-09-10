@@ -64,6 +64,10 @@ jobs:
       # recompile what the change touches; pushes to main and the weekly run
       # recompile everything. A change with no Swift in it still extracts one
       # small module so the analysis has a database.
+      - name: Kept environment (diagnostic)
+        if: matrix.language == 'swift'
+        run: .github/scripts/stable-env.sh env | sort
+
       - name: Build
         if: matrix.language == 'swift'
         run: |
@@ -77,7 +81,7 @@ jobs:
           else
             find Sources -name '*.swift' -exec touch {} +
           fi
-          .github/scripts/stable-env.sh swift build --manifest-cache local
+          .github/scripts/stable-env.sh swift build --manifest-cache local -v
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
