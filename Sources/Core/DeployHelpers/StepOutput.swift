@@ -37,7 +37,7 @@ public struct StepOutput: Sendable {
 private extension StepOutput {
     /// `O_APPEND`: creates when missing, atomic for shared files.
     func append(_ text: String, to file: URL) throws {
-        let descriptor = open(file.path, O_WRONLY | O_APPEND | O_CREAT, 0o644)
+        let descriptor = open(file.path, O_WRONLY | O_APPEND | O_CREAT, 0o600)
         guard descriptor >= 0 else {
             throw CocoaError(.fileWriteUnknown, userInfo: [
                 NSFilePathErrorKey: file.path,

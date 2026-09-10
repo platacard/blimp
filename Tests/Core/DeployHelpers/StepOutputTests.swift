@@ -90,3 +90,12 @@ extension StepOutputTests {
         }
     }
 }
+
+extension StepOutputTests {
+    func testACreatedOutputFileIsPrivateToTheUser() throws {
+        let sut = StepOutput(environment: ["BLIMP_OUTPUT": outputFile.path])
+        try sut.export("BUILD_ID", "abc")
+        let mode = try XCTUnwrap(FileManager.default.attributesOfItem(atPath: outputFile.path)[.posixPermissions] as? Int)
+        XCTAssertEqual(mode, 0o600)
+    }
+}
