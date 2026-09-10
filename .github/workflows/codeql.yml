@@ -28,37 +28,37 @@ jobs:
             build-mode: none
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Swift version
-      if: matrix.language == 'swift'
-      id: swift
-      run: echo "version=$(swift --version 2>&1 | head -1 | tr -d ' ')" >> "$GITHUB_OUTPUT"
+      - name: Swift version
+        if: matrix.language == 'swift'
+        id: swift
+        run: echo "version=$(swift --version 2>&1 | head -1 | tr -d ' ')" >> "$GITHUB_OUTPUT"
 
-    # Dependencies come back compiled; first-party sources are touched so the
-    # traced build recompiles them and CodeQL sees every line of our code.
-    - name: Cache SwiftPM checkouts and build products
-      if: matrix.language == 'swift'
-      uses: actions/cache@v4
-      with:
-        path: .build
-        key: codeql-spm-${{ runner.os }}-${{ steps.swift.outputs.version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}
-        restore-keys: |
-          codeql-spm-${{ runner.os }}-${{ steps.swift.outputs.version }}-
+      # Dependencies come back compiled; first-party sources are touched so the
+      # traced build recompiles them and CodeQL sees every line of our code.
+      - name: Cache SwiftPM checkouts and build products
+        if: matrix.language == 'swift'
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: codeql-spm-${{ runner.os }}-${{ steps.swift.outputs.version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          restore-keys: |
+            codeql-spm-${{ runner.os }}-${{ steps.swift.outputs.version }}-
 
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v3
-      with:
-        languages: ${{ matrix.language }}
-        build-mode: ${{ matrix.build-mode }}
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
 
-    - name: Build
-      if: matrix.language == 'swift'
-      run: |
-        find Sources Tests -name '*.swift' -exec touch {} +
-        swift build
+      - name: Build
+        if: matrix.language == 'swift'
+        run: |
+          find Sources Tests -name '*.swift' -exec touch {} +
+          swift build
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v3
-      with:
-        category: "/language:${{ matrix.language }}"
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
