@@ -18,21 +18,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  analyze:
-    name: Analyze (${{ matrix.language }})
-    # Swift analysis runs on main and weekly only: under the CodeQL tracer a
-    # build costs 8-19 minutes even fully cached, too slow to gate every PR.
-    if: matrix.language != 'swift' || github.event_name != 'pull_request'
-    runs-on: ${{ matrix.language == 'swift' && 'macos-latest' || 'ubuntu-latest' }}
+  actions:
+    name: Analyze (actions)
+    runs-on: ubuntu-latest
 
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - language: swift
-            build-mode: manual
-          - language: actions
-            build-mode: none
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: actions
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:actions"
+
+  swift:
+    name: Analyze (swift)
+    # Runs on main and weekly only: under the CodeQL tracer a build costs
+    # 8-19 minutes even fully cached, too slow to gate every pull request.
+    if: github.event_name != 'pull_request'
+    runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -40,15 +49,12 @@ jobs:
           fetch-depth: 0
 
       - uses: chetan/git-restore-mtime-action@d186aca54f8760da4dec55313195e51ed3ebb0b3 # v2.3
-        if: matrix.language == 'swift'
 
       - name: Swift version
-        if: matrix.language == 'swift'
         id: swift
         run: echo "version=$(swift --version 2>&1 | grep -oE 'Swift version [0-9.]+' | tr -d ' ')" >> "$GITHUB_OUTPUT"
 
       - name: Cache SwiftPM checkouts and build products
-        if: matrix.language == 'swift'
         uses: actions/cache@v4
         with:
           path: .build
@@ -60,8 +66,8 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
-          languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build-mode }}
+          languages: swift
+          build-mode: manual
           # Fixed so the traced build's environment does not vary with runner size.
           ram: 6144
           threads: 3
@@ -72,7 +78,6 @@ jobs:
       # its manifest cache on the environment, and the tracer library sets a
       # per-process CODEQL_PARENT_ID inside every traced process.
       - name: Build
-        if: matrix.language == 'swift'
         run: |
           find Sources -name '*.swift' -exec touch {} +
           .github/scripts/stable-env.sh "$(xcrun --find swift-build)" --manifest-cache local
@@ -80,4 +85,4 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
-          category: "/language:${{ matrix.language }}"
+          category: "/language:swift"
