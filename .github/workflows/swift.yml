@@ -21,7 +21,7 @@ jobs:
 
       # Checkout stamps every file with "now"; commit times let the incremental
       # build skip whatever did not change since the cached build.
-      - uses: chetan/git-restore-mtime-action@v2
+      - uses: chetan/git-restore-mtime-action@d186aca54f8760da4dec55313195e51ed3ebb0b3 # v2.3
 
       - name: Swift version
         id: swift
@@ -35,6 +35,16 @@ jobs:
           restore-keys: |
             spm-v2-${{ runner.os }}-${{ steps.swift.outputs.version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}-
             spm-v2-${{ runner.os }}-${{ steps.swift.outputs.version }}-
+
+      # Restored timestamps come from commit dates, which a commit can forge;
+      # whatever this change touches recompiles regardless.
+      - name: Mark changed sources
+        run: |
+          base="${{ github.event.pull_request.base.sha || github.event.before }}"
+          git rev-parse -q --verify "$base^{commit}" >/dev/null || base=$(git rev-parse HEAD~1)
+          git diff --name-only --diff-filter=AMR "$base" HEAD -- Sources Tests Package.swift Package.resolved \
+            | while IFS= read -r f; do [ -e "$f" ] && touch "$f"; done
+          true
 
       - name: Build
         run: swift build --build-tests
