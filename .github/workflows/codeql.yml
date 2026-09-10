@@ -70,6 +70,12 @@ jobs:
       # recompile what the change touches; pushes to main and the weekly run
       # recompile everything. A change with no Swift in it still extracts one
       # small module so the analysis has a database.
+      - name: Traced process environment (diagnostic)
+        if: matrix.language == 'swift'
+        run: |
+          .github/scripts/stable-env.sh /opt/homebrew/bin/python3 -c 'import os; [print(f"{k}={v}") for k,v in sorted(os.environ.items())]' | sed 's/^/traced1 /'
+          .github/scripts/stable-env.sh /opt/homebrew/bin/python3 -c 'import os; [print(f"{k}={v}") for k,v in sorted(os.environ.items())]' | sed 's/^/traced2 /'
+
       - name: Build
         if: matrix.language == 'swift'
         run: |
