@@ -15,16 +15,26 @@ public protocol CIProvider: Sendable {
     func entry(name: String, value: String) throws -> String
 }
 
-public enum CIProviders {
-    /// An explicit blimp output file wins over what the CI vendor advertises.
-    public static let all: [any CIProvider.Type] = [DotenvFile.self, GitLabCI.self, GitHubActions.self]
+/// Detection order is declaration order: an explicit blimp output file wins
+/// over what the CI vendor advertises.
+public enum CIProviders: CaseIterable {
+    case dotenvFile
+    case gitLabCI
+    case gitHubActions
+
+    public var type: any CIProvider.Type {
+        switch self {
+        case .dotenvFile: DotenvFile.self
+        case .gitLabCI: GitLabCI.self
+        case .gitHubActions: GitHubActions.self
+        }
+    }
 
     public static func detect(
-        environment: [String: String] = ProcessInfo.processInfo.environment,
-        from candidates: [any CIProvider.Type] = all
+        environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> (any CIProvider)? {
-        for candidate in candidates {
-            if let provider = candidate.init(environment: environment) { return provider }
+        for candidate in allCases {
+            if let provider = candidate.type.init(environment: environment) { return provider }
         }
         return nil
     }
