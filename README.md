@@ -108,9 +108,18 @@ By default, `blimp approach` blocks and polls the App Store Connect API every 30
 
 Once the build is processed, `blimp approach` prints `BuildId: <id>` and hands the id to `blimp land`, which takes it from `--build-id` or, when the option is omitted, from the `BUILD_ID` environment variable.
 
+How the id travels between steps depends on the CI provider, detected from the environment:
+
+| Provider | Detected by | Outputs go to |
+|----------|-------------|---------------|
+| dotenv file (GitLab CI, any shell) | `BLIMP_OUTPUT` | `name=value` lines at that path |
+| GitHub Actions | `GITHUB_OUTPUT` | `$GITHUB_OUTPUT`, plus a note in the step summary |
+
+An explicit `BLIMP_OUTPUT` wins, so outputs can always be redirected. With neither set, nothing is written and the logged `BuildId:` line is the handoff.
+
 ### GitHub Actions
 
-On GitHub Actions, `blimp approach` appends `BUILD_ID=<id>` to `$GITHUB_OUTPUT` and leaves a one-line note in the step summary. Give the step an `id` and pass the output to `blimp land`:
+`blimp approach` appends `BUILD_ID=<id>` to `$GITHUB_OUTPUT`. Give the step an `id` and pass the output to `blimp land`:
 
 ```yaml
 - name: Upload to App Store Connect
@@ -142,9 +151,31 @@ jobs:
       - run: blimp land --bundle-id com.app --build-id "${{ needs.upload.outputs.build-id }}" --beta-groups "Beta Testers"
 ```
 
+### GitLab CI
+
+Point `BLIMP_OUTPUT` at a file and publish it as a [dotenv artifact](https://docs.gitlab.com/ci/yaml/#artifactsreportsdotenv); GitLab then injects `BUILD_ID` into every job that depends on the upload job:
+
+```yaml
+upload:
+  stage: deploy
+  variables:
+    BLIMP_OUTPUT: build.env
+  script:
+    - blimp approach --bundle-id com.app --ipa-path build/App.ipa --app-version 1.0 --build-number $CI_PIPELINE_IID
+  artifacts:
+    reports:
+      dotenv: build.env
+
+land:
+  stage: deploy
+  needs: [upload]
+  script:
+    - blimp land --bundle-id com.app --beta-groups "Beta Testers"
+```
+
 ### Other CI and shells
 
-Capture the id from the output: `blimp approach … | tee approach.log` then `BUILD_ID=$(grep -oE 'BuildId: [0-9a-f-]+' approach.log | head -1 | awk '{print $2}')` and export it (or pass `--build-id`) to `blimp land`.
+The same dotenv file works anywhere: `BLIMP_OUTPUT=build.env blimp approach …` then `source build.env` (or `set -a; . build.env`) before `blimp land`. Without `BLIMP_OUTPUT`, capture the id from the log: `blimp approach … | tee approach.log` then `BUILD_ID=$(grep -oE 'BuildId: [0-9A-Za-z-]+' approach.log | head -1 | awk '{print $2}')`.
 
 `blimp-relay` is the webhook alternative: a small, separately deployable HTTP server that receives [App Store Connect webhooks](https://developer.apple.com/documentation/appstoreconnectapi/webhooks), verifies their signatures, and relays them to configurable sinks (log, HTTP forward, GitLab pipeline trigger) — so the upload job can exit right after the upload and a webhook resumes your pipeline.
 

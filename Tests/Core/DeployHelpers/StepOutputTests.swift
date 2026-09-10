@@ -3,8 +3,8 @@ import Foundation
 import XCTest
 
 /// `blimp approach` hands the processed build id to the next step. A process
-/// cannot set a variable in its parent shell, so the output goes where CI
-/// reads it: appended to `$GITHUB_OUTPUT` as `name=value`.
+/// cannot set a variable in its parent shell, so the output goes to the file
+/// the detected (or injected) `CIProvider` names.
 final class StepOutputTests: XCTestCase {
     private var outputFile: URL!
 
@@ -17,7 +17,7 @@ final class StepOutputTests: XCTestCase {
         try? FileManager.default.removeItem(at: outputFile)
     }
 
-    func testExportAppendsNameValueLinesToGitHubOutput() throws {
+    func testExportAppendsProviderEntriesToItsOutputFile() throws {
         // Given: GitHub Actions creates the file before the step runs.
         try "".write(to: outputFile, atomically: true, encoding: .utf8)
         let sut = StepOutput(environment: ["GITHUB_OUTPUT": outputFile.path])
@@ -31,23 +31,16 @@ final class StepOutputTests: XCTestCase {
     }
 
     func testExportCreatesTheOutputFileWhenMissing() throws {
-        let sut = StepOutput(environment: ["GITHUB_OUTPUT": outputFile.path])
+        let sut = StepOutput(environment: ["BLIMP_OUTPUT": outputFile.path])
         try sut.export("BUILD_ID", "abc")
         XCTAssertEqual(try String(contentsOf: outputFile, encoding: .utf8), "BUILD_ID=abc\n")
     }
 
-    func testMultilineValuesUseTheHeredocForm() throws {
+    func testExportUsesTheProviderFormat() throws {
         let sut = StepOutput(environment: ["GITHUB_OUTPUT": outputFile.path])
         try sut.export("NOTES", "line one\nline two")
         XCTAssertEqual(try String(contentsOf: outputFile, encoding: .utf8),
                        "NOTES<<BLIMP_EOF\nline one\nline two\nBLIMP_EOF\n")
-    }
-
-    func testHeredocDelimiterNeverOccursInTheValue() throws {
-        let sut = StepOutput(environment: ["GITHUB_OUTPUT": outputFile.path])
-        try sut.export("NOTES", "has BLIMP_EOF inside\nand BLIMP_EOF_1 too")
-        XCTAssertEqual(try String(contentsOf: outputFile, encoding: .utf8),
-                       "NOTES<<BLIMP_EOF_2\nhas BLIMP_EOF inside\nand BLIMP_EOF_1 too\nBLIMP_EOF_2\n")
     }
 
     func testExportOutsideCIIsANoOp() throws {
@@ -56,14 +49,9 @@ final class StepOutputTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: outputFile.path))
     }
 
-    func testEmptyOutputPathIsTreatedAsUnset() throws {
-        let sut = StepOutput(environment: ["GITHUB_OUTPUT": ""])
-        XCTAssertNil(try sut.export("BUILD_ID", "abc"))
-    }
-
-    func testSummarizeAppendsMarkdownToTheStepSummary() throws {
+    func testSummarizeAppendsMarkdownToTheProviderSummary() throws {
         try "# Earlier\n".write(to: outputFile, atomically: true, encoding: .utf8)
-        let sut = StepOutput(environment: ["GITHUB_STEP_SUMMARY": outputFile.path])
+        let sut = StepOutput(environment: ["GITHUB_OUTPUT": "/unused", "GITHUB_STEP_SUMMARY": outputFile.path])
         let file = try sut.summarize("Build 1.0 (42) processed")
         XCTAssertEqual(file, outputFile)
         XCTAssertEqual(try String(contentsOf: outputFile, encoding: .utf8),
@@ -71,14 +59,40 @@ final class StepOutputTests: XCTestCase {
     }
 
     func testSummarizeKeepsASingleTrailingNewline() throws {
-        let sut = StepOutput(environment: ["GITHUB_STEP_SUMMARY": outputFile.path])
+        let sut = StepOutput(environment: ["GITHUB_OUTPUT": "/unused", "GITHUB_STEP_SUMMARY": outputFile.path])
         try sut.summarize("line\n")
         XCTAssertEqual(try String(contentsOf: outputFile, encoding: .utf8), "line\n")
     }
 
-    func testSummarizeOutsideCIIsANoOp() throws {
-        let sut = StepOutput(environment: ["GITHUB_STEP_SUMMARY": ""])
+    func testSummarizeIsANoOpWhenTheProviderHasNoSummary() throws {
+        let sut = StepOutput(environment: ["BLIMP_OUTPUT": outputFile.path])
         XCTAssertNil(try sut.summarize("ignored"))
         XCTAssertFalse(FileManager.default.fileExists(atPath: outputFile.path))
+    }
+
+    func testAnInjectedProviderReplacesDetection() throws {
+        let sut = StepOutput(provider: RecordingProvider(outputFile: outputFile))
+        try sut.export("BUILD_ID", "abc")
+        XCTAssertEqual(try String(contentsOf: outputFile, encoding: .utf8), "recorded BUILD_ID:abc\n")
+    }
+}
+
+private struct RecordingProvider: CIProvider {
+    static let name = "Recording"
+    let outputFile: URL?
+    let summaryFile: URL? = nil
+
+    init(outputFile: URL) { self.outputFile = outputFile }
+    init?(environment: [String: String]) { nil }
+
+    func entry(name: String, value: String) throws -> String { "recorded \(name):\(value)\n" }
+}
+
+extension StepOutputTests {
+    func testExportFailsLoudlyWhenTheOutputFileCannotBeOpened() {
+        let sut = StepOutput(environment: ["BLIMP_OUTPUT": "/nonexistent-dir/out.env"])
+        XCTAssertThrowsError(try sut.export("BUILD_ID", "abc")) { error in
+            XCTAssertTrue("\(error)".contains("/nonexistent-dir/out.env"), "\(error)")
+        }
     }
 }

@@ -64,12 +64,13 @@ struct Approach: AsyncParsableCommand {
 
         logger.info("Build with id: \(processingResult.buildId) has been successfully processed!")
 
-        // Hand the id to the next step (`blimp land`): `steps.<id>.outputs.BUILD_ID`
-        // on GitHub Actions; elsewhere the caller parses the "BuildId: <id>" line
-        // the processing stage (BlimpKit `Approach.hold`) logs.
+        // Hand the id to the next step (`blimp land`) through the detected CI
+        // provider's outputs file; without one the caller parses the
+        // "BuildId: <id>" line the processing stage (BlimpKit `Approach.hold`) logs.
         let stepOutput = StepOutput()
         if let outputs = try stepOutput.export(StepInput.buildIdKey, processingResult.buildId) {
-            logger.info("\(StepInput.buildIdKey)=\(processingResult.buildId) written to \(outputs.path)")
+            let provider = stepOutput.providerName ?? "CI"
+            logger.info("\(StepInput.buildIdKey)=\(processingResult.buildId) written to \(outputs.path) (\(provider))")
         }
         try stepOutput.summarize(
             "✈️ `\(bundleId)` \(appVersion) (\(buildNumber)) processed on App Store Connect, build id `\(processingResult.buildId)`"
