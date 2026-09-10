@@ -59,6 +59,9 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
+          # Fixed so the traced build's environment does not vary with runner size.
+          ram: 6144
+          threads: 3
 
       # CodeQL only sees what the traced build compiles. Pull requests
       # recompile what the change touches; pushes to main and the weekly run

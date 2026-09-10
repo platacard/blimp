@@ -6,7 +6,7 @@ set -euo pipefail
 
 keep=$(env | cut -d= -f1 | grep -E '^[A-Za-z_][A-Za-z0-9_]*$' \
   | grep -E '^(PATH|HOME|USER|TMPDIR|SHELL|LANG|DEVELOPER_DIR|SDKROOT|TOOLCHAINS|RUNNER_TEMP)$|^(CODEQL_|SEMMLE_|DYLD_|ODASA_|LGTM_)' \
-  | grep -vE '^CODEQL_(ACTION_JOB_RUN_UUID|WORKFLOW_STARTED_AT)$')
+  | grep -vE '^(CODEQL_(ACTION_JOB_RUN_UUID|WORKFLOW_STARTED_AT|PARENT_ID|EXEC_ARGS_OFFSET)|SEMMLE_EXEC)$')
 
 args=()
 for name in $keep; do args+=("$name=${!name}"); done
