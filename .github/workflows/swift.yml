@@ -47,7 +47,7 @@ jobs:
           true
 
       - name: Build
-        run: swift build --build-tests
+        run: swift build --build-tests --manifest-cache local
 
       - name: Run tests
-        run: swift test --skip-build
+        run: swift test --skip-build --manifest-cache local
