@@ -10,4 +10,6 @@ keep=$(env | cut -d= -f1 | grep -E '^[A-Za-z_][A-Za-z0-9_]*$' \
 
 args=()
 for name in $keep; do args+=("$name=${!name}"); done
+# macOS runners get a random per-VM TMPDIR; RUNNER_TEMP is stable.
+args+=("TMPDIR=${RUNNER_TEMP:-${TMPDIR:-/tmp}}")
 exec env -i "${args[@]}" "$@"
