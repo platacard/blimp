@@ -20,6 +20,9 @@ concurrency:
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
+    # Swift analysis runs on main and weekly only: under the CodeQL tracer a
+    # build costs 8-19 minutes even fully cached, too slow to gate every PR.
+    if: matrix.language != 'swift' || github.event_name != 'pull_request'
     runs-on: ${{ matrix.language == 'swift' && 'macos-latest' || 'ubuntu-latest' }}
 
     strategy:
@@ -63,41 +66,15 @@ jobs:
           ram: 6144
           threads: 3
 
-      # Dependency manifests recompile under the tracer on every run: SwiftPM
-      # keys its manifest cache on the environment, and the tracer library sets
-      # a per-process CODEQL_PARENT_ID inside every traced process. Nothing
-      # above swift-build can make that stable; the cost is accepted.
-      # CodeQL only sees what the traced build compiles. Pull requests
-      # recompile what the change touches; pushes to main and the weekly run
-      # recompile everything. A change with no Swift in it still extracts one
-      # small module so the analysis has a database.
-      # Dependency manifests recompile under the tracer on every run: SwiftPM
-      # keys its manifest cache on the environment, and the tracer library sets
-      # a per-process CODEQL_PARENT_ID inside every traced process. Nothing
-      # above swift-build can make that stable; the cost is accepted.
-      # CodeQL only sees what the traced build compiles. Pull requests
-      # recompile what the change touches; pushes to main and the weekly run
-      # recompile everything. A change with no Swift in it still extracts one
-      # small module so the analysis has a database.
-      - name: Traced process environment (diagnostic)
-        if: matrix.language == 'swift'
-        run: |
-          .github/scripts/stable-env.sh /opt/homebrew/bin/python3 -c 'import os; [print(f"{k}={v}") for k,v in sorted(os.environ.items())]' | sed 's/^/traced1 /'
-          .github/scripts/stable-env.sh /opt/homebrew/bin/python3 -c 'import os; [print(f"{k}={v}") for k,v in sorted(os.environ.items())]' | sed 's/^/traced2 /'
-
+      # CodeQL only sees what the traced build compiles: every first-party
+      # source is touched so all of it is extracted. Dependencies come from the
+      # cache. Their manifests still recompile under the tracer: SwiftPM keys
+      # its manifest cache on the environment, and the tracer library sets a
+      # per-process CODEQL_PARENT_ID inside every traced process.
       - name: Build
         if: matrix.language == 'swift'
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            changed=$(git diff --name-only --diff-filter=AMR "${{ github.event.pull_request.base.sha }}...HEAD" -- Sources)
-            if [ -n "$changed" ]; then
-              echo "$changed" | while IFS= read -r f; do [ -e "$f" ] && touch "$f"; done
-            else
-              find Sources/Core/ASCCredentials -name '*.swift' -exec touch {} +
-            fi
-          else
-            find Sources -name '*.swift' -exec touch {} +
-          fi
+          find Sources -name '*.swift' -exec touch {} +
           .github/scripts/stable-env.sh "$(xcrun --find swift-build)" --manifest-cache local
 
       - name: Perform CodeQL Analysis
