@@ -78,7 +78,17 @@ final class InvitationServiceTests: XCTestCase {
         }
     }
 
-    func testAPartialListingIsNeverTrusted() async {
+    func testAnExactMatchOnAPartialListingIsStillUsed() async throws {
+        client.existingUserInvitations = [.init(id: "invite-123", email: "dev@example.com", firstName: "John", lastName: "Doe")]
+        client.listingHasMorePages = true
+
+        let result = try await sut.ensureDeveloperInvite(email: "dev@example.com", firstName: "John", lastName: "Doe")
+
+        XCTAssertEqual(result, .sent(email: "dev@example.com"))
+        XCTAssertEqual(client.userInvitationDeleteCalls, ["invite-123"])
+    }
+
+    func testAPartialListingWithoutAnExactMatchIsNeverTrusted() async {
         client.listingHasMorePages = true
 
         await XCTAssertThrowsErrorAsync(try await sut.ensureDeveloperInvite(email: "dev@example.com", firstName: "John", lastName: "Doe")) { error in

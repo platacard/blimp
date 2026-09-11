@@ -4,7 +4,7 @@ import Cronista
 /// `POST /v1/userInvitations` answers 409 when an invitation for the address is
 /// already pending. A pending developer-only invitation is deleted and sent
 /// again; one carrying other roles is left alone.
-public struct TestflightInvitationService: InvitationService, Sendable {
+struct TestflightInvitationService: InvitationService, Sendable {
     private let client: any APIProtocol
     nonisolated(unsafe) private let logger: Cronista
 
@@ -13,7 +13,7 @@ public struct TestflightInvitationService: InvitationService, Sendable {
         self.logger = Cronista(module: "blimp", category: "InvitationService", isFileLoggingEnabled: true)
     }
 
-    public func ensureDeveloperInvite(email: String, firstName: String, lastName: String) async throws -> InvitationResult {
+    func ensureDeveloperInvite(email: String, firstName: String, lastName: String) async throws -> InvitationResult {
         guard let pending = try await pendingInvitation(email: email) else {
             return try await create(email: email, firstName: firstName, lastName: lastName)
         }
@@ -51,14 +51,16 @@ private extension TestflightInvitationService {
         switch response {
         case .ok(let ok):
             let page = try ok.body.json
-            // filter[email] matches substrings; match the address exactly. The
-            // generated client cannot follow `links.next`, so a listing that
-            // does not fit one page is refused rather than guessed from.
+            // filter[email] matches substrings; match the address exactly.
+            if let invitation = page.data.first(where: { $0.attributes?.email == email }) {
+                return .init(id: invitation.id, roles: invitation.attributes?.roles ?? [])
+            }
+            // The generated client cannot follow `links.next`; absence is only
+            // trusted when the whole listing fit on the page.
             guard page.links.next == nil else {
                 throw InvitationError.lookupFailed("more than \(Self.lookupPageSize) pending invitations match \(email.redactedEmail)")
             }
-            let invitation = page.data.first { $0.attributes?.email == email }
-            return invitation.map { .init(id: $0.id, roles: $0.attributes?.roles ?? []) }
+            return nil
         case .badRequest(let failure):
             throw InvitationError.lookupFailed((try? failure.body.json.errorDescription) ?? "Bad request")
         case .unauthorized(let failure):
