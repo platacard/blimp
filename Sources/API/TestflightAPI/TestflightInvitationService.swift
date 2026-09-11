@@ -19,7 +19,6 @@ struct TestflightInvitationService: InvitationService, Sendable {
         }
         guard Set(pending.roles) == [.developer] else {
             let roles = pending.roles.map(\.rawValue)
-            logger.info("\(email.redactedEmail) has a pending invitation with roles \(roles); leaving it")
             return .pendingWithOtherRoles(email: email, roles: roles)
         }
 
@@ -114,14 +113,12 @@ private extension TestflightInvitationService {
 
         switch response {
         case .created:
-            logger.info("Developer invite sent to \(email.redactedEmail)")
             return .sent(email: email)
         case .conflict:
             // 409 also answers a pending invitation; only an empty re-query means membership.
             guard try await pendingInvitation(email: email) == nil else {
                 throw InvitationError.pendingInvitationConflict(email: email)
             }
-            logger.info("\(email.redactedEmail) is already a team member")
             return .alreadyRegistered(email: email)
         case .badRequest(let failure):
             throw InvitationError.badRequest((try? failure.body.json.errorDescription) ?? "Bad request")
