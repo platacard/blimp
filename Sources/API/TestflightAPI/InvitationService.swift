@@ -1,38 +1,33 @@
 import Foundation
 
-/// Result of an invitation operation
 public enum InvitationResult: Sendable, Equatable {
     case sent(email: String)
-    case alreadyAccepted(email: String)
+    /// A pending invitation with roles other than developer exists; left untouched.
+    case pendingWithOtherRoles(email: String, roles: [String])
     case alreadyRegistered(email: String)
 }
 
-/// Error types for invitation operations
-public enum InvitationError: Error, Sendable, Equatable {
+public enum InvitationError: LocalizedError, Sendable, Equatable {
     case forbidden(String)
     case badRequest(String)
+    case lookupFailed(String)
+    /// The pending invitation was deleted but a new one could not be sent.
+    case resendFailed(email: String, reason: String)
     case unexpected(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .forbidden(let message): "Forbidden: \(message)"
+        case .badRequest(let message): "Bad request: \(message)"
+        case .lookupFailed(let message): "Could not look up pending invitations: \(message)"
+        case .resendFailed(let email, let reason):
+            "Deleted the pending invitation for \(email.redactedEmail) but could not send a new one: \(reason)"
+        case .unexpected(let message): message
+        }
+    }
 }
 
-/// Protocol for invitation operations - enables testing
 public protocol InvitationService: Sendable {
-    /// Ensure a developer invitation is sent/resent.
-    /// Deletes any existing invitation first, then creates a new one.
-    /// Returns `.alreadyRegistered` if user is already a team member.
-    func ensureDeveloperInvite(
-        email: String,
-        firstName: String,
-        lastName: String
-    ) async throws -> InvitationResult
-
-    /// Ensure a beta tester invitation is sent.
-    /// Checks tester state first to prevent 409 errors.
-    /// Returns `.alreadyAccepted` if user is already testing.
-    func ensureBetaTesterInvite(
-        appId: String,
-        betaGroupIds: [String],
-        email: String,
-        firstName: String,
-        lastName: String
-    ) async throws -> InvitationResult
+    /// Sends a developer invitation, resending it when one is already pending.
+    func ensureDeveloperInvite(email: String, firstName: String, lastName: String) async throws -> InvitationResult
 }

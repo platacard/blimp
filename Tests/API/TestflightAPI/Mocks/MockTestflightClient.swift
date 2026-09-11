@@ -2,30 +2,21 @@ import Foundation
 @testable import TestflightAPI
 
 class MockTestflightClient: APIProtocol, @unchecked Sendable {
-
-    // MARK: - Call Tracking
-
     var userInvitationGetCollectionCalls: [String?] = []
     var userInvitationCreateCalls: [(email: String, firstName: String, lastName: String)] = []
     var userInvitationDeleteCalls: [String] = []
-    var betaTesterGetCollectionCalls: [(email: String?, appId: String?)] = []
-    var betaTesterCreateCalls: [(email: String, firstName: String, lastName: String, betaGroupIds: [String])] = []
-    var betaTesterInvitationCreateCalls: [(betaTesterId: String, appId: String)] = []
-    var betaTesterBetaGroupsCreateCalls: [(testerId: String, groupIds: [String])] = []
-    var betaGroupsGetCollectionCalls: [(names: [String]?, appId: String?)] = []
-
-    // MARK: - Mock Data
 
     var existingUserInvitations: [MockUserInvitation] = []
-    var existingBetaTesters: [MockBetaTester] = []
-    var existingBetaGroups: [MockBetaGroup] = []
 
-    // MARK: - Response Configuration
-
+    var userInvitationGetCollectionBehavior: UserInvitationGetCollectionBehavior = .success
     var userInvitationCreateBehavior: UserInvitationCreateBehavior = .success
     var userInvitationDeleteBehavior: UserInvitationDeleteBehavior = .success
-    var betaTesterCreateBehavior: BetaTesterCreateBehavior = .success
-    var betaTesterInvitationCreateBehavior: BetaTesterInvitationCreateBehavior = .success
+
+    enum UserInvitationGetCollectionBehavior {
+        case success
+        case tooManyRequests
+        case forbidden(String)
+    }
 
     enum UserInvitationCreateBehavior {
         case success
@@ -40,32 +31,26 @@ class MockTestflightClient: APIProtocol, @unchecked Sendable {
         case conflict(String)
     }
 
-    enum BetaTesterCreateBehavior {
-        case success
-        case conflictIsDeveloper
-        case forbidden(String)
-    }
-
-    enum BetaTesterInvitationCreateBehavior {
-        case success
-        case conflict
-        case badRequest(String)
-    }
-
-    // MARK: - Invitation-Related Methods
-
     func userInvitationsGetCollection(_ input: Operations.UserInvitationsGetCollection.Input) async throws -> Operations.UserInvitationsGetCollection.Output {
         let emailFilter = input.query.filter_lbrack_email_rbrack_?.first
         userInvitationGetCollectionCalls.append(emailFilter)
 
-        let matchingInvitations = existingUserInvitations.filter { invitation in
-            if let emailFilter {
-                return invitation.email == emailFilter
-            }
-            return true
+        switch userInvitationGetCollectionBehavior {
+        case .tooManyRequests:
+            return .tooManyRequests(.init(body: .json(.init(
+                errors: [.init(status: "429", code: "RATE_LIMIT_EXCEEDED", title: "Rate limited", detail: "")]
+            ))))
+        case .forbidden(let message):
+            return .forbidden(.init(body: .json(.init(
+                errors: [.init(status: "403", code: "FORBIDDEN_ERROR", title: "Forbidden", detail: message)]
+            ))))
+        case .success:
+            break
         }
 
-        let invitationData = matchingInvitations.map { invitation in
+        // App Store Connect matches filter[email] as a substring.
+        let matching = existingUserInvitations.filter { emailFilter.map($0.email.contains) ?? true }
+        let data = matching.map { invitation in
             Components.Schemas.UserInvitation(
                 _type: .userInvitations,
                 id: invitation.id,
@@ -74,17 +59,13 @@ class MockTestflightClient: APIProtocol, @unchecked Sendable {
                     firstName: invitation.firstName,
                     lastName: invitation.lastName,
                     expirationDate: nil,
-                    roles: [.developer],
+                    roles: invitation.roles,
                     allAppsVisible: true,
                     provisioningAllowed: false
                 )
             )
         }
-
-        return .ok(.init(body: .json(.init(
-            data: invitationData,
-            links: .init(_self: "http://test")
-        ))))
+        return .ok(.init(body: .json(.init(data: data, links: .init(_self: "http://test")))))
     }
 
     func userInvitationsCreateInstance(_ input: Operations.UserInvitationsCreateInstance.Input) async throws -> Operations.UserInvitationsCreateInstance.Output {
@@ -157,160 +138,24 @@ class MockTestflightClient: APIProtocol, @unchecked Sendable {
     }
 
     func betaTestersGetCollection(_ input: Operations.BetaTestersGetCollection.Input) async throws -> Operations.BetaTestersGetCollection.Output {
-        let emailFilter = input.query.filter_lbrack_email_rbrack_?.first
-        let appFilter = input.query.filter_lbrack_apps_rbrack_?.first
-
-        betaTesterGetCollectionCalls.append((email: emailFilter, appId: appFilter))
-
-        let matchingTesters = existingBetaTesters.filter { tester in
-            var matches = true
-            if let emailFilter {
-                matches = matches && tester.email == emailFilter
-            }
-            if let appFilter {
-                matches = matches && tester.appIds.contains(appFilter)
-            }
-            return matches
-        }
-
-        let testerData = matchingTesters.map { tester in
-            Components.Schemas.BetaTester(
-                _type: .betaTesters,
-                id: tester.id,
-                attributes: .init(
-                    firstName: tester.firstName,
-                    lastName: tester.lastName,
-                    email: tester.email,
-                    state: tester.state
-                )
-            )
-        }
-
-        return .ok(.init(body: .json(.init(
-            data: testerData,
-            links: .init(_self: "http://test")
-        ))))
+        fatalError("Not used")
     }
 
     func betaTestersCreateInstance(_ input: Operations.BetaTestersCreateInstance.Input) async throws -> Operations.BetaTestersCreateInstance.Output {
-        guard case .json(let request) = input.body else {
-            fatalError("Expected JSON body")
-        }
-
-        let email = request.data.attributes.email ?? ""
-        let firstName = request.data.attributes.firstName ?? ""
-        let lastName = request.data.attributes.lastName ?? ""
-        let groupIds = request.data.relationships?.betaGroups?.data?.map(\.id) ?? []
-
-        betaTesterCreateCalls.append((email: email, firstName: firstName, lastName: lastName, betaGroupIds: groupIds))
-
-        switch betaTesterCreateBehavior {
-        case .success:
-            let newTester = Components.Schemas.BetaTester(
-                _type: .betaTesters,
-                id: "tester-\(UUID().uuidString)",
-                attributes: .init(
-                    firstName: firstName,
-                    lastName: lastName,
-                    email: email,
-                    state: .invited
-                )
-            )
-            return .created(.init(body: .json(.init(
-                data: newTester,
-                links: .init(_self: "http://test")
-            ))))
-
-        case .conflictIsDeveloper:
-            return .conflict(.init(body: .json(.init(
-                errors: [.init(status: "409", code: "ENTITY_ERROR", title: "User has developer role", detail: "")]
-            ))))
-
-        case .forbidden(let message):
-            return .forbidden(.init(body: .json(.init(
-                errors: [.init(status: "403", code: "FORBIDDEN_ERROR", title: "Forbidden", detail: message)]
-            ))))
-        }
+        fatalError("Not used")
     }
 
     func betaTesterInvitationsCreateInstance(_ input: Operations.BetaTesterInvitationsCreateInstance.Input) async throws -> Operations.BetaTesterInvitationsCreateInstance.Output {
-        guard case .json(let request) = input.body else {
-            fatalError("Expected JSON body")
-        }
-
-        let betaTesterId = request.data.relationships.betaTester?.data?.id ?? ""
-        let appId = request.data.relationships.app.data.id
-
-        betaTesterInvitationCreateCalls.append((betaTesterId: betaTesterId, appId: appId))
-
-        switch betaTesterInvitationCreateBehavior {
-        case .success:
-            let invitation = Components.Schemas.BetaTesterInvitation(
-                _type: .betaTesterInvitations,
-                id: "invitation-\(UUID().uuidString)"
-            )
-            return .created(.init(body: .json(.init(
-                data: invitation,
-                links: .init(_self: "http://test")
-            ))))
-
-        case .conflict:
-            return .conflict(.init(body: .json(.init(
-                errors: [.init(status: "409", code: "CONFLICT", title: "Tester already accepted", detail: "")]
-            ))))
-
-        case .badRequest(let message):
-            return .badRequest(.init(body: .json(.init(
-                errors: [.init(status: "400", code: "BAD_REQUEST", title: message, detail: "")]
-            ))))
-        }
+        fatalError("Not used")
     }
 
     func betaTestersBetaGroupsCreateToManyRelationship(_ input: Operations.BetaTestersBetaGroupsCreateToManyRelationship.Input) async throws -> Operations.BetaTestersBetaGroupsCreateToManyRelationship.Output {
-        let testerId = input.path.id
-        guard case .json(let request) = input.body else {
-            fatalError("Expected JSON body")
-        }
-
-        let groupIds = request.data.map(\.id)
-        betaTesterBetaGroupsCreateCalls.append((testerId: testerId, groupIds: groupIds))
-
-        return .noContent
+        fatalError("Not used")
     }
 
     func betaGroupsGetCollection(_ input: Operations.BetaGroupsGetCollection.Input) async throws -> Operations.BetaGroupsGetCollection.Output {
-        let nameFilter = input.query.filter_lbrack_name_rbrack_
-        let appFilter = input.query.filter_lbrack_app_rbrack_?.first
-
-        betaGroupsGetCollectionCalls.append((names: nameFilter, appId: appFilter))
-
-        let matchingGroups = existingBetaGroups.filter { group in
-            var matches = true
-            if let nameFilter, !nameFilter.isEmpty {
-                matches = matches && nameFilter.contains(group.name)
-            }
-            if let appFilter {
-                matches = matches && group.appId == appFilter
-            }
-            return matches
-        }
-
-        let groupData = matchingGroups.map { group in
-            Components.Schemas.BetaGroup(
-                _type: .betaGroups,
-                id: group.id,
-                attributes: .init(name: group.name)
-            )
-        }
-
-        return .ok(.init(body: .json(.init(
-            data: groupData,
-            links: .init(_self: "http://test")
-        ))))
+        fatalError("Not used")
     }
-
-    // MARK: - Stub Implementations (Not Used in Invitation Tests)
-
     func betaAppReviewSubmissionsCreateInstance(_ input: Operations.BetaAppReviewSubmissionsCreateInstance.Input) async throws -> Operations.BetaAppReviewSubmissionsCreateInstance.Output {
         fatalError("Not implemented in mock")
     }
@@ -400,26 +245,10 @@ class MockTestflightClient: APIProtocol, @unchecked Sendable {
     }
 }
 
-// MARK: - Mock Data Types
-
 struct MockUserInvitation {
     let id: String
     let email: String
     let firstName: String
     let lastName: String
-}
-
-struct MockBetaTester {
-    let id: String
-    let email: String
-    let firstName: String
-    let lastName: String
-    let state: Components.Schemas.BetaTesterState
-    let appIds: [String]
-}
-
-struct MockBetaGroup {
-    let id: String
-    let name: String
-    let appId: String
+    var roles: [Components.Schemas.UserRole] = [.developer]
 }
