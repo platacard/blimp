@@ -1,0 +1,88 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '30 4 * * 1'
+
+permissions:
+  security-events: write
+  contents: read
+  actions: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actions:
+    name: Analyze (actions)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: actions
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:actions"
+
+  swift:
+    name: Analyze (swift)
+    # Runs on main and weekly only: under the CodeQL tracer a build costs
+    # 8-19 minutes even fully cached, too slow to gate every pull request.
+    if: github.event_name != 'pull_request'
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: chetan/git-restore-mtime-action@d186aca54f8760da4dec55313195e51ed3ebb0b3 # v2.3
+
+      - name: Swift version
+        id: swift
+        run: echo "version=$(swift --version 2>&1 | grep -oE 'Swift version [0-9.]+' | tr -d ' ')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache SwiftPM checkouts and build products
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: codeql-spm-v2-${{ runner.os }}-${{ steps.swift.outputs.version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}-${{ github.sha }}
+          restore-keys: |
+            codeql-spm-v2-${{ runner.os }}-${{ steps.swift.outputs.version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}-
+            codeql-spm-v2-${{ runner.os }}-${{ steps.swift.outputs.version }}-
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: swift
+          build-mode: manual
+          # Fixed so the traced build's environment does not vary with runner size.
+          ram: 6144
+          threads: 3
+
+      # CodeQL only sees what the traced build compiles: every first-party
+      # source is touched so all of it is extracted. Dependencies come from the
+      # cache. Their manifests still recompile under the tracer: SwiftPM keys
+      # its manifest cache on the environment, and the tracer library sets a
+      # per-process CODEQL_PARENT_ID inside every traced process.
+      - name: Build
+        run: |
+          find Sources -name '*.swift' -exec touch {} +
+          .github/scripts/stable-env.sh "$(xcrun --find swift-build)" --manifest-cache local
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:swift"

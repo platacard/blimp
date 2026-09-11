@@ -6,14 +6,48 @@ on:
   pull_request:
     branches: [ "main" ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: swift build -v
-    - name: Run tests
-      run: swift test -v
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Checkout stamps every file with "now"; commit times let the incremental
+      # build skip whatever did not change since the cached build.
+      - uses: chetan/git-restore-mtime-action@d186aca54f8760da4dec55313195e51ed3ebb0b3 # v2.3
+
+      - name: Swift version
+        id: swift
+        run: echo "version=$(swift --version 2>&1 | grep -oE 'Swift version [0-9.]+' | tr -d ' ')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache SwiftPM checkouts and build products
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-v2-${{ runner.os }}-${{ steps.swift.outputs.version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}-${{ github.sha }}
+          restore-keys: |
+            spm-v2-${{ runner.os }}-${{ steps.swift.outputs.version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}-
+            spm-v2-${{ runner.os }}-${{ steps.swift.outputs.version }}-
+
+      # Restored timestamps come from commit dates, which a commit can forge;
+      # whatever this change touches recompiles regardless.
+      - name: Mark changed sources
+        run: |
+          base="${{ github.event.pull_request.base.sha || github.event.before }}"
+          git rev-parse -q --verify "$base^{commit}" >/dev/null || base=$(git rev-parse HEAD~1)
+          git diff --name-only --diff-filter=AMR "$base...HEAD" -- Sources Tests Package.swift Package.resolved \
+            | while IFS= read -r f; do [ -e "$f" ] && touch "$f"; done
+          true
+
+      - name: Build
+        run: .github/scripts/stable-env.sh swift build --build-tests --manifest-cache local
+
+      - name: Run tests
+        run: .github/scripts/stable-env.sh swift test --skip-build --manifest-cache local

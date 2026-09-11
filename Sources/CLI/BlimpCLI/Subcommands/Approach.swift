@@ -1,5 +1,6 @@
 import Foundation
 import BlimpKit
+import DeployHelpers
 import ArgumentParser
 import Cronista
 import Uploader
@@ -63,7 +64,14 @@ struct Approach: AsyncParsableCommand {
 
         logger.info("Build with id: \(processingResult.buildId) has been successfully processed!")
 
-        ProcessInfo.processInfo.setValue(processingResult.buildId, forKey: "BUILD_ID")
+        let stepOutput = StepOutput()
+        if let outputs = try stepOutput.export(StepInput.buildIdKey, processingResult.buildId) {
+            let provider = stepOutput.providerName ?? "CI"
+            logger.info("\(StepInput.buildIdKey)=\(processingResult.buildId) written to \(outputs.path) (\(provider))")
+        }
+        try stepOutput.summarize(
+            "✈️ `\(bundleId)` \(appVersion) (\(buildNumber)) processed on App Store Connect, build id `\(processingResult.buildId)`"
+        )
         logger.info("Done!")
     }
 }
