@@ -27,6 +27,8 @@ public struct TestflightInvitationService: InvitationService, Sendable {
         try await delete(invitationId: pending.id)
         do {
             return try await create(email: email, firstName: firstName, lastName: lastName)
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             throw InvitationError.resendFailed(email: email, reason: error.localizedDescription)
         }
@@ -43,11 +45,7 @@ private extension TestflightInvitationService {
 
     func pendingInvitation(email: String) async throws -> PendingInvitation? {
         let response = try await client.userInvitationsGetCollection(
-            query: .init(
-                filter_lbrack_email_rbrack_: [email],
-                filter_lbrack_roles_rbrack_: [.developer],
-                limit: Self.lookupPageSize
-            )
+            query: .init(filter_lbrack_email_rbrack_: [email], limit: Self.lookupPageSize)
         )
 
         switch response {

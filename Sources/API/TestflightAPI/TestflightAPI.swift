@@ -667,10 +667,13 @@ private extension TestflightAPI {
         if isDeveloper != nil {
             logger.info("\(email.redactedEmail) has the developer role. Resending the invite...")
             let result = try await inviteDeveloper(email: email, firstName: firstName, lastName: lastName)
-            guard case .sent = result else {
-                throw Error.badResponse(
-                    "\(email.redactedEmail) cannot be added as a beta tester: \(result); add them to the beta groups in App Store Connect"
-                )
+            switch result {
+            case .sent:
+                break
+            case .alreadyRegistered:
+                throw Error.badResponse("\(email.redactedEmail) is already a team member; add them to the beta groups in App Store Connect")
+            case .pendingWithOtherRoles(_, let roles):
+                throw Error.badResponse("\(email.redactedEmail) has a pending invitation with roles \(roles); accept it first")
             }
             return nil
         } else {

@@ -40,6 +40,18 @@ final class InvitationServiceTests: XCTestCase {
         XCTAssertEqual(client.userInvitationCreateCalls.count, 0)
     }
 
+    func testLeavesAPendingInvitationWithoutTheDeveloperRole() async throws {
+        client.existingUserInvitations = [
+            .init(id: "invite-fin", email: "fin@example.com", firstName: "Jane", lastName: "Doe", roles: [.finance]),
+        ]
+
+        let result = try await sut.ensureDeveloperInvite(email: "fin@example.com", firstName: "Jane", lastName: "Doe")
+
+        XCTAssertEqual(result, .pendingWithOtherRoles(email: "fin@example.com", roles: ["FINANCE"]))
+        XCTAssertEqual(client.userInvitationDeleteCalls, [])
+        XCTAssertEqual(client.userInvitationCreateCalls.count, 0)
+    }
+
     func testMatchesTheAddressExactlyDespiteSubstringFiltering() async throws {
         client.existingUserInvitations = [.init(id: "invite-au", email: "dev@example.com.au", firstName: "Jane", lastName: "Doe")]
 

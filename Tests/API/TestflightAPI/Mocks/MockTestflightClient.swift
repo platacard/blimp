@@ -51,8 +51,12 @@ class MockTestflightClient: APIProtocol, @unchecked Sendable {
             break
         }
 
-        // App Store Connect matches filter[email] as a substring.
-        let matching = existingUserInvitations.filter { emailFilter.map($0.email.contains) ?? true }
+        // App Store Connect matches filter[email] as a substring; filter[roles] by any listed role.
+        let roleFilter = input.query.filter_lbrack_roles_rbrack_?.map(\.rawValue)
+        let matching = existingUserInvitations.filter { invitation in
+            (emailFilter.map(invitation.email.contains) ?? true)
+                && (roleFilter.map { !Set($0).isDisjoint(with: invitation.roles.map(\.rawValue)) } ?? true)
+        }
         let data = matching.map { invitation in
             Components.Schemas.UserInvitation(
                 _type: .userInvitations,
