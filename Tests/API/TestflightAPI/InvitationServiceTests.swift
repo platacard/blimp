@@ -96,6 +96,18 @@ final class InvitationServiceTests: XCTestCase {
         XCTAssertEqual(client.userInvitationDeleteCalls, ["invite-123"])
     }
 
+    func testAFailedDeletionStopsBeforeCreating() async {
+        client.existingUserInvitations = [.init(id: "invite-123", email: "dev@example.com", firstName: "John", lastName: "Doe")]
+        client.userInvitationDeleteBehavior = .conflict("Cannot delete")
+
+        await XCTAssertThrowsErrorAsync(try await sut.ensureDeveloperInvite(email: "dev@example.com", firstName: "John", lastName: "Doe")) { error in
+            guard case .unexpected(let message) = error as? InvitationError else { return XCTFail("\(error)") }
+            XCTAssertTrue(message.contains("Cannot delete"), message)
+        }
+        XCTAssertEqual(client.userInvitationCreateCalls.count, 0)
+        XCTAssertEqual(client.existingUserInvitations.map(\.id), ["invite-123"])
+    }
+
     func testForbiddenCreationIsPropagated() async {
         client.userInvitationCreateBehavior = .forbidden("No permission")
 

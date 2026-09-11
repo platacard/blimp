@@ -43,14 +43,19 @@ private extension TestflightInvitationService {
 
     func pendingInvitation(email: String) async throws -> PendingInvitation? {
         let response = try await client.userInvitationsGetCollection(
-            query: .init(filter_lbrack_email_rbrack_: [email], limit: Self.lookupPageSize)
+            query: .init(
+                filter_lbrack_email_rbrack_: [email],
+                filter_lbrack_roles_rbrack_: [.developer],
+                limit: Self.lookupPageSize
+            )
         )
 
         switch response {
         case .ok(let ok):
             let page = try ok.body.json
-            // filter[email] matches substrings; match the address exactly, and
-            // never guess from a partial listing.
+            // filter[email] matches substrings; match the address exactly. The
+            // generated client cannot follow `links.next`, so a listing that
+            // does not fit one page is refused rather than guessed from.
             guard page.links.next == nil else {
                 throw InvitationError.lookupFailed("more than \(Self.lookupPageSize) pending invitations match \(email.redactedEmail)")
             }

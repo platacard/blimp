@@ -341,11 +341,12 @@ public struct TestflightAPI: Sendable {
         return basicState.asProcessingState
     }
 
+    @discardableResult
     public func inviteDeveloper(
         email: String,
         firstName: String,
         lastName: String
-    ) async throws {
+    ) async throws -> InvitationResult {
         let result = try await TestflightInvitationService(client: client).ensureDeveloperInvite(
             email: email,
             firstName: firstName,
@@ -360,6 +361,7 @@ public struct TestflightAPI: Sendable {
         case .pendingWithOtherRoles(let email, let roles):
             logger.info("\(email.redactedEmail) already has a pending invitation with roles \(roles); not resent")
         }
+        return result
     }
 
     public func inviteBetaTester(
@@ -664,7 +666,12 @@ private extension TestflightAPI {
 
         if isDeveloper != nil {
             logger.info("\(email.redactedEmail) has the developer role. Resending the invite...")
-            try await inviteDeveloper(email: email, firstName: firstName, lastName: lastName)
+            let result = try await inviteDeveloper(email: email, firstName: firstName, lastName: lastName)
+            guard case .sent = result else {
+                throw Error.badResponse(
+                    "\(email.redactedEmail) cannot be added as a beta tester: \(result); add them to the beta groups in App Store Connect"
+                )
+            }
             return nil
         } else {
             let betaTesterId = try result.created.body.json.data.id
