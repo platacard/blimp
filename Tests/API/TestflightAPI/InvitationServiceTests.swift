@@ -57,6 +57,24 @@ final class InvitationServiceTests: XCTestCase {
         XCTAssertEqual(result, .alreadyRegistered(email: "member@example.com"))
     }
 
+    func testAConflictWithAPendingInvitationIsNotMembership() async {
+        client.userInvitationCreateBehavior = .conflict
+        client.invitationsAppearingOnConflict = [.init(id: "invite-race", email: "dev@example.com", firstName: "John", lastName: "Doe")]
+
+        await XCTAssertThrowsErrorAsync(try await sut.ensureDeveloperInvite(email: "dev@example.com", firstName: "John", lastName: "Doe")) { error in
+            XCTAssertEqual(error as? InvitationError, .pendingInvitationConflict(email: "dev@example.com"))
+        }
+    }
+
+    func testAPartialListingIsNeverTrusted() async {
+        client.listingHasMorePages = true
+
+        await XCTAssertThrowsErrorAsync(try await sut.ensureDeveloperInvite(email: "dev@example.com", firstName: "John", lastName: "Doe")) { error in
+            guard case .lookupFailed = error as? InvitationError else { return XCTFail("\(error)") }
+        }
+        XCTAssertEqual(client.userInvitationCreateCalls.count, 0)
+    }
+
     func testAFailedLookupIsAnErrorNotAnAbsentInvitation() async {
         client.userInvitationGetCollectionBehavior = .tooManyRequests
 

@@ -28,7 +28,7 @@ public struct TestflightInvitationService: InvitationService, Sendable {
         do {
             return try await create(email: email, firstName: firstName, lastName: lastName)
         } catch {
-            throw InvitationError.resendFailed(email: email, reason: "\(error)")
+            throw InvitationError.resendFailed(email: email, reason: error.localizedDescription)
         }
     }
 }
@@ -39,15 +39,22 @@ private extension TestflightInvitationService {
         let roles: [Components.Schemas.UserRole]
     }
 
+    static let lookupPageSize = 200
+
     func pendingInvitation(email: String) async throws -> PendingInvitation? {
         let response = try await client.userInvitationsGetCollection(
-            query: .init(filter_lbrack_email_rbrack_: [email])
+            query: .init(filter_lbrack_email_rbrack_: [email], limit: Self.lookupPageSize)
         )
 
         switch response {
         case .ok(let ok):
-            // filter[email] matches substrings; match the address exactly.
-            let invitation = try ok.body.json.data.first { $0.attributes?.email == email }
+            let page = try ok.body.json
+            // filter[email] matches substrings; match the address exactly, and
+            // never guess from a partial listing.
+            guard page.links.next == nil else {
+                throw InvitationError.lookupFailed("more than \(Self.lookupPageSize) pending invitations match \(email.redactedEmail)")
+            }
+            let invitation = page.data.first { $0.attributes?.email == email }
             return invitation.map { .init(id: $0.id, roles: $0.attributes?.roles ?? []) }
         case .badRequest(let failure):
             throw InvitationError.lookupFailed((try? failure.body.json.errorDescription) ?? "Bad request")
@@ -75,7 +82,7 @@ private extension TestflightInvitationService {
         case .badRequest(let failure):
             throw InvitationError.badRequest((try? failure.body.json.errorDescription) ?? "Bad request")
         case .unauthorized(let failure):
-            throw InvitationError.forbidden((try? failure.body.json.errorDescription) ?? "Unauthorized")
+            throw InvitationError.unauthorized((try? failure.body.json.errorDescription) ?? "Unauthorized")
         case .forbidden(let failure):
             throw InvitationError.forbidden((try? failure.body.json.errorDescription) ?? "Forbidden")
         case .tooManyRequests(let failure):
@@ -105,6 +112,10 @@ private extension TestflightInvitationService {
             logger.info("Developer invite sent to \(email.redactedEmail)")
             return .sent(email: email)
         case .conflict:
+            // 409 also answers a pending invitation; only an empty re-query means membership.
+            guard try await pendingInvitation(email: email) == nil else {
+                throw InvitationError.pendingInvitationConflict(email: email)
+            }
             logger.info("\(email.redactedEmail) is already a team member")
             return .alreadyRegistered(email: email)
         case .badRequest(let failure):
@@ -112,7 +123,7 @@ private extension TestflightInvitationService {
         case .unprocessableContent(let failure):
             throw InvitationError.badRequest((try? failure.body.json.errorDescription) ?? "Unprocessable")
         case .unauthorized(let failure):
-            throw InvitationError.forbidden((try? failure.body.json.errorDescription) ?? "Unauthorized")
+            throw InvitationError.unauthorized((try? failure.body.json.errorDescription) ?? "Unauthorized")
         case .forbidden(let failure):
             throw InvitationError.forbidden((try? failure.body.json.errorDescription) ?? "Forbidden")
         case .tooManyRequests(let failure):

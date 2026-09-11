@@ -7,6 +7,9 @@ class MockTestflightClient: APIProtocol, @unchecked Sendable {
     var userInvitationDeleteCalls: [String] = []
 
     var existingUserInvitations: [MockUserInvitation] = []
+    /// Appear in the listing after a conflicting create, as a concurrent invite would.
+    var invitationsAppearingOnConflict: [MockUserInvitation] = []
+    var listingHasMorePages = false
 
     var userInvitationGetCollectionBehavior: UserInvitationGetCollectionBehavior = .success
     var userInvitationCreateBehavior: UserInvitationCreateBehavior = .success
@@ -65,7 +68,10 @@ class MockTestflightClient: APIProtocol, @unchecked Sendable {
                 )
             )
         }
-        return .ok(.init(body: .json(.init(data: data, links: .init(_self: "http://test")))))
+        return .ok(.init(body: .json(.init(
+            data: data,
+            links: .init(_self: "http://test", next: listingHasMorePages ? "http://test?cursor=2" : nil)
+        ))))
     }
 
     func userInvitationsCreateInstance(_ input: Operations.UserInvitationsCreateInstance.Input) async throws -> Operations.UserInvitationsCreateInstance.Output {
@@ -100,6 +106,7 @@ class MockTestflightClient: APIProtocol, @unchecked Sendable {
             ))))
 
         case .conflict:
+            existingUserInvitations += invitationsAppearingOnConflict
             return .conflict(.init(body: .json(.init(
                 errors: [.init(status: "409", code: "ENTITY_ERROR.RELATIONSHIP.INVALID", title: "User already exists", detail: "")]
             ))))
