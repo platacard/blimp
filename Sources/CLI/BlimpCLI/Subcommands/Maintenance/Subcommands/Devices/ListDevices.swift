@@ -21,7 +21,12 @@ struct ListDevices: AsyncParsableCommand {
         } else {
             logger.info("Devices:")
             for device in devices {
-                let status = device.status == .enabled ? "✓" : "✗"
+                let status = switch device.status {
+                case .enabled: "✓"
+                case .disabled: "✗"
+                case .processing: "⏳ processing"
+                case .unknown(let raw): "? \(raw)"
+                }
                 let platformStr = device.platform?.rawValue ?? "unknown"
                 logger.info("  \(status) \(device.name) (\(platformStr))")
                 logger.info("    ID: \(device.id)")

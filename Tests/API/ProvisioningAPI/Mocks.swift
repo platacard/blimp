@@ -66,15 +66,34 @@ class MockAPIClient: APIProtocol, @unchecked Sendable {
 }
 
 class MockJWTProvider: JWTProviding, @unchecked Sendable {
-    func token() throws -> String {
-        return "mock_token"
-    }
-    
-    func token(expiration: TimeInterval) throws -> String {
-        return "mock_token"
-    }
-    
+    var apiKeyId: String? { "mock_key_id" }
+    var apiIssuerId: String? { "mock_issuer_id" }
+    var apiPrivateKey: String? { "mock_private_key" }
+
     func token(keyId: String, keyIssuer: String, privateKey: String, lifetimeSec: TimeInterval) throws -> String {
         return "mock_token"
+    }
+}
+
+final class RequestRecorder: @unchecked Sendable {
+    private(set) var requests: [URLRequest] = []
+
+    func record(_ request: URLRequest) {
+        requests.append(request)
+    }
+}
+
+final class ResponseQueue: @unchecked Sendable {
+    private var responses: [(status: Int, json: String)]
+
+    init(_ responses: [(status: Int, json: String)]) {
+        self.responses = responses
+    }
+
+    func dequeue() throws -> (status: Int, json: String) {
+        guard !responses.isEmpty else {
+            throw NSError(domain: "ResponseQueue", code: 1, userInfo: [NSLocalizedDescriptionKey: "No stubbed response left"])
+        }
+        return responses.removeFirst()
     }
 }

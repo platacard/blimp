@@ -14,11 +14,11 @@ public extension ProvisioningAPI {
             }
         }
 
-        var asDeviceFilterPlatform: Operations.DevicesGetCollection.Input.Query.FilterLbrackPlatformRbrackPayloadPayload {
+        var asDeviceFilterValue: String {
             switch self {
-            case .ios: .ios
-            case .macos: .macOs
-            case .tvos, .catalyst: .universal
+            case .ios: "IOS"
+            case .macos: "MAC_OS"
+            case .tvos, .catalyst: "UNIVERSAL"
             }
         }
     }
@@ -86,9 +86,29 @@ public extension ProvisioningAPI {
         public let platform: Platform?
         public let status: Status
 
-        public enum Status: String, Sendable {
-            case enabled = "ENABLED"
-            case disabled = "DISABLED"
+        public enum Status: Sendable, Equatable {
+            case enabled
+            case disabled
+            case processing
+            case unknown(String)
+
+            init(apiValue: String?) {
+                switch apiValue {
+                case "ENABLED": self = .enabled
+                case "DISABLED": self = .disabled
+                case "PROCESSING": self = .processing
+                default: self = .unknown(apiValue ?? "")
+                }
+            }
+
+            var apiValue: String {
+                switch self {
+                case .enabled: "ENABLED"
+                case .disabled: "DISABLED"
+                case .processing: "PROCESSING"
+                case .unknown(let raw): raw
+                }
+            }
         }
 
         public init(id: String, name: String, udid: String, platform: Platform?, status: Status) {

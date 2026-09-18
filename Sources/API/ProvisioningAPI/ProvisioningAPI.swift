@@ -7,17 +7,28 @@ import Foundation
 
 public struct ProvisioningAPI: Sendable {
 
+    typealias RequestPerformer = @Sendable (URLRequest) async throws -> (Data, URLResponse)
+
     private let jwtProvider: any JWTProviding
     private let client: any APIProtocol
+    private let serverURL: URL
+    private let performRequest: RequestPerformer
 
     nonisolated(unsafe) private let logger: Cronista
 
+    // Server URL is constant, fallback is defensive only
+    private static var defaultServerURL: URL {
+        (try? Servers.Server1.url()) ?? URL(string: "https://api.appstoreconnect.apple.com")!
+    }
+
+    static let sharedSessionPerformer: RequestPerformer = { try await URLSession.shared.data(for: $0) }
+
     public init(jwtProvider: any JWTProviding) {
+        let serverURL = Self.defaultServerURL
         self.jwtProvider = jwtProvider
         self.logger = Cronista(module: "blimp", category: "ProvisioningAPI")
-
-        // Server URL is constant, fallback is defensive only
-        let serverURL = (try? Servers.Server1.url()) ?? URL(string: "https://api.appstoreconnect.apple.com")!
+        self.serverURL = serverURL
+        self.performRequest = Self.sharedSessionPerformer
 
         self.client = Client(
             serverURL: serverURL,
@@ -29,9 +40,15 @@ public struct ProvisioningAPI: Sendable {
         )
     }
 
-    internal init(client: any APIProtocol, jwtProvider: any JWTProviding) {
+    internal init(
+        client: any APIProtocol,
+        jwtProvider: any JWTProviding,
+        performRequest: @escaping RequestPerformer = ProvisioningAPI.sharedSessionPerformer
+    ) {
         self.client = client
         self.jwtProvider = jwtProvider
+        self.serverURL = Self.defaultServerURL
+        self.performRequest = performRequest
         self.logger = Cronista(module: "blimp", category: "ProvisioningAPI")
     }
 
@@ -61,9 +78,17 @@ public struct ProvisioningAPI: Sendable {
         guard let requestURL = URL(string: url) else {
             throw Error.badResponse("Invalid pagination URL")
         }
+        return try await fetchPage(url: requestURL)
+    }
+
+    private func fetchPage(url requestURL: URL) async throws -> (Data, URLResponse) {
         var request = URLRequest(url: requestURL)
         request.setValue("Bearer \(try jwtProvider.token())", forHTTPHeaderField: "Authorization")
-        return try await URLSession.shared.data(for: request)
+        return try await performRequest(request)
+    }
+
+    private func errorMessage(from data: Data) -> String? {
+        (try? jsonDecoder.decode(Components.Schemas.ErrorResponse.self, from: data))?.errorDescription
     }
 
     // MARK: - Bundle IDs
@@ -88,114 +113,85 @@ public struct ProvisioningAPI: Sendable {
         }
     }
 
+    /// Bypasses the generated client: newly registered devices come back with statuses
+    /// the published spec doesn't declare, which the generated closed enums refuse to decode.
     public func registerDevice(name: String, udid: String, platform: Platform) async throws -> Device {
-        let attributes = Components.Schemas.DeviceCreateRequest.DataPayload.AttributesPayload(
-            name: name,
-            platform: platform.asApiPlatform,
-            udid: udid
-        )
-        let data = Components.Schemas.DeviceCreateRequest.DataPayload(
+        let body = Components.Schemas.DeviceCreateRequest(data: .init(
             _type: .devices,
-            attributes: attributes
-        )
-        let body = Components.Schemas.DeviceCreateRequest(data: data)
-        let input = Operations.DevicesCreateInstance.Input(body: .json(body))
-        
-        let response = try await client.devicesCreateInstance(input)
-        
-        switch response {
-        case .created(let created):
-            let data = try created.body.json.data
-            return Device(
-                id: data.id,
-                name: data.attributes?.name ?? name,
-                udid: data.attributes?.udid ?? udid,
-                platform: platform,
-                status: data.attributes?.status == .enabled ? .enabled : .disabled
-            )
-        case .conflict(let conflict):
-            let message = (try? conflict.body.json.errorDescription) ?? "Device already exists"
+            attributes: .init(name: name, platform: platform.asApiPlatform, udid: udid)
+        ))
+        var request = URLRequest(url: serverURL.appendingPathComponent("v1/devices"))
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(try jwtProvider.token())", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await performRequest(request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw Error.badResponse("Non-HTTP response while registering device")
+        }
+
+        switch httpResponse.statusCode {
+        case 201:
+            let created = try jsonDecoder.decode(RegisteredDeviceResponse.self, from: data)
+            return created.data.device(platform: platform, fallbackName: name, fallbackUDID: udid)
+        case 409:
+            let message = errorMessage(from: data) ?? "Device already exists"
             logger.warning("\(message). This might not be a blocker.")
             throw Error.conflict(message)
-        case .forbidden(let forbidden):
-             let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
-             throw Error.badResponse(message)
-        case .badRequest(let error):
-             let message = (try? error.body.json.errorDescription) ?? "Bad request"
-             throw Error.badRequest(message)
+        case 403:
+            throw Error.badResponse(errorMessage(from: data) ?? "Forbidden")
+        case 400, 422:
+            throw Error.badRequest(errorMessage(from: data) ?? "Bad request")
         default:
-            throw Error.undocumented("Unexpected response: \(response)")
+            throw Error.undocumented("Unexpected HTTP \(httpResponse.statusCode) while registering device")
         }
     }
     
+    /// Raw request for the same reason as `registerDevice`: the generated collection
+    /// decoder rejects devices whose status Apple hasn't documented.
     public func listDevices(platform: Platform? = nil, status: Device.Status? = .enabled) async throws -> [Device] {
+        var components = URLComponents(url: serverURL.appendingPathComponent("v1/devices"), resolvingAgainstBaseURL: false)
+        var queryItems = [URLQueryItem(name: "limit", value: String(Self.devicesPageLimit))]
+        if let platform {
+            queryItems.append(URLQueryItem(name: "filter[platform]", value: platform.asDeviceFilterValue))
+        }
+        if let status {
+            queryItems.append(URLQueryItem(name: "filter[status]", value: status.apiValue))
+        }
+        components?.queryItems = queryItems
+        guard let url = components?.url else {
+            throw Error.badRequest("Could not build devices URL")
+        }
+
         var allDevices: [Device] = []
-        var nextURL: String? = nil
-
-        // First request via typed client
-        // Filter by ENABLED status by default to avoid decoding issues with PROCESSING devices
-        let statusFilter: [Operations.DevicesGetCollection.Input.Query.FilterLbrackStatusRbrackPayloadPayload]? = status.map {
-            switch $0 {
-            case .enabled: return [.enabled]
-            case .disabled: return [.disabled]
-            }
-        }
-        let query = Operations.DevicesGetCollection.Input.Query(
-            filter_lbrack_platform_rbrack_: platform.map { [$0.asDeviceFilterPlatform] },
-            filter_lbrack_status_rbrack_: statusFilter
-        )
-        let input = Operations.DevicesGetCollection.Input(query: query)
-        let response = try await client.devicesGetCollection(input)
-
-        switch response {
-        case .ok(let ok):
-            let json = try ok.body.json
-            allDevices.append(contentsOf: parseDevices(from: json.data))
-            nextURL = json.links.next
-        case .forbidden(let forbidden):
-            let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
-            throw Error.badResponse(message)
-        default:
-            throw Error.badResponse("Failed to list devices")
-        }
-
-        // Paginate through remaining pages
+        var nextURL: String? = url.absoluteString
         while let url = nextURL {
-            let (data, nextLink) = try await fetchDevicesPage(url: url)
-            allDevices.append(contentsOf: data)
+            let (devices, nextLink) = try await fetchDevicesPage(url: url)
+            allDevices.append(contentsOf: devices)
             nextURL = nextLink
         }
-
         return allDevices
     }
 
-    private func parseDevices(from data: [Components.Schemas.Device]) -> [Device] {
-        data.compactMap { device -> Device? in
-            guard let attributes = device.attributes else { return nil }
-            let platform: Platform? = {
-                switch attributes.platform {
-                case .ios: return .ios
-                case .macOs: return .macos
-                default: return nil
-                }
-            }()
-            return Device(
-                id: device.id,
-                name: attributes.name ?? "",
-                udid: attributes.udid ?? "",
-                platform: platform,
-                status: attributes.status == .enabled ? .enabled : .disabled
-            )
-        }
-    }
+    private static let devicesPageLimit = 200
 
     private func fetchDevicesPage(url: String) async throws -> ([Device], String?) {
         let (data, response) = try await fetchPage(url: url)
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            throw Error.badResponse("Failed to fetch devices page")
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw Error.badResponse("Non-HTTP response while listing devices")
         }
-        let devicesResponse = try jsonDecoder.decode(Components.Schemas.DevicesResponse.self, from: data)
-        return (parseDevices(from: devicesResponse.data), devicesResponse.links.next)
+        switch httpResponse.statusCode {
+        case 200:
+            let page = try jsonDecoder.decode(DevicesPageResponse.self, from: data)
+            let devices = page.data.map { $0.device(platform: $0.apiPlatform) }
+            return (devices, page.links.next)
+        case 403:
+            throw Error.badResponse(errorMessage(from: data) ?? "Forbidden")
+        default:
+            throw Error.badResponse(errorMessage(from: data) ?? "Failed to list devices (HTTP \(httpResponse.statusCode))")
+        }
     }
 
     public func listCertificates(filterType: CertificateType? = nil) async throws -> [Certificate] {

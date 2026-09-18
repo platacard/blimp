@@ -20,7 +20,12 @@ struct RegisterDevice: AsyncParsableCommand {
 
     func run() async throws {
         let logger = Cronista(module: "blimp", category: "Maintenance")
-        try await Blimp.Maintenance.default.registerDevice(name: name, udid: udid, platform: platform)
-        logger.success("Device '\(name)' registered successfully")
+        let device = try await Blimp.Maintenance.default.registerDevice(name: name, udid: udid, platform: platform)
+        switch device.status {
+        case .processing:
+            logger.success("Device '\(name)' registered, Apple is still processing it. Provisioning profiles can include it once processing completes.")
+        default:
+            logger.success("Device '\(name)' registered successfully")
+        }
     }
 }
