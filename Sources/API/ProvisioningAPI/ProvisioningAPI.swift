@@ -158,7 +158,7 @@ public struct ProvisioningAPI: Sendable {
             queryItems.append(URLQueryItem(name: "filter[platform]", value: platform.asDeviceFilterValue))
         }
         if let status {
-            queryItems.append(URLQueryItem(name: "filter[status]", value: status.apiValue))
+            queryItems.append(URLQueryItem(name: "filter[status]", value: try Self.deviceStatusFilterValue(status)))
         }
         components?.queryItems = queryItems
         guard let url = components?.url else {
@@ -176,6 +176,16 @@ public struct ProvisioningAPI: Sendable {
     }
 
     private static let devicesPageLimit = 200
+
+    /// Apple documents only these two values for `filter[status]`.
+    private static func deviceStatusFilterValue(_ status: Device.Status) throws -> String {
+        switch status {
+        case .enabled: "ENABLED"
+        case .disabled: "DISABLED"
+        case .processing, .unknown:
+            throw Error.badRequest("Devices can only be filtered by enabled or disabled status")
+        }
+    }
 
     private func fetchDevicesPage(url: String) async throws -> ([Device], String?) {
         let (data, response) = try await fetchPage(url: url)
