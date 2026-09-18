@@ -139,11 +139,82 @@ final class ProvisioningAPITests: XCTestCase {
         }
     }
 
+    func testRegisterDevicePreservesRequestedPlatform() async throws {
+        let api = makeRawAPI(recorder: RequestRecorder(), status: 201, json: """
+        {"data":{"type":"devices","id":"device-123","attributes":{"name":"Apple TV","platform":"IOS","udid":"udid-123","status":"ENABLED"},"links":{"self":"http://test"}},"links":{"self":"http://test"}}
+        """)
+
+        let device = try await api.registerDevice(name: "Apple TV", udid: "udid-123", platform: .tvos)
+
+        XCTAssertEqual(device.platform, .tvos)
+    }
+
+    func testListDevicesDecodesProcessingDevicesAndPaginates() async throws {
+        let recorder = RequestRecorder()
+        let api = makeRawAPI(recorder: recorder, responses: [
+            (200, """
+            {"data":[{"type":"devices","id":"d1","attributes":{"name":"New","platform":"IOS","udid":"u1","status":"PROCESSING"}}],"links":{"self":"http://test","next":"https://api.appstoreconnect.apple.com/v1/devices?cursor=abc"}}
+            """),
+            (200, """
+            {"data":[{"type":"devices","id":"d2","attributes":{"name":"Old","platform":"MAC_OS","udid":"u2","status":"ENABLED"}}],"links":{"self":"http://test"}}
+            """),
+        ])
+
+        let devices = try await api.listDevices(platform: .ios, status: nil)
+
+        XCTAssertEqual(devices.map(\.id), ["d1", "d2"])
+        XCTAssertEqual(devices.map(\.status), [.processing, .enabled])
+        XCTAssertEqual(devices.map(\.platform), [.ios, .macos])
+
+        let first = try XCTUnwrap(recorder.requests.first)
+        XCTAssertEqual(first.httpMethod, "GET")
+        XCTAssertEqual(first.url?.path, "/v1/devices")
+        XCTAssertEqual(first.value(forHTTPHeaderField: "Authorization"), "Bearer mock_token")
+        let query = URLComponents(url: try XCTUnwrap(first.url), resolvingAgainstBaseURL: false)?.queryItems ?? []
+        XCTAssertEqual(query.first { $0.name == "filter[platform]" }?.value, "IOS")
+        XCTAssertEqual(query.first { $0.name == "limit" }?.value, "200")
+        XCTAssertNil(query.first { $0.name == "filter[status]" })
+        XCTAssertEqual(recorder.requests.last?.url?.absoluteString, "https://api.appstoreconnect.apple.com/v1/devices?cursor=abc")
+    }
+
+    func testListDevicesAppliesStatusFilter() async throws {
+        let recorder = RequestRecorder()
+        let api = makeRawAPI(recorder: recorder, status: 200, json: """
+        {"data":[],"links":{"self":"http://test"}}
+        """)
+
+        let devices = try await api.listDevices(platform: nil, status: .disabled)
+
+        XCTAssertTrue(devices.isEmpty)
+        let query = URLComponents(url: try XCTUnwrap(recorder.requests.first?.url), resolvingAgainstBaseURL: false)?.queryItems ?? []
+        XCTAssertEqual(query.first { $0.name == "filter[status]" }?.value, "DISABLED")
+        XCTAssertNil(query.first { $0.name == "filter[platform]" })
+    }
+
+    func testListDevicesForbidden() async throws {
+        let api = makeRawAPI(recorder: RequestRecorder(), status: 403, json: """
+        {"errors":[{"id":"e1","status":"403","code":"FORBIDDEN","title":"Forbidden","detail":"Key lacks permission."}]}
+        """)
+
+        do {
+            _ = try await api.listDevices()
+            XCTFail("Expected forbidden")
+        } catch ProvisioningAPI.Error.badResponse(let message) {
+            XCTAssertEqual(message, "Key lacks permission.")
+        }
+    }
+
     private func makeRawAPI(recorder: RequestRecorder, status: Int, json: String) -> ProvisioningAPI {
-        ProvisioningAPI(client: mockClient, jwtProvider: mockJWT) { request in
+        makeRawAPI(recorder: recorder, responses: [(status, json)])
+    }
+
+    private func makeRawAPI(recorder: RequestRecorder, responses: [(status: Int, json: String)]) -> ProvisioningAPI {
+        let queue = ResponseQueue(responses)
+        return ProvisioningAPI(client: mockClient, jwtProvider: mockJWT) { request in
             recorder.record(request)
-            let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!
-            return (Data(json.utf8), response)
+            let next = try queue.dequeue()
+            let response = HTTPURLResponse(url: request.url!, statusCode: next.status, httpVersion: nil, headerFields: nil)!
+            return (Data(next.json.utf8), response)
         }
     }
 

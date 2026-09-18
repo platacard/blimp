@@ -82,3 +82,18 @@ final class RequestRecorder: @unchecked Sendable {
         requests.append(request)
     }
 }
+
+final class ResponseQueue: @unchecked Sendable {
+    private var responses: [(status: Int, json: String)]
+
+    init(_ responses: [(status: Int, json: String)]) {
+        self.responses = responses
+    }
+
+    func dequeue() throws -> (status: Int, json: String) {
+        guard !responses.isEmpty else {
+            throw NSError(domain: "ResponseQueue", code: 1, userInfo: [NSLocalizedDescriptionKey: "No stubbed response left"])
+        }
+        return responses.removeFirst()
+    }
+}

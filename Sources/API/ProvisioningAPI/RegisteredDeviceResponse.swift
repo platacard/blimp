@@ -1,14 +1,9 @@
 import Foundation
 
-/// Lenient counterpart of the generated `DeviceResponse`: Apple returns device statuses
+/// Lenient counterparts of the generated device responses: Apple returns device statuses
 /// (e.g. `PROCESSING`) that are absent from the published OpenAPI spec, so the generated
-/// closed enums fail to decode a freshly registered device.
-struct RegisteredDeviceResponse: Decodable {
-    struct Payload: Decodable {
-        let id: String
-        let attributes: Attributes?
-    }
-
+/// closed enums fail to decode freshly registered devices.
+struct DeviceResource: Decodable {
     struct Attributes: Decodable {
         let name: String?
         let udid: String?
@@ -16,21 +11,37 @@ struct RegisteredDeviceResponse: Decodable {
         let status: String?
     }
 
-    let data: Payload
+    let id: String
+    let attributes: Attributes?
 
-    func device(fallbackName: String, fallbackUDID: String, fallbackPlatform: ProvisioningAPI.Platform) -> ProvisioningAPI.Device {
-        let attributes = data.attributes
-        let platform: ProvisioningAPI.Platform = switch attributes?.platform {
+    var apiPlatform: ProvisioningAPI.Platform? {
+        switch attributes?.platform {
         case "IOS": .ios
         case "MAC_OS": .macos
-        default: fallbackPlatform
+        default: nil
         }
-        return ProvisioningAPI.Device(
-            id: data.id,
+    }
+
+    func device(platform: ProvisioningAPI.Platform?, fallbackName: String = "", fallbackUDID: String = "") -> ProvisioningAPI.Device {
+        ProvisioningAPI.Device(
+            id: id,
             name: attributes?.name ?? fallbackName,
             udid: attributes?.udid ?? fallbackUDID,
             platform: platform,
             status: .init(apiValue: attributes?.status)
         )
     }
+}
+
+struct RegisteredDeviceResponse: Decodable {
+    let data: DeviceResource
+}
+
+struct DevicesPageResponse: Decodable {
+    struct Links: Decodable {
+        let next: String?
+    }
+
+    let data: [DeviceResource]
+    let links: Links
 }
