@@ -86,9 +86,20 @@ public extension ProvisioningAPI {
         public let platform: Platform?
         public let status: Status
 
-        public enum Status: String, Sendable {
-            case enabled = "ENABLED"
-            case disabled = "DISABLED"
+        public enum Status: Sendable, Equatable {
+            case enabled
+            case disabled
+            case processing
+            case unknown(String)
+
+            init(apiValue: String?) {
+                switch apiValue {
+                case "ENABLED": self = .enabled
+                case "DISABLED": self = .disabled
+                case "PROCESSING": self = .processing
+                default: self = .unknown(apiValue ?? "")
+                }
+            }
         }
 
         public init(id: String, name: String, udid: String, platform: Platform?, status: Status) {

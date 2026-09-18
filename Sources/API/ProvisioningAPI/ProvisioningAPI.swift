@@ -7,17 +7,27 @@ import Foundation
 
 public struct ProvisioningAPI: Sendable {
 
+    typealias RequestPerformer = @Sendable (URLRequest) async throws -> (Data, URLResponse)
+
     private let jwtProvider: any JWTProviding
     private let client: any APIProtocol
+    private let serverURL: URL
+    private let performRequest: RequestPerformer
 
     nonisolated(unsafe) private let logger: Cronista
+
+    // Server URL is constant, fallback is defensive only
+    private static var defaultServerURL: URL {
+        (try? Servers.Server1.url()) ?? URL(string: "https://api.appstoreconnect.apple.com")!
+    }
+
+    private static let sharedSessionPerformer: RequestPerformer = { try await URLSession.shared.data(for: $0) }
 
     public init(jwtProvider: any JWTProviding) {
         self.jwtProvider = jwtProvider
         self.logger = Cronista(module: "blimp", category: "ProvisioningAPI")
-
-        // Server URL is constant, fallback is defensive only
-        let serverURL = (try? Servers.Server1.url()) ?? URL(string: "https://api.appstoreconnect.apple.com")!
+        self.serverURL = Self.defaultServerURL
+        self.performRequest = Self.sharedSessionPerformer
 
         self.client = Client(
             serverURL: serverURL,
@@ -29,9 +39,15 @@ public struct ProvisioningAPI: Sendable {
         )
     }
 
-    internal init(client: any APIProtocol, jwtProvider: any JWTProviding) {
+    internal init(
+        client: any APIProtocol,
+        jwtProvider: any JWTProviding,
+        performRequest: @escaping RequestPerformer = ProvisioningAPI.sharedSessionPerformer
+    ) {
         self.client = client
         self.jwtProvider = jwtProvider
+        self.serverURL = Self.defaultServerURL
+        self.performRequest = performRequest
         self.logger = Cronista(module: "blimp", category: "ProvisioningAPI")
     }
 
@@ -63,7 +79,11 @@ public struct ProvisioningAPI: Sendable {
         }
         var request = URLRequest(url: requestURL)
         request.setValue("Bearer \(try jwtProvider.token())", forHTTPHeaderField: "Authorization")
-        return try await URLSession.shared.data(for: request)
+        return try await performRequest(request)
+    }
+
+    private func errorMessage(from data: Data) -> String? {
+        (try? jsonDecoder.decode(Components.Schemas.ErrorResponse.self, from: data))?.errorDescription
     }
 
     // MARK: - Bundle IDs
@@ -88,43 +108,39 @@ public struct ProvisioningAPI: Sendable {
         }
     }
 
+    /// Bypasses the generated client: newly registered devices come back with statuses
+    /// the published spec doesn't declare, which the generated closed enums refuse to decode.
     public func registerDevice(name: String, udid: String, platform: Platform) async throws -> Device {
-        let attributes = Components.Schemas.DeviceCreateRequest.DataPayload.AttributesPayload(
-            name: name,
-            platform: platform.asApiPlatform,
-            udid: udid
-        )
-        let data = Components.Schemas.DeviceCreateRequest.DataPayload(
+        let body = Components.Schemas.DeviceCreateRequest(data: .init(
             _type: .devices,
-            attributes: attributes
-        )
-        let body = Components.Schemas.DeviceCreateRequest(data: data)
-        let input = Operations.DevicesCreateInstance.Input(body: .json(body))
-        
-        let response = try await client.devicesCreateInstance(input)
-        
-        switch response {
-        case .created(let created):
-            let data = try created.body.json.data
-            return Device(
-                id: data.id,
-                name: data.attributes?.name ?? name,
-                udid: data.attributes?.udid ?? udid,
-                platform: platform,
-                status: data.attributes?.status == .enabled ? .enabled : .disabled
-            )
-        case .conflict(let conflict):
-            let message = (try? conflict.body.json.errorDescription) ?? "Device already exists"
+            attributes: .init(name: name, platform: platform.asApiPlatform, udid: udid)
+        ))
+        var request = URLRequest(url: serverURL.appendingPathComponent("v1/devices"))
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(try jwtProvider.token())", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await performRequest(request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw Error.badResponse("Non-HTTP response while registering device")
+        }
+
+        switch httpResponse.statusCode {
+        case 201:
+            let created = try jsonDecoder.decode(RegisteredDeviceResponse.self, from: data)
+            return created.device(fallbackName: name, fallbackUDID: udid, fallbackPlatform: platform)
+        case 409:
+            let message = errorMessage(from: data) ?? "Device already exists"
             logger.warning("\(message). This might not be a blocker.")
             throw Error.conflict(message)
-        case .forbidden(let forbidden):
-             let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
-             throw Error.badResponse(message)
-        case .badRequest(let error):
-             let message = (try? error.body.json.errorDescription) ?? "Bad request"
-             throw Error.badRequest(message)
+        case 403:
+            throw Error.badResponse(errorMessage(from: data) ?? "Forbidden")
+        case 400, 422:
+            throw Error.badRequest(errorMessage(from: data) ?? "Bad request")
         default:
-            throw Error.undocumented("Unexpected response: \(response)")
+            throw Error.undocumented("Unexpected HTTP \(httpResponse.statusCode) while registering device")
         }
     }
     
@@ -134,12 +150,7 @@ public struct ProvisioningAPI: Sendable {
 
         // First request via typed client
         // Filter by ENABLED status by default to avoid decoding issues with PROCESSING devices
-        let statusFilter: [Operations.DevicesGetCollection.Input.Query.FilterLbrackStatusRbrackPayloadPayload]? = status.map {
-            switch $0 {
-            case .enabled: return [.enabled]
-            case .disabled: return [.disabled]
-            }
-        }
+        let statusFilter = try status.map(deviceStatusFilter)
         let query = Operations.DevicesGetCollection.Input.Query(
             filter_lbrack_platform_rbrack_: platform.map { [$0.asDeviceFilterPlatform] },
             filter_lbrack_status_rbrack_: statusFilter
@@ -169,6 +180,15 @@ public struct ProvisioningAPI: Sendable {
         return allDevices
     }
 
+    private func deviceStatusFilter(_ status: Device.Status) throws -> [Operations.DevicesGetCollection.Input.Query.FilterLbrackStatusRbrackPayloadPayload] {
+        switch status {
+        case .enabled: [.enabled]
+        case .disabled: [.disabled]
+        case .processing, .unknown:
+            throw Error.badRequest("Devices can only be filtered by enabled or disabled status")
+        }
+    }
+
     private func parseDevices(from data: [Components.Schemas.Device]) -> [Device] {
         data.compactMap { device -> Device? in
             guard let attributes = device.attributes else { return nil }
@@ -184,7 +204,7 @@ public struct ProvisioningAPI: Sendable {
                 name: attributes.name ?? "",
                 udid: attributes.udid ?? "",
                 platform: platform,
-                status: attributes.status == .enabled ? .enabled : .disabled
+                status: .init(apiValue: attributes.status?.rawValue)
             )
         }
     }

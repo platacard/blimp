@@ -66,15 +66,19 @@ class MockAPIClient: APIProtocol, @unchecked Sendable {
 }
 
 class MockJWTProvider: JWTProviding, @unchecked Sendable {
-    func token() throws -> String {
-        return "mock_token"
-    }
-    
-    func token(expiration: TimeInterval) throws -> String {
-        return "mock_token"
-    }
-    
+    var apiKeyId: String? { "mock_key_id" }
+    var apiIssuerId: String? { "mock_issuer_id" }
+    var apiPrivateKey: String? { "mock_private_key" }
+
     func token(keyId: String, keyIssuer: String, privateKey: String, lifetimeSec: TimeInterval) throws -> String {
         return "mock_token"
+    }
+}
+
+final class RequestRecorder: @unchecked Sendable {
+    private(set) var requests: [URLRequest] = []
+
+    func record(_ request: URLRequest) {
+        requests.append(request)
     }
 }
