@@ -191,6 +191,23 @@ final class ProvisioningAPITests: XCTestCase {
         XCTAssertNil(query.first { $0.name == "filter[platform]" })
     }
 
+    func testListDevicesRejectsUnsupportedStatusFilterLocally() async throws {
+        let recorder = RequestRecorder()
+        let api = makeRawAPI(recorder: recorder, status: 200, json: """
+        {"data":[],"links":{"self":"http://test"}}
+        """)
+
+        for status in [ProvisioningAPI.Device.Status.processing, .unknown("INELIGIBLE"), .unknown("")] {
+            do {
+                _ = try await api.listDevices(platform: nil, status: status)
+                XCTFail("Expected local rejection for \(status)")
+            } catch ProvisioningAPI.Error.badRequest(let message) {
+                XCTAssertTrue(message.contains("enabled"), "Unexpected message: \(message)")
+            }
+        }
+        XCTAssertTrue(recorder.requests.isEmpty, "No request should reach the API")
+    }
+
     func testListDevicesForbidden() async throws {
         let api = makeRawAPI(recorder: RequestRecorder(), status: 403, json: """
         {"errors":[{"id":"e1","status":"403","code":"FORBIDDEN","title":"Forbidden","detail":"Key lacks permission."}]}

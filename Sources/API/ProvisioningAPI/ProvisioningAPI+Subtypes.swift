@@ -100,15 +100,6 @@ public extension ProvisioningAPI {
                 default: self = .unknown(apiValue ?? "")
                 }
             }
-
-            var apiValue: String {
-                switch self {
-                case .enabled: "ENABLED"
-                case .disabled: "DISABLED"
-                case .processing: "PROCESSING"
-                case .unknown(let raw): raw
-                }
-            }
         }
 
         public init(id: String, name: String, udid: String, platform: Platform?, status: Status) {
