@@ -156,10 +156,13 @@ class MockProfileService: ProfileService, @unchecked Sendable {
 class MockDeviceService: DeviceService, @unchecked Sendable {
     var devices: [ProvisioningAPI.Device] = []
 
-    func registerDevice(name: String, udid: String, platform: ProvisioningAPI.Platform) async throws -> ProvisioningAPI.Device {
+    func registerDevice(name: String, udid: String, platform: ProvisioningAPI.Platform) async throws -> ProvisioningAPI.DeviceRegistration {
+        if let existing = devices.first(where: { $0.udid.caseInsensitiveCompare(udid) == .orderedSame }) {
+            return .alreadyRegistered(.init(id: existing.id, name: existing.name, udid: existing.udid, platform: platform, status: existing.status))
+        }
         let device = ProvisioningAPI.Device(id: UUID().uuidString, name: name, udid: udid, platform: platform, status: .enabled)
         devices.append(device)
-        return device
+        return .registered(device)
     }
 
     func addDevice(name: String, udid: String, platform: ProvisioningAPI.Platform, status: ProvisioningAPI.Device.Status) {

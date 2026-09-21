@@ -24,10 +24,15 @@ public extension Blimp {
         // MARK: - Device Management
 
         @discardableResult
-        public func registerDevice(name: String, udid: String, platform: ProvisioningAPI.Platform) async throws -> ProvisioningAPI.Device {
-            let device = try await api.registerDevice(name: name, udid: udid, platform: platform)
-            logger.info("Registered device: \(device.name) (\(device.id)), status: \(device.status)")
-            return device
+        public func registerDevice(name: String, udid: String, platform: ProvisioningAPI.Platform) async throws -> ProvisioningAPI.DeviceRegistration {
+            let registration = try await api.registerDevice(name: name, udid: udid, platform: platform)
+            switch registration {
+            case .registered(let device):
+                logger.info("Registered device: \(device.name) (\(device.id)), status: \(device.status)")
+            case .alreadyRegistered(let device):
+                logger.info("Device already registered: \(device.name) (\(device.id)), status: \(device.status)")
+            }
+            return registration
         }
 
         public func listDevices(platform: ProvisioningAPI.Platform?, status: ProvisioningAPI.Device.Status? = nil) async throws -> [ProvisioningAPI.Device] {

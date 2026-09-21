@@ -111,6 +111,19 @@ public extension ProvisioningAPI {
         }
     }
 
+    /// Outcome of `registerDevice`: a device registered by this call, or the
+    /// device already registered under that UDID.
+    enum DeviceRegistration: Sendable {
+        case registered(Device)
+        case alreadyRegistered(Device)
+
+        public var device: Device {
+            switch self {
+            case .registered(let device), .alreadyRegistered(let device): device
+            }
+        }
+    }
+
     struct Certificate: Sendable {
         public let id: String
         public let name: String
