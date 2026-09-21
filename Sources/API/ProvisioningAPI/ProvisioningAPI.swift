@@ -115,7 +115,8 @@ public struct ProvisioningAPI: Sendable {
 
     /// Bypasses the generated client: newly registered devices come back with statuses
     /// the published spec doesn't declare, which the generated closed enums refuse to decode.
-    public func registerDevice(name: String, udid: String, platform: Platform) async throws -> Device {
+    /// A UDID already on the team is not an error: the existing device is returned.
+    public func registerDevice(name: String, udid: String, platform: Platform) async throws -> DeviceRegistration {
         let body = Components.Schemas.DeviceCreateRequest(data: .init(
             _type: .devices,
             attributes: .init(name: name, platform: platform.asApiPlatform, udid: udid)
@@ -135,11 +136,12 @@ public struct ProvisioningAPI: Sendable {
         switch httpResponse.statusCode {
         case 201:
             let created = try jsonDecoder.decode(RegisteredDeviceResponse.self, from: data)
-            return created.data.device(platform: platform, fallbackName: name, fallbackUDID: udid)
+            return .registered(created.data.device(platform: platform, fallbackName: name, fallbackUDID: udid))
         case 409:
-            let message = errorMessage(from: data) ?? "Device already exists"
-            logger.warning("\(message). This might not be a blocker.")
-            throw Error.conflict(message)
+            guard let existing = try await device(udid: udid) else {
+                throw Error.conflict(errorMessage(from: data) ?? "Device already exists")
+            }
+            return .alreadyRegistered(existing)
         case 403:
             throw Error.badResponse(errorMessage(from: data) ?? "Forbidden")
         case 400, 422:
@@ -176,6 +178,12 @@ public struct ProvisioningAPI: Sendable {
     }
 
     private static let devicesPageLimit = 200
+
+    /// Any status: a duplicate may still be processing or be disabled.
+    private func device(udid: String) async throws -> Device? {
+        try await listDevices(platform: nil, status: nil)
+            .first { $0.udid.caseInsensitiveCompare(udid) == .orderedSame }
+    }
 
     /// Apple documents only these two values for `filter[status]`.
     private static func deviceStatusFilterValue(_ status: Device.Status) throws -> String {

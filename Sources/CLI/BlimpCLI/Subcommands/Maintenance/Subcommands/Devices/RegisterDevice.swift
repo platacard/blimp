@@ -20,12 +20,14 @@ struct RegisterDevice: AsyncParsableCommand {
 
     func run() async throws {
         let logger = Cronista(module: "blimp", category: "Maintenance")
-        let device = try await Blimp.Maintenance.default.registerDevice(name: name, udid: udid, platform: platform)
-        switch device.status {
-        case .processing:
+        let registration = try await Blimp.Maintenance.default.registerDevice(name: name, udid: udid, platform: platform)
+        switch registration {
+        case .registered(let device) where device.status == .processing:
             logger.success("Device '\(name)' registered, Apple is still processing it. Provisioning profiles can include it once processing completes.")
-        default:
+        case .registered:
             logger.success("Device '\(name)' registered successfully")
+        case .alreadyRegistered(let device):
+            logger.warning("Device '\(device.name)' (\(device.udid)) is already registered, status: \(device.status). Update dev provisioning profiles: blimp maintenance sync-profiles --type development")
         }
     }
 }

@@ -64,7 +64,7 @@ final class ProvisioningAPITests: XCTestCase {
         {"data":{"type":"devices","id":"device-123","attributes":{"name":"iPhone","platform":"IOS","udid":"udid-123","deviceClass":"IPHONE","status":"PROCESSING","model":"iPhone 13 Pro Max","addedDate":"2026-09-18T08:52:07.000+00:00"},"links":{"self":"http://test"}},"links":{"self":"http://test"}}
         """)
 
-        let device = try await api.registerDevice(name: "iPhone", udid: "udid-123", platform: .ios)
+        let device = try await api.registerDevice(name: "iPhone", udid: "udid-123", platform: .ios).device
 
         XCTAssertEqual(device.id, "device-123")
         XCTAssertEqual(device.name, "iPhone")
@@ -79,7 +79,7 @@ final class ProvisioningAPITests: XCTestCase {
         {"data":{"type":"devices","id":"device-123","attributes":{"name":"iPhone","platform":"IOS","udid":"udid-123","status":"ENABLED"},"links":{"self":"http://test"}},"links":{"self":"http://test"}}
         """)
 
-        let device = try await api.registerDevice(name: "iPhone", udid: "udid-123", platform: .ios)
+        let device = try await api.registerDevice(name: "iPhone", udid: "udid-123", platform: .ios).device
 
         XCTAssertEqual(device.status, .enabled)
         let request = try XCTUnwrap(recorder.requests.first)
@@ -99,15 +99,41 @@ final class ProvisioningAPITests: XCTestCase {
         {"data":{"type":"devices","id":"device-123","attributes":{"name":"iPhone","platform":"IOS","udid":"udid-123","status":"INELIGIBLE"},"links":{"self":"http://test"}},"links":{"self":"http://test"}}
         """)
 
-        let device = try await api.registerDevice(name: "iPhone", udid: "udid-123", platform: .ios)
+        let device = try await api.registerDevice(name: "iPhone", udid: "udid-123", platform: .ios).device
 
         XCTAssertEqual(device.status, .unknown("INELIGIBLE"))
     }
 
-    func testRegisterDeviceConflict() async throws {
-        let api = makeRawAPI(recorder: RequestRecorder(), status: 409, json: """
-        {"errors":[{"id":"e1","status":"409","code":"ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE","title":"Duplicate","detail":"A device with UDID 'udid-123' already exists on this team."}]}
-        """)
+    func testRegisterDeviceConflictReturnsTheExistingDevice() async throws {
+        let recorder = RequestRecorder()
+        let api = makeRawAPI(recorder: recorder, responses: [
+            (409, """
+            {"errors":[{"id":"e1","status":"409","code":"ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE","title":"Duplicate","detail":"A device with UDID 'udid-123' already exists on this team."}]}
+            """),
+            (200, """
+            {"data":[{"type":"devices","id":"device-old","attributes":{"name":"Old iPhone","platform":"IOS","udid":"UDID-123","status":"ENABLED"},"links":{"self":"http://test"}}],"links":{"self":"http://test"}}
+            """),
+        ])
+
+        let registration = try await api.registerDevice(name: "iPhone", udid: "udid-123", platform: .ios)
+
+        guard case .alreadyRegistered(let device) = registration else { return XCTFail("\(registration)") }
+        XCTAssertEqual(device.id, "device-old")
+        XCTAssertEqual(device.name, "Old iPhone")
+        XCTAssertEqual(device.status, .enabled)
+        XCTAssertEqual(recorder.requests.map(\.httpMethod), ["POST", "GET"])
+        XCTAssertEqual(recorder.requests.last?.url?.path, "/v1/devices")
+    }
+
+    func testRegisterDeviceConflictWithoutAMatchingDeviceIsStillAnError() async throws {
+        let api = makeRawAPI(recorder: RequestRecorder(), responses: [
+            (409, """
+            {"errors":[{"id":"e1","status":"409","code":"ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE","title":"Duplicate","detail":"A device with UDID 'udid-123' already exists on this team."}]}
+            """),
+            (200, """
+            {"data":[],"links":{"self":"http://test"}}
+            """),
+        ])
 
         do {
             _ = try await api.registerDevice(name: "iPhone", udid: "udid-123", platform: .ios)
@@ -144,7 +170,7 @@ final class ProvisioningAPITests: XCTestCase {
         {"data":{"type":"devices","id":"device-123","attributes":{"name":"Apple TV","platform":"IOS","udid":"udid-123","status":"ENABLED"},"links":{"self":"http://test"}},"links":{"self":"http://test"}}
         """)
 
-        let device = try await api.registerDevice(name: "Apple TV", udid: "udid-123", platform: .tvos)
+        let device = try await api.registerDevice(name: "Apple TV", udid: "udid-123", platform: .tvos).device
 
         XCTAssertEqual(device.platform, .tvos)
     }

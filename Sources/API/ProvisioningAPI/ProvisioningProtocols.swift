@@ -31,6 +31,6 @@ public protocol ProfileService: Sendable {
 
 /// Service for managing devices in Apple Developer Portal.
 public protocol DeviceService: Sendable {
-    func registerDevice(name: String, udid: String, platform: ProvisioningAPI.Platform) async throws -> ProvisioningAPI.Device
+    func registerDevice(name: String, udid: String, platform: ProvisioningAPI.Platform) async throws -> ProvisioningAPI.DeviceRegistration
     func listDevices(platform: ProvisioningAPI.Platform?, status: ProvisioningAPI.Device.Status?) async throws -> [ProvisioningAPI.Device]
 }
