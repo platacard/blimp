@@ -138,7 +138,7 @@ public struct ProvisioningAPI: Sendable {
             let created = try jsonDecoder.decode(RegisteredDeviceResponse.self, from: data)
             return .registered(created.data.device(platform: platform, fallbackName: name, fallbackUDID: udid))
         case 409:
-            guard let existing = try await device(udid: udid) else {
+            guard let existing = try await device(udid: udid, platform: platform) else {
                 throw Error.conflict(errorMessage(from: data) ?? "Device already exists")
             }
             return .alreadyRegistered(existing)
@@ -179,10 +179,13 @@ public struct ProvisioningAPI: Sendable {
 
     private static let devicesPageLimit = 200
 
-    /// Any status: a duplicate may still be processing or be disabled.
-    private func device(udid: String) async throws -> Device? {
+    /// Any status: a duplicate may still be processing or be disabled. The
+    /// listing reports platforms coarsely, so the requested one is kept, as
+    /// the create path does.
+    private func device(udid: String, platform: Platform) async throws -> Device? {
         try await listDevices(platform: nil, status: nil)
             .first { $0.udid.caseInsensitiveCompare(udid) == .orderedSame }
+            .map { Device(id: $0.id, name: $0.name, udid: $0.udid, platform: platform, status: $0.status) }
     }
 
     /// Apple documents only these two values for `filter[status]`.

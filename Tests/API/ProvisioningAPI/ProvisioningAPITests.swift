@@ -115,12 +115,13 @@ final class ProvisioningAPITests: XCTestCase {
             """),
         ])
 
-        let registration = try await api.registerDevice(name: "iPhone", udid: "udid-123", platform: .ios)
+        let registration = try await api.registerDevice(name: "Apple TV", udid: "udid-123", platform: .tvos)
 
         guard case .alreadyRegistered(let device) = registration else { return XCTFail("\(registration)") }
         XCTAssertEqual(device.id, "device-old")
         XCTAssertEqual(device.name, "Old iPhone")
         XCTAssertEqual(device.status, .enabled)
+        XCTAssertEqual(device.platform, .tvos)
         XCTAssertEqual(recorder.requests.map(\.httpMethod), ["POST", "GET"])
         XCTAssertEqual(recorder.requests.last?.url?.path, "/v1/devices")
     }
