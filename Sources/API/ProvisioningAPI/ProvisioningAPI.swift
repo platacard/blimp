@@ -54,6 +54,8 @@ public struct ProvisioningAPI: Sendable {
 
     // MARK: - Pagination Helpers
 
+    private static let pageLimit = 200
+
     private var jsonDecoder: JSONDecoder {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
@@ -93,24 +95,39 @@ public struct ProvisioningAPI: Sendable {
 
     // MARK: - Bundle IDs
 
+    /// Raw request for the same reason as `listDevices`: the identifier filter also returns
+    /// Services IDs, whose undocumented platform the generated collection decoder rejects.
     public func getBundleId(identifier: String) async throws -> String? {
-        let query = Operations.BundleIdsGetCollection.Input.Query(
-            filter_lbrack_identifier_rbrack_: [identifier]
-        )
-        let input = Operations.BundleIdsGetCollection.Input(query: query)
-        let response = try await client.bundleIdsGetCollection(input)
-
-        switch response {
-        case .ok(let ok):
-            // Filter for EXACT match (API returns substring/prefix matches)
-            let exactMatch = try ok.body.json.data.first { $0.attributes?.identifier == identifier }
-            return exactMatch?.id
-        case .forbidden(let forbidden):
-             let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
-             throw Error.badResponse(message)
-        default:
-            throw Error.badResponse("Failed to list bundle IDs")
+        var components = URLComponents(url: serverURL.appendingPathComponent("v1/bundleIds"), resolvingAgainstBaseURL: false)
+        components?.queryItems = [
+            URLQueryItem(name: "filter[identifier]", value: identifier),
+            URLQueryItem(name: "limit", value: String(Self.pageLimit))
+        ]
+        guard let url = components?.url else {
+            throw Error.badRequest("Could not build bundle IDs URL")
         }
+
+        var nextURL: String? = url.absoluteString
+        while let url = nextURL {
+            let page = try await fetchBundleIdsPage(url: url)
+            // The filter also matches longer identifiers: only the exact one counts
+            if let exactMatch = page.data.first(where: { $0.attributes?.identifier == identifier }) {
+                return exactMatch.id
+            }
+            nextURL = page.links.next
+        }
+        return nil
+    }
+
+    private func fetchBundleIdsPage(url: String) async throws -> BundleIdsPageResponse {
+        let (data, response) = try await fetchPage(url: url)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw Error.badResponse("Non-HTTP response while listing bundle IDs")
+        }
+        guard httpResponse.statusCode == 200 else {
+            throw Error.badResponse(errorMessage(from: data) ?? "Failed to list bundle IDs (HTTP \(httpResponse.statusCode))")
+        }
+        return try jsonDecoder.decode(BundleIdsPageResponse.self, from: data)
     }
 
     /// Bypasses the generated client: newly registered devices come back with statuses
@@ -155,7 +172,7 @@ public struct ProvisioningAPI: Sendable {
     /// decoder rejects devices whose status Apple hasn't documented.
     public func listDevices(platform: Platform? = nil, status: Device.Status? = .enabled) async throws -> [Device] {
         var components = URLComponents(url: serverURL.appendingPathComponent("v1/devices"), resolvingAgainstBaseURL: false)
-        var queryItems = [URLQueryItem(name: "limit", value: String(Self.devicesPageLimit))]
+        var queryItems = [URLQueryItem(name: "limit", value: String(Self.pageLimit))]
         if let platform {
             queryItems.append(URLQueryItem(name: "filter[platform]", value: platform.asDeviceFilterValue))
         }
@@ -176,8 +193,6 @@ public struct ProvisioningAPI: Sendable {
         }
         return allDevices
     }
-
-    private static let devicesPageLimit = 200
 
     /// Any status: a duplicate may still be processing or be disabled. The
     /// listing reports platforms coarsely, so the requested one is kept, as

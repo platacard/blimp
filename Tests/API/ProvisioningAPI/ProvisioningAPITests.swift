@@ -13,26 +13,64 @@ final class ProvisioningAPITests: XCTestCase {
         api = ProvisioningAPI(client: mockClient, jwtProvider: mockJWT)
     }
     
-    func testGetBundleId() async throws {
-        // Setup
-        mockClient.bundleIdsGetCollectionResponse = .ok(.init(body: .json(
-            .init(data: [
-                .init(
-                    _type: .bundleIds,
-                    id: "bundle-123",
-                    attributes: .init(identifier: "com.example.app"),
-                    links: .init(_self: "http://test")
-                )
-            ], links: .init(_self: "http://test"))
-        )))
-        
-        // Execute
+    func testGetBundleIdPicksTheExactMatchNextToAnUndocumentedPlatform() async throws {
+        let recorder = RequestRecorder()
+        let api = makeRawAPI(recorder: recorder, status: 200, json: """
+        {"data":[{"type":"bundleIds","id":"services-1","attributes":{"name":"Sign in with Apple","identifier":"com.example.app.signin","platform":"SERVICES","seedId":"TEAMID1234"},"links":{"self":"http://test"}},{"type":"bundleIds","id":"bundle-123","attributes":{"name":"Example","identifier":"com.example.app","platform":"IOS","seedId":"TEAMID1234"},"links":{"self":"http://test"}}],"links":{"self":"http://test"},"meta":{"paging":{"total":2,"limit":200}}}
+        """)
+
         let id = try await api.getBundleId(identifier: "com.example.app")
-        
-        // Verify
+
         XCTAssertEqual(id, "bundle-123")
+        let request = try XCTUnwrap(recorder.requests.first)
+        XCTAssertEqual(request.httpMethod, "GET")
+        XCTAssertEqual(request.url?.path, "/v1/bundleIds")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer mock_token")
+        let query = URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)?.queryItems ?? []
+        XCTAssertEqual(query.first { $0.name == "filter[identifier]" }?.value, "com.example.app")
+        XCTAssertEqual(query.first { $0.name == "limit" }?.value, "200")
     }
-    
+
+    func testGetBundleIdFollowsPagesToTheExactMatch() async throws {
+        let recorder = RequestRecorder()
+        let api = makeRawAPI(recorder: recorder, responses: [
+            (200, """
+            {"data":[{"type":"bundleIds","id":"widget-1","attributes":{"identifier":"com.example.app.widget","platform":"IOS"}}],"links":{"self":"http://test","next":"https://api.appstoreconnect.apple.com/v1/bundleIds?cursor=abc"}}
+            """),
+            (200, """
+            {"data":[{"type":"bundleIds","id":"bundle-123","attributes":{"identifier":"com.example.app","platform":"UNIVERSAL"}}],"links":{"self":"http://test"}}
+            """),
+        ])
+
+        let id = try await api.getBundleId(identifier: "com.example.app")
+
+        XCTAssertEqual(id, "bundle-123")
+        XCTAssertEqual(recorder.requests.last?.url?.absoluteString, "https://api.appstoreconnect.apple.com/v1/bundleIds?cursor=abc")
+    }
+
+    func testGetBundleIdWithoutAnExactMatchIsNil() async throws {
+        let api = makeRawAPI(recorder: RequestRecorder(), status: 200, json: """
+        {"data":[{"type":"bundleIds","id":"services-1","attributes":{"identifier":"com.example.app.signin","platform":"SERVICES"}}],"links":{"self":"http://test"}}
+        """)
+
+        let id = try await api.getBundleId(identifier: "com.example.app")
+
+        XCTAssertNil(id)
+    }
+
+    func testGetBundleIdForbidden() async throws {
+        let api = makeRawAPI(recorder: RequestRecorder(), status: 403, json: """
+        {"errors":[{"id":"e1","status":"403","code":"FORBIDDEN","title":"Forbidden","detail":"Key lacks permission."}]}
+        """)
+
+        do {
+            _ = try await api.getBundleId(identifier: "com.example.app")
+            XCTFail("Expected forbidden")
+        } catch ProvisioningAPI.Error.badResponse(let message) {
+            XCTAssertEqual(message, "Key lacks permission.")
+        }
+    }
+
     func testCreateCertificate() async throws {
         // Setup
         mockClient.certificatesCreateInstanceResponse = .created(.init(body: .json(
