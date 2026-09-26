@@ -286,6 +286,12 @@ final class ProvisioningAPITests: XCTestCase {
         XCTAssertEqual(recorder.requests.last?.url?.absoluteString, "https://api.appstoreconnect.apple.com/v1/devices?cursor=abc")
     }
 
+    /// The public initializer keeps its earlier signature: `expirationDate` is optional.
+    func testCertificateInitializerStaysSourceCompatible() {
+        let certificate = ProvisioningAPI.Certificate(id: "c1", name: "Cert", type: nil, content: nil, serialNumber: nil)
+        XCTAssertNil(certificate.expirationDate)
+    }
+
     /// Devices are registered as IOS (tvOS) or MAC_OS (Catalyst), so they are listed under the same platform.
     func testListDevicesFiltersTvosAndCatalystByTheirRegisteredPlatform() async throws {
         for (platform, expected) in [(ProvisioningAPI.Platform.tvos, "IOS"), (.catalyst, "MAC_OS")] {
