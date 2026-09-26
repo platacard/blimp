@@ -26,6 +26,8 @@ public struct ProfileSyncCoordinator: Sendable {
     }
 
     /// Syncs provisioning profiles for the given bundle IDs.
+    /// Bundle IDs, devices and existing portal profiles of every entry to sync are looked up
+    /// before the first portal profile is deleted, so a failed lookup leaves the portal untouched.
     /// - Parameters:
     ///   - platform: Target platform
     ///   - type: Profile type
@@ -39,89 +41,154 @@ public struct ProfileSyncCoordinator: Sendable {
         certificateIds: [String],
         force: Bool = false
     ) async throws {
+        if let duplicate = firstDuplicateProfileName(in: bundleIds) {
+            throw Error.duplicateProfileName(duplicate)
+        }
+
         logger.info("Starting profile sync for \(platform.rawValue) \(type.rawValue)")
         logger.info("Bundle IDs: \(bundleIds.map(\.bundleId).joined(separator: ", "))")
         logger.info("Using \(certificateIds.count) certificate(s): \(certificateIds.joined(separator: ", "))")
 
         try await git.cloneOrPull()
 
-        var updated: [String] = []
+        let pending = try await resolvePendingProfiles(bundleIds: bundleIds, type: type, platform: platform, force: force)
+        let deviceIds = pending.isEmpty ? nil : try await resolveDeviceIds(type: type, platform: platform)
 
-        for entry in bundleIds {
-            let synced = try await syncProfile(
-                bundleId: entry.bundleId,
-                profileName: entry.profileName,
-                type: type,
-                platform: platform,
-                certificateIds: certificateIds,
-                force: force
-            )
-            if synced {
-                updated.append(entry.profileName)
+        var synced: [String] = []
+        for profile in pending {
+            do {
+                try await replace(profile, type: type, certificateIds: certificateIds, deviceIds: deviceIds)
+            } catch {
+                await commitBeforeFailing(synced, type: type)
+                throw error
             }
+            synced.append(profile.name)
         }
 
-        if !updated.isEmpty {
-            try await git.commitAndPush(message: "Update \(typeLabel(type)) profiles", push: push)
-        }
+        try await commit(synced, type: type)
 
         logger.info("Profile sync completed successfully.")
     }
 
-    private func syncProfile(
-        bundleId: String,
-        profileName: String,
-        type: ProvisioningAPI.ProfileType,
-        platform: ProvisioningAPI.Platform,
-        certificateIds: [String],
-        force: Bool
-    ) async throws -> Bool {
-        let profileDir = "profiles/\(platform.rawValue)/\(type.rawValue)"
-        let fileName = "\(profileName).mobileprovision"
-        let filePath = "\(profileDir)/\(fileName)"
+    public enum Error: Swift.Error, LocalizedError {
+        case missingData(String)
+        case duplicateProfileName(String)
+        case syncFailed(profileName: String, deletedProfileIds: [String], underlying: any Swift.Error)
 
-        let fileExists = await git.fileExists(path: filePath)
-
-        if !force && fileExists {
-            logger.info("Profile \(profileName) exists in storage, skipping.")
-            return false
-        }
-
-        if force {
-            let existingProfiles = try await profileService.listProfiles(name: profileName)
-            if !existingProfiles.isEmpty {
-                logger.info("Deleting \(existingProfiles.count) existing profile(s) for \(profileName)")
-                for profile in existingProfiles {
-                    try await profileService.deleteProfile(id: profile.id)
-                }
+        public var errorDescription: String? {
+            switch self {
+            case .missingData(let msg):
+                return msg
+            case .duplicateProfileName(let name):
+                return "Profile name \(name) is listed more than once"
+            case .syncFailed(let profileName, let deletedProfileIds, let underlying):
+                let failure = "Could not sync profile \(profileName): \(underlying.localizedDescription)"
+                guard !deletedProfileIds.isEmpty else { return failure }
+                return "\(failure). Its previous portal profile was already deleted; run sync-profiles again with --force to recreate it."
             }
         }
+    }
+}
 
-        let deviceIds = try await resolveDeviceIds(type: type, platform: platform)
-
-        guard let bundleResourceId = try await profileService.getBundleId(identifier: bundleId) else {
-            throw Error.missingData("Could not find Bundle ID resource for \(bundleId)")
-        }
-
-        let newProfile = try await profileService.createProfile(
-            name: profileName,
-            type: type,
-            bundleId: bundleResourceId,
-            certificateIds: certificateIds,
-            deviceIds: deviceIds
-        )
-
-        guard let content = newProfile.content else {
-            throw Error.missingData("Profile created but no content returned")
-        }
-
-        try await git.writeFile(path: filePath, content: content)
-
-        logger.info("Synced profile: \(profileName)")
-        return true
+private extension ProfileSyncCoordinator {
+    func firstDuplicateProfileName(in bundleIds: [(bundleId: String, profileName: String)]) -> String? {
+        var seen: Set<String> = []
+        return bundleIds.map(\.profileName).first { !seen.insert($0).inserted }
     }
 
-    private func typeLabel(_ type: ProvisioningAPI.ProfileType) -> String {
+    /// A profile to create, with every input resolved before the portal is changed.
+    struct PendingProfile {
+        let name: String
+        let filePath: String
+        let bundleResourceId: String
+        let staleProfileIds: [String]
+    }
+
+    func resolvePendingProfiles(
+        bundleIds: [(bundleId: String, profileName: String)],
+        type: ProvisioningAPI.ProfileType,
+        platform: ProvisioningAPI.Platform,
+        force: Bool
+    ) async throws -> [PendingProfile] {
+        var pending: [PendingProfile] = []
+        for entry in bundleIds {
+            let filePath = "profiles/\(platform.rawValue)/\(type.rawValue)/\(entry.profileName).mobileprovision"
+
+            if !force, await git.fileExists(path: filePath) {
+                logger.info("Profile \(entry.profileName) exists in storage, skipping.")
+                continue
+            }
+
+            guard let bundleResourceId = try await profileService.getBundleId(identifier: entry.bundleId) else {
+                throw Error.missingData("Could not find Bundle ID resource for \(entry.bundleId)")
+            }
+
+            let staleProfileIds = force ? try await profileService.listProfiles(name: entry.profileName).map(\.id) : []
+
+            pending.append(PendingProfile(
+                name: entry.profileName,
+                filePath: filePath,
+                bundleResourceId: bundleResourceId,
+                staleProfileIds: staleProfileIds
+            ))
+        }
+        return pending
+    }
+
+    /// The portal refuses a second profile under the same name and profiles cannot be
+    /// renamed, so the stale one is deleted right before its replacement is created.
+    func replace(
+        _ profile: PendingProfile,
+        type: ProvisioningAPI.ProfileType,
+        certificateIds: [String],
+        deviceIds: [String]?
+    ) async throws {
+        var deletedProfileIds: [String] = []
+        do {
+            if !profile.staleProfileIds.isEmpty {
+                logger.info("Deleting \(profile.staleProfileIds.count) existing profile(s) for \(profile.name)")
+            }
+            for id in profile.staleProfileIds {
+                try await profileService.deleteProfile(id: id)
+                deletedProfileIds.append(id)
+            }
+
+            let newProfile = try await profileService.createProfile(
+                name: profile.name,
+                type: type,
+                bundleId: profile.bundleResourceId,
+                certificateIds: certificateIds,
+                deviceIds: deviceIds
+            )
+
+            guard let content = newProfile.content else {
+                throw Error.missingData("Profile created but no content returned")
+            }
+
+            try await git.writeFile(path: profile.filePath, content: content)
+        } catch {
+            throw Error.syncFailed(profileName: profile.name, deletedProfileIds: deletedProfileIds, underlying: error)
+        }
+
+        logger.info("Synced profile: \(profile.name)")
+    }
+
+    func commit(_ synced: [String], type: ProvisioningAPI.ProfileType) async throws {
+        guard !synced.isEmpty else { return }
+        try await git.commitAndPush(message: "Update \(typeLabel(type)) profiles", push: push)
+    }
+
+    /// The portal already holds the profiles synced so far: storage has to record them even
+    /// though a later one failed. That failure stays the error the caller sees.
+    func commitBeforeFailing(_ synced: [String], type: ProvisioningAPI.ProfileType) async {
+        do {
+            try await commit(synced, type: type)
+        } catch {
+            logger.error("Could not commit profiles synced before the failure (\(synced.joined(separator: ", "))): \(error.localizedDescription)")
+        }
+    }
+
+    func typeLabel(_ type: ProvisioningAPI.ProfileType) -> String {
         switch type {
         case .iosAppDevelopment, .macAppDevelopment, .tvosAppDevelopment, .macCatalystAppDevelopment: "development"
         case .iosAppStore, .macAppStore, .tvosAppStore, .macCatalystAppStore: "appstore"
@@ -131,7 +198,7 @@ public struct ProfileSyncCoordinator: Sendable {
         }
     }
 
-    private func resolveDeviceIds(type: ProvisioningAPI.ProfileType, platform: ProvisioningAPI.Platform) async throws -> [String]? {
+    func resolveDeviceIds(type: ProvisioningAPI.ProfileType, platform: ProvisioningAPI.Platform) async throws -> [String]? {
         guard requiresDevices(type: type) else {
             return nil
         }
@@ -145,10 +212,10 @@ public struct ProfileSyncCoordinator: Sendable {
             logger.info("Found \(devices.count) enabled devices")
         }
 
-        return devices.map { $0.id }
+        return devices.map(\.id)
     }
 
-    private func requiresDevices(type: ProvisioningAPI.ProfileType) -> Bool {
+    func requiresDevices(type: ProvisioningAPI.ProfileType) -> Bool {
         switch type {
         case .iosAppDevelopment, .tvosAppDevelopment, .macAppDevelopment, .macCatalystAppDevelopment:
             return true
@@ -156,16 +223,6 @@ public struct ProfileSyncCoordinator: Sendable {
             return true
         default:
             return false
-        }
-    }
-
-    public enum Error: Swift.Error, LocalizedError {
-        case missingData(String)
-
-        public var errorDescription: String? {
-            switch self {
-            case .missingData(let msg): return msg
-            }
         }
     }
 }

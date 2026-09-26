@@ -13,6 +13,7 @@ actor MockGitRepo: GitManaging {
     var pushedCommits: [String] = []
     var cloneOrPullCalled = false
     var cloneOrPullCount = 0
+    private var commitError: Error?
     private var remoteURL: String? = nil
     private let _localURL: URL
 
@@ -43,7 +44,12 @@ actor MockGitRepo: GitManaging {
         return remoteURL != nil
     }
 
+    func failCommits(with error: Error) {
+        commitError = error
+    }
+
     func commitAndPush(message: String, push: Bool) throws {
+        if let commitError { throw commitError }
         pushedCommits.append(message)
     }
 
@@ -121,12 +127,16 @@ class MockProfileService: ProfileService, @unchecked Sendable {
     var bundleIds: [String: String] = [:]
     var profiles: [ProvisioningAPI.Profile] = []
     var deletedProfileIds: [String] = []
+    var bundleIdError: Error?
+    var createErrors: [String: Error] = [:]
 
     func getBundleId(identifier: String) async throws -> String? {
+        if let bundleIdError { throw bundleIdError }
         return bundleIds[identifier]
     }
 
     func createProfile(name: String, type: ProvisioningAPI.ProfileType, bundleId: String, certificateIds: [String], deviceIds: [String]?) async throws -> ProvisioningAPI.Profile {
+        if let createError = createErrors[name] { throw createError }
         let profile = ProvisioningAPI.Profile(
             id: UUID().uuidString,
             name: name,
@@ -155,6 +165,7 @@ class MockProfileService: ProfileService, @unchecked Sendable {
 
 class MockDeviceService: DeviceService, @unchecked Sendable {
     var devices: [ProvisioningAPI.Device] = []
+    var listError: Error?
 
     func registerDevice(name: String, udid: String, platform: ProvisioningAPI.Platform) async throws -> ProvisioningAPI.DeviceRegistration {
         if let existing = devices.first(where: { $0.udid.caseInsensitiveCompare(udid) == .orderedSame }) {
@@ -171,6 +182,7 @@ class MockDeviceService: DeviceService, @unchecked Sendable {
     }
 
     func listDevices(platform: ProvisioningAPI.Platform?, status: ProvisioningAPI.Device.Status?) async throws -> [ProvisioningAPI.Device] {
+        if let listError { throw listError }
         var filtered = devices
         if let platform {
             filtered = filtered.filter { $0.platform == platform }
