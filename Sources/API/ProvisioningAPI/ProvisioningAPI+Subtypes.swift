@@ -130,13 +130,15 @@ public extension ProvisioningAPI {
         public let type: CertificateType?
         public let content: Data?
         public let serialNumber: String?
+        public let expirationDate: Date?
 
-        public init(id: String, name: String, type: CertificateType?, content: Data?, serialNumber: String?) {
+        public init(id: String, name: String, type: CertificateType?, content: Data?, serialNumber: String?, expirationDate: Date?) {
             self.id = id
             self.name = name
             self.type = type
             self.content = content
             self.serialNumber = serialNumber
+            self.expirationDate = expirationDate
         }
     }
 

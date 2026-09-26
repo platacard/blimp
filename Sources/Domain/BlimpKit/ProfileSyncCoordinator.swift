@@ -28,6 +28,7 @@ public struct ProfileSyncCoordinator: Sendable {
     /// Syncs provisioning profiles for the given bundle IDs.
     /// Bundle IDs, devices and existing portal profiles of every entry to sync are looked up
     /// before the first portal profile is deleted, so a failed lookup leaves the portal untouched.
+    /// Development and ad hoc profiles need at least one enabled device.
     /// - Parameters:
     ///   - platform: Target platform
     ///   - type: Profile type
@@ -73,7 +74,8 @@ public struct ProfileSyncCoordinator: Sendable {
     public enum Error: Swift.Error, LocalizedError {
         case missingData(String)
         case duplicateProfileName(String)
-        case syncFailed(profileName: String, deletedProfileIds: [String], underlying: any Swift.Error)
+        case noDevices(platform: ProvisioningAPI.Platform, type: ProvisioningAPI.ProfileType)
+        case syncFailed(profileName: String, deletedProfileIds: [String], createdProfileId: String?, underlying: any Swift.Error)
 
         public var errorDescription: String? {
             switch self {
@@ -81,7 +83,13 @@ public struct ProfileSyncCoordinator: Sendable {
                 return msg
             case .duplicateProfileName(let name):
                 return "Profile name \(name) is listed more than once"
-            case .syncFailed(let profileName, let deletedProfileIds, let underlying):
+            case .noDevices(let platform, let type):
+                return "\(type.rawValue) profiles need at least one enabled \(platform.rawValue) device, and there is none. "
+                    + "Register one with: blimp maintenance register-device <udid> <name> --platform \(platform.rawValue)"
+            case .syncFailed(let profileName, _, let createdProfileId?, let underlying):
+                return "Could not store profile \(profileName): \(underlying.localizedDescription). "
+                    + "Portal profile \(createdProfileId) was created; run sync-profiles again with --force to replace and store it."
+            case .syncFailed(let profileName, let deletedProfileIds, nil, let underlying):
                 let failure = "Could not sync profile \(profileName): \(underlying.localizedDescription)"
                 guard !deletedProfileIds.isEmpty else { return failure }
                 return "\(failure). Its previous portal profile was already deleted; run sync-profiles again with --force to recreate it."
@@ -144,12 +152,13 @@ private extension ProfileSyncCoordinator {
         deviceIds: [String]?
     ) async throws {
         var deletedProfileIds: [String] = []
+        var createdProfileId: String?
         do {
             if !profile.staleProfileIds.isEmpty {
                 logger.info("Deleting \(profile.staleProfileIds.count) existing profile(s) for \(profile.name)")
             }
             for id in profile.staleProfileIds {
-                try await profileService.deleteProfile(id: id)
+                try await deleteIfPresent(profileId: id)
                 deletedProfileIds.append(id)
             }
 
@@ -160,6 +169,7 @@ private extension ProfileSyncCoordinator {
                 certificateIds: certificateIds,
                 deviceIds: deviceIds
             )
+            createdProfileId = newProfile.id
 
             guard let content = newProfile.content else {
                 throw Error.missingData("Profile created but no content returned")
@@ -167,10 +177,24 @@ private extension ProfileSyncCoordinator {
 
             try await git.writeFile(path: profile.filePath, content: content)
         } catch {
-            throw Error.syncFailed(profileName: profile.name, deletedProfileIds: deletedProfileIds, underlying: error)
+            throw Error.syncFailed(
+                profileName: profile.name,
+                deletedProfileIds: deletedProfileIds,
+                createdProfileId: createdProfileId,
+                underlying: error
+            )
         }
 
         logger.info("Synced profile: \(profile.name)")
+    }
+
+    /// A stale profile removed since it was listed (a parallel run, a manual delete) is already gone.
+    func deleteIfPresent(profileId: String) async throws {
+        do {
+            try await profileService.deleteProfile(id: profileId)
+        } catch ProvisioningAPI.Error.notFound {
+            logger.info("Profile \(profileId) is no longer on the portal")
+        }
     }
 
     func commit(_ synced: [String], type: ProvisioningAPI.ProfileType) async throws {
@@ -203,15 +227,12 @@ private extension ProfileSyncCoordinator {
             return nil
         }
 
-        // Fetch only ENABLED devices
         let devices = try await deviceService.listDevices(platform: platform, status: .enabled)
-
-        if devices.isEmpty {
-            logger.warning("No enabled devices found for \(platform.rawValue). Profile creation may fail.")
-        } else {
-            logger.info("Found \(devices.count) enabled devices")
+        guard !devices.isEmpty else {
+            throw Error.noDevices(platform: platform, type: type)
         }
 
+        logger.info("Found \(devices.count) enabled devices")
         return devices.map(\.id)
     }
 

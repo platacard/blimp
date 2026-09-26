@@ -93,7 +93,7 @@ public extension Blimp {
             return certs.first
         }
 
-        /// Finds ALL valid certificate IDs from storage that match Apple Developer Portal.
+        /// Finds ALL valid (unexpired) certificate IDs from storage that match Apple Developer Portal.
         /// - Parameters:
         ///   - type: Certificate type
         ///   - platform: Target platform
@@ -108,25 +108,17 @@ public extension Blimp {
             let git = GitStorage(localPath: storagePath)
             try await git.cloneOrPull()
 
-            let certDir = type.storageDirectory(for: platform)
-            let appleCerts = try await api.listCertificates(filterType: type)
-
-            logger.info("Found \(appleCerts.count) \(type.rawValue) certificates on Developer Portal")
-
             var validCertIds: [String] = []
-            for cert in appleCerts {
-                let p12Path = "\(certDir)/\(cert.id).p12"
-                if await git.fileExists(path: p12Path) {
-                    if let filterNames {
-                        let matches = filterNames.contains { cert.name.localizedCaseInsensitiveContains($0) }
-                        if matches {
-                            logger.info("Found matching certificate \(cert.name) (\(cert.id))")
-                            validCertIds.append(cert.id)
-                        }
-                    } else {
-                        logger.info("Found valid certificate \(cert.name) (\(cert.id))")
+            for cert in try await api.storedValidCertificates(type: type, platform: platform, git: git) {
+                if let filterNames {
+                    let matches = filterNames.contains { cert.name.localizedCaseInsensitiveContains($0) }
+                    if matches {
+                        logger.info("Found matching certificate \(cert.name) (\(cert.id))")
                         validCertIds.append(cert.id)
                     }
+                } else {
+                    logger.info("Found valid certificate \(cert.name) (\(cert.id))")
+                    validCertIds.append(cert.id)
                 }
             }
 

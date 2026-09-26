@@ -14,6 +14,7 @@ actor MockGitRepo: GitManaging {
     var cloneOrPullCalled = false
     var cloneOrPullCount = 0
     private var commitError: Error?
+    private var writeError: Error?
     private var remoteURL: String? = nil
     private let _localURL: URL
 
@@ -48,6 +49,10 @@ actor MockGitRepo: GitManaging {
         commitError = error
     }
 
+    func failWrites(with error: Error) {
+        writeError = error
+    }
+
     func commitAndPush(message: String, push: Bool) throws {
         if let commitError { throw commitError }
         pushedCommits.append(message)
@@ -65,6 +70,7 @@ actor MockGitRepo: GitManaging {
     }
 
     func writeFile(path: String, content: Data) throws {
+        if let writeError { throw writeError }
         fileStore[path] = content
         // Also write to disk for file listing
         let fileURL = _localURL.appendingPathComponent(path)
@@ -109,7 +115,8 @@ class MockCertificateService: CertificateService, @unchecked Sendable {
             name: "Mock Cert",
             type: type,
             content: "CERT_CONTENT".data(using: .utf8),
-            serialNumber: "123456"
+            serialNumber: "123456",
+            expirationDate: Date().addingTimeInterval(365 * 86_400)
         )
         certificates.append(cert)
         return cert
@@ -129,6 +136,8 @@ class MockProfileService: ProfileService, @unchecked Sendable {
     var deletedProfileIds: [String] = []
     var bundleIdError: Error?
     var createErrors: [String: Error] = [:]
+    var listErrors: [String: Error] = [:]
+    var deleteErrors: [String: Error] = [:]
 
     func getBundleId(identifier: String) async throws -> String? {
         if let bundleIdError { throw bundleIdError }
@@ -149,13 +158,13 @@ class MockProfileService: ProfileService, @unchecked Sendable {
     }
 
     func listProfiles(name: String?) async throws -> [ProvisioningAPI.Profile] {
-        if let name = name {
-            return profiles.filter { $0.name == name }
-        }
-        return profiles
+        guard let name else { return profiles }
+        if let listError = listErrors[name] { throw listError }
+        return profiles.filter { $0.name == name }
     }
 
     func deleteProfile(id: String) async throws {
+        if let deleteError = deleteErrors[id] { throw deleteError }
         deletedProfileIds.append(id)
         profiles.removeAll { $0.id == id }
     }

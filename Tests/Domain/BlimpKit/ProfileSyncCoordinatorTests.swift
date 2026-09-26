@@ -27,6 +27,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
         let bundleId = "com.example.app"
         let certificateId = "cert-123"
         mockProfileService.bundleIds[bundleId] = "bundle-resource-id"
+        _ = try await mockDeviceService.registerDevice(name: "iPhone 15", udid: "UDID-1", platform: .ios)
 
         try await coordinator.sync(
             platform: .ios,
@@ -70,6 +71,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
         let bundleId = "com.example.app"
         let certificateId = "cert-123"
         mockProfileService.bundleIds[bundleId] = "bundle-resource-id"
+        _ = try await mockDeviceService.registerDevice(name: "iPhone 15", udid: "UDID-1", platform: .ios)
 
         let existingProfile = try await mockProfileService.createProfile(
             name: bundleId,
@@ -145,6 +147,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
         let profileName = "com.example.app.ah"
         let certificateId = "cert-123"
         mockProfileService.bundleIds[bundleId] = "bundle-resource-id"
+        _ = try await mockDeviceService.registerDevice(name: "iPhone 15", udid: "UDID-1", platform: .ios)
 
         try await coordinator.sync(
             platform: .ios,
@@ -247,25 +250,33 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
         XCTAssertEqual(enabledDevices.count, 1)
     }
 
-    func testSyncOnlyUsesEnabledDevices() async throws {
+    func testSyncWithOnlyDisabledDevicesFailsBeforeCreating() async throws {
         let bundleId = "com.example.app"
-        let certificateId = "cert-123"
         mockProfileService.bundleIds[bundleId] = "bundle-resource-id"
 
         mockDeviceService.addDevice(name: "Disabled Device 1", udid: "UDID-1", platform: .ios, status: .disabled)
         mockDeviceService.addDevice(name: "Disabled Device 2", udid: "UDID-2", platform: .ios, status: .disabled)
 
-        try await coordinator.sync(
-            platform: .ios,
-            type: .iosAppDevelopment,
-            bundleIds: [(bundleId, bundleId)],
-            certificateIds: [certificateId]
-        )
+        do {
+            try await coordinator.sync(
+                platform: .ios,
+                type: .iosAppDevelopment,
+                bundleIds: [(bundleId, bundleId)],
+                certificateIds: ["cert-123"]
+            )
+            XCTFail("Expected the sync to fail without enabled devices")
+        } catch let error as ProfileSyncCoordinator.Error {
+            guard case .noDevices(let platform, let type) = error else { return XCTFail("\(error)") }
+            XCTAssertEqual(platform, .ios)
+            XCTAssertEqual(type, .iosAppDevelopment)
+            XCTAssertEqual(
+                error.errorDescription,
+                "IOS_APP_DEVELOPMENT profiles need at least one enabled ios device, and there is none. "
+                    + "Register one with: blimp maintenance register-device <udid> <name> --platform ios"
+            )
+        }
 
-        XCTAssertEqual(mockProfileService.profiles.count, 1)
-
-        let enabledDevices = try await mockDeviceService.listDevices(platform: .ios, status: .enabled)
-        XCTAssertEqual(enabledDevices.count, 0, "No enabled devices should be found")
+        XCTAssertTrue(mockProfileService.profiles.isEmpty)
     }
 
     func testListDevicesFiltersByStatus() async throws {
@@ -371,6 +382,102 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
         XCTAssertEqual(mockProfileService.profiles.map(\.id), [existing.id])
     }
 
+    func testForceDeletesNothingWhenNoDevicesAreRegistered() async throws {
+        let bundleId = "com.example.app"
+        mockProfileService.bundleIds[bundleId] = "bundle-resource-id"
+        let existing = try await givenStoredProfile(named: bundleId, type: .iosAppDevelopment)
+
+        do {
+            try await coordinator.sync(
+                platform: .ios,
+                type: .iosAppDevelopment,
+                bundleIds: [(bundleId, bundleId)],
+                certificateIds: ["cert-123"],
+                force: true
+            )
+            XCTFail("Expected the sync to fail without enabled devices")
+        } catch ProfileSyncCoordinator.Error.noDevices {}
+
+        XCTAssertTrue(mockProfileService.deletedProfileIds.isEmpty)
+        XCTAssertEqual(mockProfileService.profiles.map(\.id), [existing.id])
+    }
+
+    func testForceDeletesNothingWhenALaterProfileListingFails() async throws {
+        let app = "com.example.app"
+        let widget = "com.example.app.widget"
+        mockProfileService.bundleIds[app] = "resource-app"
+        mockProfileService.bundleIds[widget] = "resource-widget"
+        let existingApp = try await givenStoredProfile(named: app, type: .iosAppStore)
+        let existingWidget = try await givenStoredProfile(named: widget, type: .iosAppStore)
+        mockProfileService.listErrors[widget] = ProvisioningAPI.Error.badResponse("Failed to list profiles")
+
+        do {
+            try await coordinator.sync(
+                platform: .ios,
+                type: .iosAppStore,
+                bundleIds: [(app, app), (widget, widget)],
+                certificateIds: ["cert-123"],
+                force: true
+            )
+            XCTFail("Expected the widget profile listing to fail")
+        } catch ProvisioningAPI.Error.badResponse {}
+
+        XCTAssertTrue(mockProfileService.deletedProfileIds.isEmpty)
+        XCTAssertEqual(mockProfileService.profiles.map(\.id), [existingApp.id, existingWidget.id])
+        let commits = await mockGit.pushedCommits
+        XCTAssertTrue(commits.isEmpty)
+    }
+
+    func testForceReplacesAProfileAlreadyGoneFromThePortal() async throws {
+        let bundleId = "com.example.app"
+        mockProfileService.bundleIds[bundleId] = "bundle-resource-id"
+        let existing = try await givenStoredProfile(named: bundleId, type: .iosAppStore)
+        mockProfileService.deleteErrors[existing.id] = ProvisioningAPI.Error.notFound("Profile \(existing.id)")
+
+        try await coordinator.sync(
+            platform: .ios,
+            type: .iosAppStore,
+            bundleIds: [(bundleId, bundleId)],
+            certificateIds: ["cert-123"],
+            force: true
+        )
+
+        let replacement = try XCTUnwrap(mockProfileService.profiles.last)
+        XCTAssertNotEqual(replacement.id, existing.id)
+        let stored = try await mockGit.readFile(path: "profiles/ios/IOS_APP_STORE/\(bundleId).mobileprovision")
+        XCTAssertEqual(stored, replacement.content)
+        let commits = await mockGit.pushedCommits
+        XCTAssertEqual(commits, ["Update appstore profiles"])
+    }
+
+    func testStoreFailureAfterCreateNamesTheCreatedProfile() async throws {
+        let bundleId = "com.example.app"
+        mockProfileService.bundleIds[bundleId] = "bundle-resource-id"
+        let existing = try await givenStoredProfile(named: bundleId, type: .iosAppStore)
+        await mockGit.failWrites(with: NSError(domain: "git", code: 1, userInfo: [NSLocalizedDescriptionKey: "disk full"]))
+
+        do {
+            try await coordinator.sync(
+                platform: .ios,
+                type: .iosAppStore,
+                bundleIds: [(bundleId, bundleId)],
+                certificateIds: ["cert-123"],
+                force: true
+            )
+            XCTFail("Expected the store to fail")
+        } catch let error as ProfileSyncCoordinator.Error {
+            guard case .syncFailed(_, let deletedProfileIds, let createdProfileId, _) = error else { return XCTFail("\(error)") }
+            XCTAssertEqual(deletedProfileIds, [existing.id])
+            let created = try XCTUnwrap(createdProfileId)
+            XCTAssertEqual(mockProfileService.profiles.map(\.id), [created])
+            XCTAssertEqual(
+                error.errorDescription,
+                "Could not store profile com.example.app: disk full. "
+                    + "Portal profile \(created) was created; run sync-profiles again with --force to replace and store it."
+            )
+        }
+    }
+
     func testDuplicateProfileNamesAreRejectedBeforeAnythingChanges() async throws {
         let shared = "com.example.shared"
         mockProfileService.bundleIds["com.example.app"] = "resource-app"
@@ -414,9 +521,10 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
             )
             XCTFail("Expected the create to fail")
         } catch let error as ProfileSyncCoordinator.Error {
-            guard case .syncFailed(let profileName, let deletedProfileIds, _) = error else { return XCTFail("\(error)") }
+            guard case .syncFailed(let profileName, let deletedProfileIds, let createdProfileId, _) = error else { return XCTFail("\(error)") }
             XCTAssertEqual(profileName, bundleId)
             XCTAssertEqual(deletedProfileIds, [existing.id])
+            XCTAssertNil(createdProfileId)
             XCTAssertEqual(
                 error.errorDescription,
                 "Could not sync profile com.example.app: Bad response: Failed to create profile. "
@@ -442,7 +550,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
                 certificateIds: ["cert-123"]
             )
             XCTFail("Expected the widget profile to fail")
-        } catch ProfileSyncCoordinator.Error.syncFailed(let profileName, let deletedProfileIds, _) {
+        } catch ProfileSyncCoordinator.Error.syncFailed(let profileName, let deletedProfileIds, _, _) {
             XCTAssertEqual(profileName, widget)
             XCTAssertTrue(deletedProfileIds.isEmpty)
         }
@@ -469,7 +577,7 @@ final class ProfileSyncCoordinatorTests: XCTestCase {
                 certificateIds: ["cert-123"]
             )
             XCTFail("Expected the widget profile to fail")
-        } catch ProfileSyncCoordinator.Error.syncFailed(let profileName, _, _) {
+        } catch ProfileSyncCoordinator.Error.syncFailed(let profileName, _, _, _) {
             XCTAssertEqual(profileName, widget)
         }
 

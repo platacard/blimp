@@ -38,21 +38,11 @@ public struct CertificateManager: Sendable {
     ) async throws -> String? {
         try await git.cloneOrPull()
 
-        let certDir = type.storageDirectory(for: platform)
-        let appleCerts = try await certificateService.listCertificates(filterType: type)
-
-        logger.info("Found \(appleCerts.count) certificates of type \(type.rawValue) on Developer Portal")
-
-        for cert in appleCerts {
-            let p12Path = "\(certDir)/\(cert.id).p12"
-
-            if await git.fileExists(path: p12Path) {
-                logger.info("Found valid certificate \(cert.id) in storage")
-                return cert.id
-            }
+        let certificate = try await certificateService.storedValidCertificates(type: type, platform: platform, git: git).first
+        if let certificate {
+            logger.info("Found valid certificate \(certificate.id) in storage")
         }
-
-        return nil
+        return certificate?.id
     }
 
     /// Creates a new certificate and stores it encrypted in Git.
@@ -163,5 +153,31 @@ public struct CertificateManager: Sendable {
             case .missingData(let msg): return msg
             }
         }
+    }
+}
+
+extension CertificateService {
+    /// Portal certificates of `type` whose p12 is in storage. Expired ones are left out:
+    /// no profile can be created with them.
+    func storedValidCertificates(
+        type: ProvisioningAPI.CertificateType,
+        platform: ProvisioningAPI.Platform,
+        git: any GitManaging
+    ) async throws -> [ProvisioningAPI.Certificate] {
+        let logger = Cronista(module: "blimp", category: "CertificateLookup")
+        let certDir = type.storageDirectory(for: platform)
+        let portalCertificates = try await listCertificates(filterType: type)
+        logger.info("Found \(portalCertificates.count) \(type.rawValue) certificates on Developer Portal")
+        let now = Date()
+
+        var valid: [ProvisioningAPI.Certificate] = []
+        for certificate in portalCertificates where await git.fileExists(path: "\(certDir)/\(certificate.id).p12") {
+            if let expirationDate = certificate.expirationDate, expirationDate <= now {
+                logger.warning("Skipping certificate \(certificate.name) (\(certificate.id)): expired on \(expirationDate)")
+                continue
+            }
+            valid.append(certificate)
+        }
+        return valid
     }
 }

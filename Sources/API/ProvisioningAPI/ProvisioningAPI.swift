@@ -95,8 +95,8 @@ public struct ProvisioningAPI: Sendable {
 
     // MARK: - Bundle IDs
 
-    /// Raw request for the same reason as `listDevices`: the identifier filter also returns
-    /// Services IDs, whose undocumented platform the generated collection decoder rejects.
+    /// Raw request for the same reason as `listDevices`: the identifier filter also returns longer
+    /// identifiers, whose platform may be one the generated collection decoder rejects.
     public func getBundleId(identifier: String) async throws -> String? {
         var components = URLComponents(url: serverURL.appendingPathComponent("v1/bundleIds"), resolvingAgainstBaseURL: false)
         components?.queryItems = [
@@ -109,7 +109,7 @@ public struct ProvisioningAPI: Sendable {
 
         var nextURL: String? = url.absoluteString
         while let url = nextURL {
-            let page = try await fetchBundleIdsPage(url: url)
+            let page = try await fetchCollectionPage(BundleIdsPageResponse.self, url: url, listing: "bundle IDs")
             // The filter also matches longer identifiers: only the exact one counts
             if let exactMatch = page.data.first(where: { $0.attributes?.identifier == identifier }) {
                 return exactMatch.id
@@ -117,17 +117,6 @@ public struct ProvisioningAPI: Sendable {
             nextURL = page.links.next
         }
         return nil
-    }
-
-    private func fetchBundleIdsPage(url: String) async throws -> BundleIdsPageResponse {
-        let (data, response) = try await fetchPage(url: url)
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw Error.badResponse("Non-HTTP response while listing bundle IDs")
-        }
-        guard httpResponse.statusCode == 200 else {
-            throw Error.badResponse(errorMessage(from: data) ?? "Failed to list bundle IDs (HTTP \(httpResponse.statusCode))")
-        }
-        return try jsonDecoder.decode(BundleIdsPageResponse.self, from: data)
     }
 
     /// Bypasses the generated client: newly registered devices come back with statuses
@@ -138,21 +127,14 @@ public struct ProvisioningAPI: Sendable {
             _type: .devices,
             attributes: .init(name: name, platform: platform.asApiPlatform, udid: udid)
         ))
-        var request = URLRequest(url: serverURL.appendingPathComponent("v1/devices"))
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(try jwtProvider.token())", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let (data, response) = try await performRequest(request)
+        let (data, response) = try await performRequest(try postRequest(path: "v1/devices", body: body))
         guard let httpResponse = response as? HTTPURLResponse else {
             throw Error.badResponse("Non-HTTP response while registering device")
         }
 
         switch httpResponse.statusCode {
         case 201:
-            let created = try jsonDecoder.decode(RegisteredDeviceResponse.self, from: data)
+            let created = try decode(RegisteredDeviceResponse.self, from: data, reading: "the registered device")
             return .registered(created.data.device(platform: platform, fallbackName: name, fallbackUDID: udid))
         case 409:
             guard let existing = try await device(udid: udid, platform: platform) else {
@@ -187,9 +169,9 @@ public struct ProvisioningAPI: Sendable {
         var allDevices: [Device] = []
         var nextURL: String? = url.absoluteString
         while let url = nextURL {
-            let (devices, nextLink) = try await fetchDevicesPage(url: url)
-            allDevices.append(contentsOf: devices)
-            nextURL = nextLink
+            let page = try await fetchCollectionPage(DevicesPageResponse.self, url: url, listing: "devices")
+            allDevices.append(contentsOf: page.data.map { $0.device(platform: $0.apiPlatform) })
+            nextURL = page.links.next
         }
         return allDevices
     }
@@ -210,23 +192,6 @@ public struct ProvisioningAPI: Sendable {
         case .disabled: "DISABLED"
         case .processing, .unknown:
             throw Error.badRequest("Devices can only be filtered by enabled or disabled status")
-        }
-    }
-
-    private func fetchDevicesPage(url: String) async throws -> ([Device], String?) {
-        let (data, response) = try await fetchPage(url: url)
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw Error.badResponse("Non-HTTP response while listing devices")
-        }
-        switch httpResponse.statusCode {
-        case 200:
-            let page = try jsonDecoder.decode(DevicesPageResponse.self, from: data)
-            let devices = page.data.map { $0.device(platform: $0.apiPlatform) }
-            return (devices, page.links.next)
-        case 403:
-            throw Error.badResponse(errorMessage(from: data) ?? "Forbidden")
-        default:
-            throw Error.badResponse(errorMessage(from: data) ?? "Failed to list devices (HTTP \(httpResponse.statusCode))")
         }
     }
 
@@ -268,7 +233,8 @@ public struct ProvisioningAPI: Sendable {
                 name: cert.attributes?.name ?? "",
                 type: cert.attributes?.certificateType.map { CertificateType(rawValue: $0.rawValue) } ?? nil,
                 content: cert.attributes?.certificateContent.flatMap { Data(base64Encoded: $0) },
-                serialNumber: cert.attributes?.serialNumber
+                serialNumber: cert.attributes?.serialNumber,
+                expirationDate: cert.attributes?.expirationDate
             )
         }
     }
@@ -278,7 +244,7 @@ public struct ProvisioningAPI: Sendable {
         guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
             throw Error.badResponse("Failed to fetch certificates page")
         }
-        let certificatesResponse = try jsonDecoder.decode(Components.Schemas.CertificatesResponse.self, from: data)
+        let certificatesResponse = try decode(Components.Schemas.CertificatesResponse.self, from: data, reading: "certificates")
         return (parseCertificates(from: certificatesResponse.data), certificatesResponse.links.next)
     }
     
@@ -304,7 +270,8 @@ public struct ProvisioningAPI: Sendable {
                 name: cert.attributes?.name ?? "",
                 type: cert.attributes?.certificateType.map { CertificateType(rawValue: $0.rawValue) } ?? nil,
                 content: cert.attributes?.certificateContent.flatMap { Data(base64Encoded: $0) },
-                serialNumber: cert.attributes?.serialNumber
+                serialNumber: cert.attributes?.serialNumber,
+                expirationDate: cert.attributes?.expirationDate
             )
         case .badRequest(let error):
              let message = (try? error.body.json.errorDescription) ?? "Bad request"
@@ -334,126 +301,62 @@ public struct ProvisioningAPI: Sendable {
         }
     }
 
+    /// Raw request for the same reason as `registerDevice`: a profile type, state or platform
+    /// the generated decoder rejects would fail the call after the portal created the profile.
     public func createProfile(name: String, type: ProfileType, bundleId: String, certificateIds: [String], deviceIds: [String]? = nil) async throws -> Profile {
-        let bundleIdRelationship = Components.Schemas.ProfileCreateRequest.DataPayload.RelationshipsPayload.BundleIdPayload(
-            data: .init(_type: .bundleIds, id: bundleId)
-        )
-        
-        let devicesRelationship: Components.Schemas.ProfileCreateRequest.DataPayload.RelationshipsPayload.DevicesPayload?
-        if let deviceIds = deviceIds {
-            devicesRelationship = Components.Schemas.ProfileCreateRequest.DataPayload.RelationshipsPayload.DevicesPayload(
-                data: deviceIds.map { .init(_type: .devices, id: $0) }
-            )
-        } else {
-            devicesRelationship = nil
-        }
-        
-        let certificatesRelationship = Components.Schemas.ProfileCreateRequest.DataPayload.RelationshipsPayload.CertificatesPayload(
-            data: certificateIds.map { .init(_type: .certificates, id: $0) }
-        )
-        
-        let relationships = Components.Schemas.ProfileCreateRequest.DataPayload.RelationshipsPayload(
-            bundleId: bundleIdRelationship,
-            devices: devicesRelationship,
-            certificates: certificatesRelationship
-        )
-        
-        let attributes = Components.Schemas.ProfileCreateRequest.DataPayload.AttributesPayload(
-            name: name,
-            profileType: type.asApiType
-        )
-        
-        let data = Components.Schemas.ProfileCreateRequest.DataPayload(
+        let body = Components.Schemas.ProfileCreateRequest(data: .init(
             _type: .profiles,
-            attributes: attributes,
-            relationships: relationships
-        )
-        
-        let body = Components.Schemas.ProfileCreateRequest(data: data)
-        let input = Operations.ProfilesCreateInstance.Input(body: .json(body))
-        
-        let response = try await client.profilesCreateInstance(input)
-        
-        switch response {
-        case .created(let created):
-            let profile = try created.body.json.data
-            return Profile(
-                id: profile.id,
-                name: profile.attributes?.name ?? "",
-                type: profile.attributes?.profileType.map { ProfileType(rawValue: $0.rawValue) } ?? nil,
-                content: profile.attributes?.profileContent.flatMap { Data(base64Encoded: $0) },
-                expirationDate: profile.attributes?.expirationDate
+            attributes: .init(name: name, profileType: type.asApiType),
+            relationships: .init(
+                bundleId: .init(data: .init(_type: .bundleIds, id: bundleId)),
+                devices: deviceIds.map { .init(data: $0.map { .init(_type: .devices, id: $0) }) },
+                certificates: .init(data: certificateIds.map { .init(_type: .certificates, id: $0) })
             )
-        case .badRequest(let error):
-             let message = (try? error.body.json.errorDescription) ?? "Bad request"
-             throw Error.badRequest(message)
-        case .conflict(let conflict):
-            let message = (try? conflict.body.json.errorDescription) ?? "Profile already exists"
-            throw Error.conflict(message)
-        case .forbidden(let forbidden):
-             let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
-             throw Error.badResponse(message)
+        ))
+
+        let (data, response) = try await performRequest(try postRequest(path: "v1/profiles", body: body))
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw Error.badResponse("Non-HTTP response while creating profile")
+        }
+
+        switch httpResponse.statusCode {
+        case 201:
+            return try decode(CreatedProfileResponse.self, from: data, reading: "the created profile").data.profile
+        case 409:
+            throw Error.conflict(errorMessage(from: data) ?? "Profile already exists")
+        case 400, 422:
+            throw Error.badRequest(errorMessage(from: data) ?? "Bad request")
         default:
-            throw Error.badResponse("Failed to create profile")
+            throw Error.badResponse(errorMessage(from: data) ?? "Failed to create profile (HTTP \(httpResponse.statusCode))")
         }
     }
 
+    /// Raw request for the same reason as `listDevices`: the name filter also returns other
+    /// profiles, and one the generated decoder rejects would fail the whole listing.
     public func listProfiles(name: String? = nil) async throws -> [Profile] {
-        var allProfiles: [Profile] = []
-        var nextURL: String? = nil
-
-        let query = Operations.ProfilesGetCollection.Input.Query(
-            filter_lbrack_name_rbrack_: name.map { [$0] }
-        )
-        let input = Operations.ProfilesGetCollection.Input(query: query)
-        let response = try await client.profilesGetCollection(input)
-
-        switch response {
-        case .ok(let ok):
-            let json = try ok.body.json
-            allProfiles.append(contentsOf: parseProfiles(from: json.data))
-            nextURL = json.links.next
-        case .forbidden(let forbidden):
-            let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
-            throw Error.badResponse(message)
-        default:
-            throw Error.badResponse("Failed to list profiles")
-        }
-
-        while let url = nextURL {
-            let (data, nextLink) = try await fetchProfilesPage(url: url)
-            allProfiles.append(contentsOf: data)
-            nextURL = nextLink
-        }
-
-        // Filter for EXACT name match (API returns substring/prefix matches)
+        var components = URLComponents(url: serverURL.appendingPathComponent("v1/profiles"), resolvingAgainstBaseURL: false)
+        var queryItems = [URLQueryItem(name: "limit", value: String(Self.pageLimit))]
         if let name {
-            return allProfiles.filter { $0.name == name }
+            queryItems.append(URLQueryItem(name: "filter[name]", value: name))
         }
-        return allProfiles
+        components?.queryItems = queryItems
+        guard let url = components?.url else {
+            throw Error.badRequest("Could not build profiles URL")
+        }
+
+        var allProfiles: [Profile] = []
+        var nextURL: String? = url.absoluteString
+        while let url = nextURL {
+            let page = try await fetchCollectionPage(ProfilesPageResponse.self, url: url, listing: "profiles")
+            allProfiles.append(contentsOf: page.data.map(\.profile))
+            nextURL = page.links.next
+        }
+
+        // The name filter also matches longer names: only the exact one counts
+        guard let name else { return allProfiles }
+        return allProfiles.filter { $0.name == name }
     }
 
-    private func parseProfiles(from data: [Components.Schemas.Profile]) -> [Profile] {
-        data.map { profile in
-            Profile(
-                id: profile.id,
-                name: profile.attributes?.name ?? "",
-                type: profile.attributes?.profileType.map { ProfileType(rawValue: $0.rawValue) } ?? nil,
-                content: profile.attributes?.profileContent.flatMap { Data(base64Encoded: $0) },
-                expirationDate: profile.attributes?.expirationDate
-            )
-        }
-    }
-
-    private func fetchProfilesPage(url: String) async throws -> ([Profile], String?) {
-        let (data, response) = try await fetchPage(url: url)
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-            throw Error.badResponse("Failed to fetch profiles page")
-        }
-        let profilesResponse = try jsonDecoder.decode(Components.Schemas.ProfilesResponse.self, from: data)
-        return (parseProfiles(from: profilesResponse.data), profilesResponse.links.next)
-    }
-    
     public func deleteProfile(id: String) async throws {
         let input = Operations.ProfilesDeleteInstance.Input(path: .init(id: id))
         let response = try await client.profilesDeleteInstance(input)
@@ -465,7 +368,7 @@ public struct ProvisioningAPI: Sendable {
              let message = (try? forbidden.body.json.errorDescription) ?? "Forbidden"
              throw Error.badResponse(message)
         case .notFound:
-            throw Error.badResponse("Profile not found")
+            throw Error.notFound("Profile \(id)")
         default:
             throw Error.badResponse("Failed to delete profile")
         }
@@ -475,6 +378,7 @@ public struct ProvisioningAPI: Sendable {
         case badRequest(String)
         case badResponse(String)
         case conflict(String)
+        case notFound(String)
         case undocumented(String)
         
         public var errorDescription: String? {
@@ -482,6 +386,7 @@ public struct ProvisioningAPI: Sendable {
             case .badRequest(let message): return "Bad request: \(message)"
             case .badResponse(let message): return "Bad response: \(message)"
             case .conflict(let message): return "Conflict: \(message)"
+            case .notFound(let message): return "Not found: \(message)"
             case .undocumented(let message): return "Undocumented: \(message)"
             }
         }
@@ -491,6 +396,50 @@ public struct ProvisioningAPI: Sendable {
 extension Components.Schemas.ErrorResponse {
     var errorDescription: String? {
         return errors?.compactMap { $0.detail }.joined(separator: ", ")
+    }
+}
+
+private extension ProvisioningAPI {
+    func postRequest(path: String, body: some Encodable) throws -> URLRequest {
+        var request = URLRequest(url: serverURL.appendingPathComponent(path))
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(try jwtProvider.token())", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.httpBody = try JSONEncoder().encode(body)
+        return request
+    }
+
+    func fetchCollectionPage<Page: Decodable>(_ type: Page.Type, url: String, listing subject: String) async throws -> Page {
+        let (data, response) = try await fetchPage(url: url)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw Error.badResponse("Non-HTTP response while listing \(subject)")
+        }
+        guard httpResponse.statusCode == 200 else {
+            throw Error.badResponse(errorMessage(from: data) ?? "Failed to list \(subject) (HTTP \(httpResponse.statusCode))")
+        }
+        return try decode(type, from: data, reading: subject)
+    }
+
+    /// A bare `DecodingError` prints as "The data couldn't be read…"; this names the reply and the field.
+    func decode<T: Decodable>(_ type: T.Type, from data: Data, reading subject: String) throws -> T {
+        do {
+            return try jsonDecoder.decode(type, from: data)
+        } catch let error as DecodingError {
+            throw Error.badResponse("Could not decode \(subject)\(Self.location(of: error))")
+        }
+    }
+
+    static func location(of error: DecodingError) -> String {
+        let (codingPath, detail): ([any CodingKey], String) = switch error {
+        case .keyNotFound(let key, let context): (context.codingPath + [key], context.debugDescription)
+        case .typeMismatch(_, let context), .valueNotFound(_, let context), .dataCorrupted(let context): (context.codingPath, context.debugDescription)
+        @unknown default: ([], String(describing: error))
+        }
+        let path = codingPath.reduce("") { path, key in
+            key.intValue.map { "\(path)[\($0)]" } ?? (path.isEmpty ? key.stringValue : "\(path).\(key.stringValue)")
+        }
+        return path.isEmpty ? ": \(detail)" : " at \(path): \(detail)"
     }
 }
 
