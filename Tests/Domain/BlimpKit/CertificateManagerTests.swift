@@ -105,6 +105,32 @@ final class CertificateManagerTests: XCTestCase {
         XCTAssertEqual(foundDist, distCert.id)
     }
 
+    func testFindValidCertificateSkipsAnExpiredCertificate() async throws {
+        let expired = givenPortalCertificate(id: "expired", type: .distribution, expiresIn: -86_400)
+        let valid = givenPortalCertificate(id: "valid", type: .distribution, expiresIn: 86_400)
+        try await mockGit.writeFile(path: "certificates/DISTRIBUTION/\(expired.id).p12", content: Data())
+        try await mockGit.writeFile(path: "certificates/DISTRIBUTION/\(valid.id).p12", content: Data())
+
+        let foundId = try await manager.findValidCertificate(type: .distribution, platform: .ios)
+
+        XCTAssertEqual(foundId, valid.id)
+    }
+
+    func testStoredValidCertificatesLeaveOutExpiredAndUnstoredOnes() async throws {
+        let expired = givenPortalCertificate(id: "expired", type: .distribution, expiresIn: -1)
+        _ = givenPortalCertificate(id: "unstored", type: .distribution, expiresIn: 86_400)
+        let valid = givenPortalCertificate(id: "valid", type: .distribution, expiresIn: 86_400)
+        let undated = ProvisioningAPI.Certificate(id: "undated", name: "undated", type: .distribution, content: nil, serialNumber: nil, expirationDate: nil)
+        mockCertService.certificates.append(undated)
+        for id in [expired.id, valid.id, undated.id] {
+            try await mockGit.writeFile(path: "certificates/DISTRIBUTION/\(id).p12", content: Data())
+        }
+
+        let certificates = try await mockCertService.storedValidCertificates(type: .distribution, platform: .ios, git: mockGit)
+
+        XCTAssertEqual(certificates.map(\.id), [valid.id, undated.id])
+    }
+
     // MARK: - Universal Certificate Tests
 
     func testUniversalCertFoundFromAnyPlatform() async throws {
@@ -245,5 +271,20 @@ final class CertificateManagerTests: XCTestCase {
         let p12Path = "certificates/DEVELOPMENT/\(certId).p12"
         let exists = await mockGit.fileExists(path: p12Path)
         XCTAssertTrue(exists)
+    }
+}
+
+private extension CertificateManagerTests {
+    func givenPortalCertificate(id: String, type: ProvisioningAPI.CertificateType, expiresIn interval: TimeInterval) -> ProvisioningAPI.Certificate {
+        let certificate = ProvisioningAPI.Certificate(
+            id: id,
+            name: id,
+            type: type,
+            content: nil,
+            serialNumber: nil,
+            expirationDate: Date().addingTimeInterval(interval)
+        )
+        mockCertService.certificates.append(certificate)
+        return certificate
     }
 }

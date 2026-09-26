@@ -14,13 +14,8 @@ public extension ProvisioningAPI {
             }
         }
 
-        var asDeviceFilterValue: String {
-            switch self {
-            case .ios: "IOS"
-            case .macos: "MAC_OS"
-            case .tvos, .catalyst: "UNIVERSAL"
-            }
-        }
+        /// Devices are listed under the platform they are registered with (`asApiPlatform`).
+        var asDeviceFilterValue: String { asApiPlatform.rawValue }
     }
 
     enum ProfileType: String, Sendable, CaseIterable {
@@ -130,13 +125,15 @@ public extension ProvisioningAPI {
         public let type: CertificateType?
         public let content: Data?
         public let serialNumber: String?
+        public let expirationDate: Date?
 
-        public init(id: String, name: String, type: CertificateType?, content: Data?, serialNumber: String?) {
+        public init(id: String, name: String, type: CertificateType?, content: Data?, serialNumber: String?, expirationDate: Date? = nil) {
             self.id = id
             self.name = name
             self.type = type
             self.content = content
             self.serialNumber = serialNumber
+            self.expirationDate = expirationDate
         }
     }
 
