@@ -14,13 +14,8 @@ public extension ProvisioningAPI {
             }
         }
 
-        var asDeviceFilterValue: String {
-            switch self {
-            case .ios: "IOS"
-            case .macos: "MAC_OS"
-            case .tvos, .catalyst: "UNIVERSAL"
-            }
-        }
+        /// Devices are listed under the platform they are registered with (`asApiPlatform`).
+        var asDeviceFilterValue: String { asApiPlatform.rawValue }
     }
 
     enum ProfileType: String, Sendable, CaseIterable {
