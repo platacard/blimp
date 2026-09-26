@@ -127,7 +127,7 @@ public extension ProvisioningAPI {
         public let serialNumber: String?
         public let expirationDate: Date?
 
-        public init(id: String, name: String, type: CertificateType?, content: Data?, serialNumber: String?, expirationDate: Date?) {
+        public init(id: String, name: String, type: CertificateType?, content: Data?, serialNumber: String?, expirationDate: Date? = nil) {
             self.id = id
             self.name = name
             self.type = type
