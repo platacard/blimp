@@ -286,6 +286,22 @@ final class ProvisioningAPITests: XCTestCase {
         XCTAssertEqual(recorder.requests.last?.url?.absoluteString, "https://api.appstoreconnect.apple.com/v1/devices?cursor=abc")
     }
 
+    /// Devices are registered as IOS (tvOS) or MAC_OS (Catalyst), so they are listed under the same platform.
+    func testListDevicesFiltersTvosAndCatalystByTheirRegisteredPlatform() async throws {
+        for (platform, expected) in [(ProvisioningAPI.Platform.tvos, "IOS"), (.catalyst, "MAC_OS")] {
+            let recorder = RequestRecorder()
+            let api = makeRawAPI(recorder: recorder, responses: [
+                (200, #"{"data":[],"links":{"self":"http://test"}}"#),
+            ])
+
+            _ = try await api.listDevices(platform: platform, status: .enabled)
+
+            let request = try XCTUnwrap(recorder.requests.first)
+            let query = URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)?.queryItems ?? []
+            XCTAssertEqual(query.first { $0.name == "filter[platform]" }?.value, expected, "\(platform)")
+        }
+    }
+
     func testListDevicesAppliesStatusFilter() async throws {
         let recorder = RequestRecorder()
         let api = makeRawAPI(recorder: recorder, status: 200, json: """
